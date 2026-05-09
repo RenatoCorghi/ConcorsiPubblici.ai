@@ -26,9 +26,8 @@ export function getRouteFromHash() {
     var hash = window.location.hash.replace('#/', '').replace('#', '');
     
     // Ignora gli hash generati da Supabase OAuth (es. #access_token=...)
-    if (hash.startsWith('access_token=') || hash.startsWith('error=')) {
-        // Puliamo l'hash dall'URL per sicurezza (Supabase l'ha già letto al boot)
-        window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
+    // NON pulire l'URL qui — Supabase deve poterlo leggere per autenticarsi!
+    if (hash.startsWith('access_token=') || hash.startsWith('error=') || hash.startsWith('type=')) {
         return 'home';
     }
     

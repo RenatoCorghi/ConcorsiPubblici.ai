@@ -51,6 +51,11 @@ export const cloud = {
             var modal = document.getElementById('onboarding-modal');
             if (modal) modal.classList.add('hidden');
             
+            // Pulisci l'hash OAuth dall'URL (Supabase l'ha già processato)
+            if (window.location.hash.includes('access_token=')) {
+                window.history.replaceState(null, document.title, window.location.pathname);
+            }
+            
             // Forza l'aggiornamento dell'UI per mostrare il nuovo profilo
             renderView();
         };
