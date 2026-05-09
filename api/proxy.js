@@ -524,7 +524,8 @@ export default async function handler(req, res) {
             fetchHeaders = {
                 'Content-Type': 'application/json',
                 'x-api-key': anthropicKey,
-                'anthropic-version': '2023-06-01'
+                'anthropic-version': '2023-06-01',
+                'anthropic-beta': 'prompt-caching-2024-07-31'
             };
             
             // Map to Anthropic format
@@ -548,9 +549,20 @@ export default async function handler(req, res) {
             const anthropicPayload = {
                 model: validation.payload.model,
                 max_tokens: validation.payload.max_tokens,
-                system: systemInstruction.trim(),
                 messages: mappedMessages
             };
+
+            // Abilita Prompt Caching sul System Prompt
+            if (systemInstruction.trim().length > 0) {
+                anthropicPayload.system = [
+                    {
+                        type: "text",
+                        text: systemInstruction.trim(),
+                        cache_control: { type: "ephemeral" }
+                    }
+                ];
+            }
+
             fetchBody = JSON.stringify(anthropicPayload);
         }
         else {
