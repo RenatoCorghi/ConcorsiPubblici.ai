@@ -543,11 +543,17 @@ export const app = {
             checkDailyReminders(); // Invia Notifiche Locali
 
             if (window.cloud) cloud.initAuthListener();
-
             initNetworkListeners();
-
-            AppState.currentRoute = getRouteFromHash();
-            navigateToRoute(AppState.currentRoute);
+    
+            // BUGFIX CHROME: Se c'è un token nell'URL, non usiamo navigateToRoute che 
+            // sovrascriverebbe l'hash prima che Supabase possa leggerlo in modo asincrono.
+            if (window.location.hash.includes('access_token=')) {
+                AppState.currentRoute = 'home';
+                renderView(); // Renderizza senza toccare l'hash
+            } else {
+                AppState.currentRoute = getRouteFromHash();
+                navigateToRoute(AppState.currentRoute);
+            }
 
             setInterval(updateNavTimer, 1000);
 
