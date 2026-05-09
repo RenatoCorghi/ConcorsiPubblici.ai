@@ -23,6 +23,7 @@ export const QuizController = {
         const NUM_QUESTIONS = 5;
         const res = await apiService.generateQuiz(apiKey, materia, NUM_QUESTIONS);
         
+        if (window._quizLoadingInterval) clearInterval(window._quizLoadingInterval);
         document.getElementById('quiz-loading').classList.add('hidden');
         document.getElementById('quiz-setup-view').classList.remove('opacity-50', 'pointer-events-none');
 
@@ -54,6 +55,7 @@ export const QuizController = {
 
         const res = await apiService.generateQuizFromCase(apiKey, 5);
 
+        if (window._quizLoadingInterval) clearInterval(window._quizLoadingInterval);
         document.getElementById('quiz-loading').classList.add('hidden');
         document.getElementById('quiz-setup-view').classList.remove('opacity-50', 'pointer-events-none');
 

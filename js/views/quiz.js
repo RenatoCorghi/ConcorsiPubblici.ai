@@ -37,19 +37,46 @@ export function renderQuizView() {
                     <div id="quiz-loading" class="hidden mt-8 text-center bg-gray-950/80 p-6 rounded-2xl border border-magis-500/30 shadow-[0_0_20px_rgba(99,102,241,0.2)] relative overflow-hidden">
                         <div class="absolute inset-0 bg-gradient-to-b from-transparent via-magis-500/10 to-transparent animate-scan-vertical"></div>
                         
-                        <div class="relative w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                        <div class="relative w-20 h-20 mx-auto mb-5 flex items-center justify-center">
                             <div class="absolute inset-0 rounded-full border-4 border-gray-800 border-t-magis-500 animate-spin" style="animation-duration: 1s;"></div>
                             <div class="absolute inset-2 rounded-full border-4 border-gray-800 border-b-indigo-400 animate-spin" style="animation-duration: 1.5s; animation-direction: reverse;"></div>
-                            <i data-lucide="cpu" class="w-6 h-6 text-magis-400 animate-pulse relative z-10"></i>
+                            <div class="absolute inset-4 rounded-full border-2 border-gray-800 border-l-cyan-400 animate-spin" style="animation-duration: 2s;"></div>
+                            <i data-lucide="brain" class="w-6 h-6 text-magis-400 animate-pulse relative z-10"></i>
                         </div>
-                        <h4 class="text-white font-bold mb-1 font-display">Connessione AI stabilita</h4>
-                        <p class="text-xs text-magis-200/70 animate-pulse mb-3">Creazione di quesiti inediti e trappole logiche in corso...</p>
+                        <h4 class="text-white font-bold mb-1 font-display text-lg">CiceroAI sta pensando...</h4>
+                        <p id="quiz-loading-status" class="text-xs text-magis-200/70 mb-4 h-8 flex items-center justify-center transition-opacity duration-500">Connessione al modello AI in corso...</p>
                         
-                        <div class="flex justify-center gap-1">
-                            <div class="w-1.5 h-1.5 rounded-full bg-magis-500 animate-bounce" style="animation-delay: 0s"></div>
-                            <div class="w-1.5 h-1.5 rounded-full bg-magis-500 animate-bounce" style="animation-delay: 0.1s"></div>
-                            <div class="w-1.5 h-1.5 rounded-full bg-magis-500 animate-bounce" style="animation-delay: 0.2s"></div>
+                        <!-- Progress dots -->
+                        <div class="w-48 mx-auto h-1 bg-gray-800 rounded-full overflow-hidden mb-3">
+                            <div class="h-full bg-gradient-to-r from-magis-500 via-indigo-500 to-magis-500 rounded-full animate-progress-shimmer"></div>
                         </div>
+                        <p class="text-[10px] text-gray-600 mt-2">La generazione richiede circa 10-15 secondi</p>
+
+                        <script>
+                            (function() {
+                                const msgs = [
+                                    "Connessione al modello AI in corso...",
+                                    "Analisi della materia selezionata...",
+                                    "Formulazione di quesiti inediti...",
+                                    "Creazione delle trappole logiche...",
+                                    "Calibrazione del livello di difficoltà...",
+                                    "Verifica della correttezza giuridica...",
+                                    "Rifinitura delle spiegazioni...",
+                                    "Quasi pronto, ultimi controlli..."
+                                ];
+                                let i = 0;
+                                window._quizLoadingInterval = setInterval(() => {
+                                    const el = document.getElementById('quiz-loading-status');
+                                    if (!el) { clearInterval(window._quizLoadingInterval); return; }
+                                    el.style.opacity = '0';
+                                    setTimeout(() => {
+                                        i = (i + 1) % msgs.length;
+                                        el.textContent = msgs[i];
+                                        el.style.opacity = '1';
+                                    }, 400);
+                                }, 3000);
+                            })();
+                        </script>
 
                         <style>
                             @keyframes scan-vertical {
@@ -58,6 +85,14 @@ export function renderQuizView() {
                             }
                             .animate-scan-vertical {
                                 animation: scan-vertical 2s linear infinite;
+                            }
+                            @keyframes progress-shimmer {
+                                0% { transform: translateX(-100%); width: 100%; }
+                                50% { width: 60%; }
+                                100% { transform: translateX(200%); width: 100%; }
+                            }
+                            .animate-progress-shimmer {
+                                animation: progress-shimmer 2.5s ease-in-out infinite;
                             }
                         </style>
                     </div>
