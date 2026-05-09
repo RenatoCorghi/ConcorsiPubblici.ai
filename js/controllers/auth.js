@@ -137,6 +137,28 @@ export var AuthController = {
             showToast(err.message || "Errore login Google", "error");
         }
     },
+    
+    logout: async function() {
+        try {
+            if (window.cloud) await cloud.signOut();
+            
+            // Pulisci il profilo locale ma mantieni altre impostazioni se vuoi
+            localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.USER_PROFILE);
+            
+            var modal = document.getElementById('ai-settings-modal');
+            if (modal) modal.classList.add('hidden');
+            
+            showToast("Disconnessione completata", "success");
+            
+            // Un breve delay per mostrare il toast, poi ricarica per ripartire puliti come ospite
+            setTimeout(function() {
+                window.location.reload();
+            }, 800);
+        } catch (err) {
+            console.error("Logout error", err);
+            showToast("Errore durante la disconnessione", "error");
+        }
+    },
 
     openAuthModal: function() {
         var modal = document.getElementById('onboarding-modal');

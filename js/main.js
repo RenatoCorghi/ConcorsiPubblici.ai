@@ -99,6 +99,7 @@ export const app = {
     submitAuth: function () { AuthController.submitAuth(); },
     loginAsGuest: function () { AuthController.loginAsGuest(); },
     loginWithGoogle: function () { AuthController.loginWithGoogle(); },
+    logout: function () { AuthController.logout(); },
     openAuthModal: function () { AuthController.openAuthModal(); },
     saveUserProfile: function () { AuthController.saveUserProfile(); },
     upgradeTier: function () { AuthController.upgradeTier(); },

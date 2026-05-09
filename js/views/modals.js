@@ -173,8 +173,11 @@ export const Modals = {
                     </div>
                 </div>
                 <button onclick="app.saveSettings()" class="w-full py-3 btn-premium rounded-lg bg-magis-600 hover:bg-magis-500 text-white font-bold transition shadow-lg shadow-magis-600/30">Salva Impostazioni</button>
-                <div class="mt-4 text-center">
+                <div class="mt-4 flex items-center justify-between">
                     <button onclick="app.navigate('legal'); app.closeAiModal();" class="text-[10px] text-gray-600 hover:text-gray-400 transition uppercase tracking-widest font-bold">Privacy & Legal Policy</button>
+                    <button onclick="app.logout()" class="text-[10px] text-red-500/80 hover:text-red-400 transition uppercase tracking-widest font-bold flex items-center gap-1">
+                        <i data-lucide="log-out" class="w-3 h-3"></i> Esci dall'account
+                    </button>
                 </div>
             </div>
         </div>`;
