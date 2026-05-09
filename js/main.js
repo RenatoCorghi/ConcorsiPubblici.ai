@@ -98,6 +98,7 @@ export const app = {
     toggleAuthMode: function () { AuthController.toggleAuthMode(); },
     submitAuth: function () { AuthController.submitAuth(); },
     loginAsGuest: function () { AuthController.loginAsGuest(); },
+    loginWithGoogle: function () { AuthController.loginWithGoogle(); },
     openAuthModal: function () { AuthController.openAuthModal(); },
     saveUserProfile: function () { AuthController.saveUserProfile(); },
     upgradeTier: function () { AuthController.upgradeTier(); },

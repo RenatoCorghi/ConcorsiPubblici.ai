@@ -70,6 +70,16 @@ export const cloud = {
         return { data, error };
     },
 
+    signInWithGoogle: async function() {
+        const { data, error } = await supabaseClient.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: window.location.origin
+            }
+        });
+        return { data, error };
+    },
+
     signOut: async function() {
         const { error } = await supabaseClient.auth.signOut();
         return { error };

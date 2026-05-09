@@ -39,6 +39,10 @@ export var AuthController = {
             showToast("Compila tutti i campi richiesti.", "error");
             return;
         }
+        if (password.length < 6) {
+            showToast("La password deve avere almeno 6 caratteri.", "error");
+            return;
+        }
 
         var btn = document.getElementById('auth-submit-btn');
         var oldBtnText = btn ? btn.innerText : '';
@@ -55,8 +59,36 @@ export var AuthController = {
             if (res.error) throw res.error;
 
             if (isSignUp) {
-                // Durante il signup, crea un placeholder che verrà sovrascritto
-                // dai DB reali appena syncProfile() completa al variare dell'Auth state listener
+                // Supabase con email confirmation attiva non crea una sessione subito.
+                // Controlliamo se l'utente ha una sessione oppure deve confermare l'email.
+                var needsConfirmation = !res.data.session;
+                
+                if (needsConfirmation) {
+                    // Mostra messaggio di conferma email nell'UI del modale
+                    var modal = document.getElementById('onboarding-modal');
+                    if (modal) {
+                        var innerContent = modal.querySelector('.relative.bg-gray-900');
+                        if (innerContent) {
+                            innerContent.innerHTML = `
+                                <div class="text-center p-6">
+                                    <div class="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <i data-lucide="mail-check" class="w-8 h-8 text-green-400"></i>
+                                    </div>
+                                    <h3 class="text-2xl font-display font-bold text-white mb-3">Controlla la tua Email!</h3>
+                                    <p class="text-gray-400 text-sm mb-2">Abbiamo inviato un link di conferma a:</p>
+                                    <p class="text-magis-400 font-bold mb-6">${email}</p>
+                                    <p class="text-gray-500 text-xs mb-8">Clicca il link nell'email per attivare il tuo account. Controlla anche la cartella spam.</p>
+                                    <button onclick="document.getElementById('onboarding-modal').classList.add('hidden')" class="w-full py-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-bold transition">Ho Capito</button>
+                                </div>
+                            `;
+                            if (window.lucide) lucide.createIcons();
+                        }
+                    }
+                    showToast("Registrazione effettuata! Controlla la tua email per confermare l'account.", "success");
+                    return; // Non chiudere il modale, mostra il messaggio
+                }
+
+                // Se la sessione è stata creata subito (email confirmation disabilitata)
                 AppState.userProfile = {
                     id: res.data.user.id,
                     name: name,
@@ -75,14 +107,34 @@ export var AuthController = {
             if (modal) modal.classList.add('hidden');
             showToast("Autenticazione Cloud riuscita!", "success");
             
+            // Nascondi bottone Accedi dalla navbar
+            var authBtn = document.getElementById('nav-auth-btn');
+            if (authBtn) authBtn.classList.add('hidden');
+            
             applyThemeColor();
             setTimeout(renderView, 500);
 
         } catch (err) {
             console.error("Auth Error", err);
-            showToast(err.message || "Errore di autenticazione", "error");
+            var msg = err.message || "Errore di autenticazione";
+            // Traduci errori comuni di Supabase
+            if (msg.includes('already registered')) msg = "Questa email è già registrata. Prova ad accedere.";
+            if (msg.includes('Invalid login')) msg = "Email o password non corretti.";
+            if (msg.includes('Email not confirmed')) msg = "Devi prima confermare la tua email. Controlla la posta in arrivo.";
+            showToast(msg, "error");
         } finally {
             if (btn) { btn.innerText = oldBtnText; btn.disabled = false; }
+        }
+    },
+
+    loginWithGoogle: async function() {
+        try {
+            var res = await cloud.signInWithGoogle();
+            if (res.error) throw res.error;
+            // Supabase OAuth fa redirect, il resto è gestito dall'auth listener in cloud.js
+        } catch (err) {
+            console.error("Google Auth Error", err);
+            showToast(err.message || "Errore login Google", "error");
         }
     },
 
