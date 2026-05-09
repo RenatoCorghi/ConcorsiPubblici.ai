@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"/c/Users/Pc/.claude/projects/C--Users-Pc-OneDrive-Desktop-concorsi-ai/memory/\" 2>/dev/null || echo \"no memory yet\")",
+      "Bash(ls \"/c/Users/Pc/.claude/projects/C--Users-Pc-OneDrive-Desktop-concorsi-ai/\" 2>/dev/null)"
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build output
+dist/
+build/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Downloaded datasets & corpus (heavy — re-generate via scripts/)
+data/
+sentenze_*/
+Federalismi/
+riviste_*/
+massimario_vip/
+scraper_cassazione/
+
+# Scratch / temp / debug artifacts
+scratch/
+temp_cache/
+temp_extracted.json
+discarded_admin_log.txt
+sample_admin_*
+test_estratto.txt
+test_admin_vip_v3.md
+test_rivista_vip.md
+
+# Logs
+*.log
+npm-debug.log*
+

@@ -1,0 +1,265 @@
+import { AppState } from '../state.js';
+import { DB_TRACCE } from '../../data.js';
+import { escapeHtml } from '../utils.js';
+import { Gamification } from '../gamification.js';
+import { renderDashboardInsights } from './analytics.js';
+import { Metering } from '../metering.js';
+
+export function renderHome() {
+    var today = new Date();
+    // Algoritmo deterministico della settimana: prendiamo l'id basato su settimana
+    var weekNum = Math.ceil(today.getDate() / 7);
+    var tracciaSettimana = DB_TRACCE[weekNum % DB_TRACCE.length];
+    
+    // Se c'è una simulazione in corso
+    var resumeCard = '';
+    if (AppState.timer.active) {
+        resumeCard = `
+            <div class="col-span-1 md:col-span-1 border border-timerOrange/30 bg-timerOrange/10 rounded-2xl p-6 glass-panel fade-in flex flex-col justify-center items-center cursor-pointer card-hover" onclick="app.navigate('simulation')">
+                <i data-lucide="timer" class="text-timerOrange w-8 h-8 mb-3 pulse-ani"></i>
+                <h3 class="text-xl font-bold text-timerOrange mb-1">Riprendi la Prova</h3>
+                <p class="text-gray-300 text-sm">Hai una simulazione in corso.</p>
+            </div>
+        `;
+    }
+
+    // Stats per Dashboard
+    var numProve = AppState.history.length;
+    var avgVoto = numProve > 0 ? (AppState.history.reduce((a, b) => a + (b.voto || 0), 0) / numProve).toFixed(1) : '-';
+    
+    // Gamification Stats
+    var xpProgress = Gamification.getLevelProgress();
+    var level = AppState.stats.level;
+    var streak = AppState.stats.streak;
+    var badges = AppState.stats.badges;
+
+    // Push Notification Banner
+    var pushBanner = '';
+    if ('Notification' in window && Notification.permission === 'default') {
+        pushBanner = `
+        <div class="mb-8 border border-blue-500/30 bg-blue-500/10 rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between fade-in">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0">
+                    <i data-lucide="bell-ring" class="w-5 h-5 text-blue-400"></i>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold text-sm">Attiva le notifiche Push</h3>
+                    <p class="text-gray-400 text-xs">Ricevi avvisi per risposte ai tuoi post e messaggi diretti dalla community.</p>
+                </div>
+            </div>
+            <button onclick="app.requestPushPermissions()" class="w-full md:w-auto shrink-0 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-bold transition">Abilita Notifiche</button>
+        </div>
+        `;
+    }
+
+    return `
+        <div class="fade-in space-y-8">
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div>
+                    <h1 class="text-4xl font-display font-bold text-white mb-2">Dashboard</h1>
+                    <div class="flex items-center gap-3">
+                        <p class="text-gray-400">Bentornato${AppState.userProfile ? ', ' + escapeHtml(AppState.userProfile.name) : ''}.</p>
+                        ${AppState.userProfile ? `<span class="px-2 py-0.5 text-[10px] rounded font-bold uppercase tracking-widest cursor-pointer hover:opacity-80 transition ${AppState.userProfile.tier === 'Pro' ? 'bg-magis-900/50 text-magis-400 border border-magis-800' : 'bg-gray-800 text-gray-400 border border-gray-700'}" onclick="app.navigate('pricing')">Tier ${AppState.userProfile.tier}</span>` : ''}
+                    </div>
+                </div>
+                <!-- Gamification Quick Stats -->
+                <div class="flex flex-wrap items-center gap-4 bg-gray-900/50 p-4 rounded-2xl border border-gray-800 cursor-pointer hover:bg-gray-800 hover:border-magis-500/50 transition-all group" onclick="app.toggleGamification()">
+                    <div class="flex items-center gap-3 pr-4 border-r border-gray-800">
+                        <div class="relative w-12 h-12 flex items-center justify-center">
+                            <svg class="w-full h-full -rotate-90">
+                                <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="3" fill="transparent" class="text-gray-800" />
+                                <circle cx="24" cy="24" r="20" stroke="currentColor" stroke-width="3" fill="transparent" class="text-magis-500" stroke-dasharray="${2 * Math.PI * 20}" stroke-dashoffset="${2 * Math.PI * 20 * (1 - xpProgress / 100)}" style="transition: stroke-dashoffset 1s ease-out;" />
+                            </svg>
+                            <span class="absolute text-[10px] font-bold text-white group-hover:text-magis-400 transition-colors">Lvl ${level}</span>
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Esperienza</div>
+                            <div class="text-sm font-bold text-white stat-glow group-hover:text-magis-300 transition-colors"><span class="count-up">${AppState.stats.xp}</span> XP <i data-lucide="chevron-down" class="w-3 h-3 inline ml-1 opacity-50"></i></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <div class="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+                            <i data-lucide="flame" class="w-5 h-5 ${streak > 0 ? 'text-orange-500' : 'text-gray-600'}"></i>
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Day Streak</div>
+                            <div class="text-sm font-bold text-white">${streak} giorni</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gamification DROPDOWN (Traguardi) -->
+            <div id="gamification-dropdown" class="hidden bg-gray-900/50 border border-gray-800 rounded-2xl p-6 fade-in shadow-2xl">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                        <i data-lucide="award" class="w-4 h-4 text-magis-400"></i> Traguardi e Medaglie
+                    </h3>
+                    <span class="text-[10px] text-gray-500 font-medium">${badges.length} / ${Object.keys(Gamification.BADGE_CATALOG).length} Completati</span>
+                </div>
+                
+                <div class="grid grid-cols-2 lg:grid-cols-6 gap-4">
+                    ${Object.entries(Gamification.BADGE_CATALOG).map(([id, info]) => {
+                        const isUnlocked = badges.find(b => b.id === id);
+                        return `
+                        <div class="flex flex-col items-center text-center p-4 rounded-xl border transition-all duration-500 ${isUnlocked ? 'bg-magis-900/10 border-magis-500/30 scale-100' : 'bg-gray-950/50 border-gray-800 opacity-40 grayscale'}">
+                            <div class="w-12 h-12 rounded-full flex items-center justify-center mb-3 ${isUnlocked ? 'bg-magis-500 text-white shadow-lg shadow-magis-500/20' : 'bg-gray-800 text-gray-500'}">
+                                <i data-lucide="${info.icon}" class="w-6 h-6"></i>
+                            </div>
+                            <h4 class="text-xs font-bold ${isUnlocked ? 'text-white' : 'text-gray-400'} mb-1">${info.name}</h4>
+                            <p class="text-[9px] text-gray-500 leading-tight">${info.desc}</p>
+                            ${isUnlocked ? `<div class="mt-2 text-[8px] font-bold text-magis-400 uppercase tracking-tighter">Sbloccato</div>` : ''}
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+
+            ${pushBanner}
+
+            <!-- PWA INSTALL BANNER -->
+            ${window.deferredPrompt ? `
+                <div id="pwa-install-banner" class="mb-8 border border-green-500/30 bg-green-500/10 rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between fade-in shadow-xl">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                            <i data-lucide="download" class="w-5 h-5 text-green-400"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-white font-bold text-sm">Installa L'App</h3>
+                            <p class="text-green-400/80 text-xs text-balance">Aggiungi ConcorsiPubblici.ai alla tua Home o Desktop per accedere istantaneamente e usare la modalità offline.</p>
+                        </div>
+                    </div>
+                    <button onclick="app.installPWA()" class="w-full md:w-auto shrink-0 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-bold transition flex items-center gap-2 justify-center"><i data-lucide="monitor-smartphone" class="w-4 h-4"></i> Installa Ora</button>
+                </div>
+            ` : ''}
+
+            <!-- ONBOARDING WIZARD OVERLAY -->
+            ${!AppState.tutorialSeen ? `
+                <div id="onboarding-tutorial" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-950/90 backdrop-blur-sm fade-in">
+                    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-8 max-w-lg w-full shadow-2xl relative overflow-hidden">
+                        <div class="absolute -top-32 -right-32 w-64 h-64 bg-magis-600/20 rounded-full blur-3xl"></div>
+                        <div class="absolute -bottom-32 -left-32 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl"></div>
+                        
+                        <div class="relative z-10 text-center">
+                            <div class="w-16 h-16 bg-gradient-to-br from-magis-500 to-indigo-600 rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-lg shadow-magis-500/30">
+                                <i data-lucide="sparkles" class="w-8 h-8 text-white"></i>
+                            </div>
+                            
+                            <h2 class="text-2xl font-bold text-white mb-2">Benvenuto a Bordo!</h2>
+                            <p class="text-gray-400 text-sm mb-8 text-balance">Usa il nostro Simulatore potenziato dall'Intelligenza Artificiale per superare l'esame.</p>
+                            
+                            <div class="space-y-4 mb-8 text-left">
+                                <div class="flex items-start gap-4 p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
+                                    <div class="mt-1"><i data-lucide="pen-tool" class="w-5 h-5 text-magis-400"></i></div>
+                                    <div>
+                                        <h4 class="text-sm font-bold text-gray-200">1. Il Simulatore AI</h4>
+                                        <p class="text-xs text-gray-500 mt-1">Svolgi temi e ricevi una correzione spietata basata sui criteri reali della commissione d'esame.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-4 p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
+                                    <div class="mt-1"><i data-lucide="bot" class="w-5 h-5 text-blue-400"></i></div>
+                                    <div>
+                                        <h4 class="text-sm font-bold text-gray-200">2. Tutor Lisia & Esame Orale</h4>
+                                        <p class="text-xs text-gray-500 mt-1">Usa la chat fluttuante e l'interprete vocale in tempo reale per essere pungolato e interrogato ovunque tu sia.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-4 p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
+                                    <div class="mt-1"><i data-lucide="book-open-check" class="w-5 h-5 text-orange-400"></i></div>
+                                    <div>
+                                        <h4 class="text-sm font-bold text-gray-200">3. L'Hub Tracce</h4>
+                                        <p class="text-xs text-gray-500 mt-1">Sfoglia centinaia di vecchie tracce concorsuali oppure genera le tue "Tracce Sartoriali" basate sui tuoi punti deboli.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button onclick="app.skipTutorial()" class="w-full py-4 rounded-xl bg-white text-black font-bold hover:bg-gray-200 transition shadow-[0_0_20px_rgba(255,255,255,0.3)]">Ho Capito, Iniziamo!</button>
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+
+            ${Metering.renderUsageWidget()}
+
+            ${renderDashboardInsights()}
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 stagger-in">
+                <!-- Traccia della settimana -->
+                <div class="col-span-1 md:col-span-2 card-gradient-border rounded-2xl p-6 glass-panel relative overflow-hidden bg-glow-theme">
+                    <div class="absolute top-0 right-0 p-3 opacity-20"><i data-lucide="award" class="w-32 h-32"></i></div>
+                    <div class="relative z-10">
+                        <span class="px-3 py-1 text-xs font-semibold rounded-full bg-magis-900/50 text-magis-300 border border-magis-800 mb-4 inline-block">Traccia della Settimana</span>
+                        <div class="mb-4">
+                            <span class="text-sm font-semibold text-gray-500 uppercase tracking-widest">${tracciaSettimana.materia}</span>
+                            <h2 class="text-2xl font-bold text-white mt-1 leading-tight">${escapeHtml(tracciaSettimana.testo)}</h2>
+                        </div>
+                        <div class="flex gap-4 mt-6">
+                            <button onclick="app.openBriefing(${tracciaSettimana.id})" class="px-6 py-3 btn-premium bg-magis-600 hover:bg-magis-500 text-white rounded-lg font-medium transition shadow-lg shadow-magis-600/50 flex items-center gap-2 text-sm">
+                                <i data-lucide="play" class="w-4 h-4"></i> Inizia Prova (8h)
+                            </button>
+                            <button onclick="app.startSimulation(1, true, ${tracciaSettimana.id})" class="px-6 py-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-200 rounded-lg font-medium transition flex items-center gap-2 text-sm" title="Usa questo per testare l'auto-submit rapido">
+                                <i data-lucide="zap" class="w-4 h-4 text-yellow-500"></i> Sprint Test (1 min)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                ${resumeCard}
+                
+                <div class="col-span-1 border border-gray-800 rounded-2xl p-6 glass-panel card-hover flex flex-col justify-center items-center bg-gray-900/50 cursor-pointer" onclick="app.navigate('schedule')">
+                    <i data-lucide="calendar" class="text-gray-400 w-8 h-8 mb-3"></i>
+                    <h3 class="text-lg font-bold text-white mb-1">Piano di Studio</h3>
+                    <p class="text-gray-500 text-sm text-center">Organizza la settimana</p>
+                </div>
+
+                <div class="col-span-1 border border-gray-800 rounded-2xl p-6 glass-panel card-hover flex flex-col justify-center items-center bg-gray-900/50 cursor-pointer" onclick="app.navigate('history')">
+                    <i data-lucide="history" class="text-gray-400 w-8 h-8 mb-3"></i>
+                    <h3 class="text-lg font-bold text-white mb-1">Storico Prove</h3>
+                    <p class="text-gray-500 text-sm text-center">Rivedi i progressi</p>
+                </div>
+
+                <div class="col-span-1 border border-gray-800 rounded-2xl p-6 glass-panel card-hover flex flex-col justify-center items-center bg-gray-900/50 cursor-pointer group shadow-lg shadow-yellow-500/5" onclick="app.navigate('quiz')">
+                    <i data-lucide="list-todo" class="text-yellow-500 w-8 h-8 mb-3 transition-transform group-hover:scale-110"></i>
+                    <h3 class="text-lg font-bold text-white mb-1">Quiz AI</h3>
+                    <p class="text-gray-500 text-sm text-center">Simulazioni rapide</p>
+                </div>
+
+                <div class="col-span-1 md:col-span-2 border border-emerald-900/50 rounded-2xl p-6 glass-panel card-hover flex flex-col md:flex-row justify-center items-center gap-4 bg-gradient-to-r from-emerald-950/30 to-gray-900/50 cursor-pointer group shadow-lg shadow-emerald-500/5 relative overflow-hidden" onclick="app.navigate('giurisprudenza')">
+                    <div class="absolute top-0 right-0 p-3 opacity-10"><i data-lucide="landmark" class="w-24 h-24"></i></div>
+                    <i data-lucide="scale" class="text-emerald-400 w-10 h-10 transition-transform group-hover:scale-110 shrink-0"></i>
+                    <div class="text-center md:text-left relative z-10">
+                        <h3 class="text-lg font-bold text-white mb-1">Banca Dati Giurisprudenza</h3>
+                        <p class="text-gray-400 text-sm">~290.000 decisioni e pareri della Giustizia Amministrativa</p>
+                    </div>
+                </div>
+
+                <div class="col-span-1 md:col-span-4 border border-amber-900/50 rounded-2xl p-6 glass-panel card-hover flex flex-col md:flex-row justify-between items-center gap-4 bg-gradient-to-r from-gray-900/50 to-amber-950/20 cursor-pointer group shadow-lg shadow-amber-500/5 relative overflow-hidden" onclick="app.navigate('bandi')">
+                    <div class="absolute top-0 right-0 p-3 opacity-10"><i data-lucide="megaphone" class="w-24 h-24 text-amber-500"></i></div>
+                    <div class="flex items-center gap-4 relative z-10">
+                        <div class="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center shrink-0">
+                            <i data-lucide="megaphone" class="text-amber-500 w-6 h-6 transition-transform group-hover:scale-110"></i>
+                        </div>
+                        <div class="text-left">
+                            <h3 class="text-lg font-bold text-white mb-1 flex items-center gap-2">Bandi in Corso <span class="px-2 py-0.5 text-[10px] font-bold rounded-full badge-new">NUOVO</span></h3>
+                            <p class="text-gray-400 text-sm">Tutti i concorsi della Gazzetta Ufficiale aggiornati in tempo reale</p>
+                        </div>
+                    </div>
+                    <div class="relative z-10 shrink-0">
+                        <button class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-bold rounded-lg transition border border-gray-700 flex items-center gap-2">
+                            Esplora <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer con link legali -->
+            <div class="pt-12 pb-6 border-t border-gray-900 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-600">
+                <p>© 2026 ConcorsiPubblici.ai - Tutti i diritti riservati.</p>
+                <div class="flex gap-6">
+                    <button onclick="app.navigate('legal')" class="hover:text-gray-400 transition">Privacy & Legal</button>
+                    <button onclick="window.open('mailto:info@concorsipubblici.ai')" class="hover:text-gray-400 transition">Supporto</button>
+                </div>
+            </div>
+        </div>
+    `;
+}

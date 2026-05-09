@@ -1,0 +1,260 @@
+/* ============================================================
+   CLOUD.JS — Connessione a Supabase (Backend/Auth)
+   ============================================================ */
+import { APP_CONFIG } from './config.js';
+import { AppState, saveHistoryState, updateUserProfile } from './state.js';
+import { DB_COMMUNITY } from '../data.js';
+import { renderView } from './router.js';
+
+// Global instance — credenziali da config.js
+window.supabaseClient = supabase.createClient(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_KEY);
+
+export const cloud = {
+    user: null,
+
+    initAuthListener: function() {
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (session) {
+                cloud.user = session.user;
+                console.log("Utente Autenticato via Supabase:", session.user.email);
+                // Aggiorna AppState se necessario per mostrare logiche premium
+                if (AppState.userProfile) {
+                    AppState.userProfile.online = true;
+                }
+                // Sincronizzazione autoritativa del tier dal database (Il Cloud Vince)
+                cloud.syncProfile();
+                
+                cloud.syncHistory(); // Scarica lo storico al login
+                cloud.syncCommunityPosts(); // Scarica la community al login
+            } else {
+                cloud.user = null;
+                console.log("Utente Disconnesso");
+            }
+        });
+        
+        // Cerca sessione corrente subito all'avvio
+        supabaseClient.auth.getSession().then(({ data: { session } }) => {
+            if (session) {
+                cloud.user = session.user;
+                cloud.syncProfile();
+                cloud.syncHistory();
+                cloud.syncCommunityPosts();
+            }
+        });
+    },
+
+    signUp: async function(email, password, fullName) {
+        const { data, error } = await supabaseClient.auth.signUp({
+            email: email,
+            password: password,
+            options: { data: { full_name: fullName } }
+        });
+        return { data, error };
+    },
+
+    signIn: async function(email, password) {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password
+        });
+        return { data, error };
+    },
+
+    signOut: async function() {
+        const { error } = await supabaseClient.auth.signOut();
+        return { error };
+    },
+
+    // --- Sincronizzazione Profilo & Abbonamenti ---
+    syncProfile: async function() {
+        if (!cloud.user) return;
+        
+        try {
+            const { data, error } = await supabaseClient
+                .from('profiles')
+                .select('tier')
+                .eq('id', cloud.user.id)
+                .single();
+                
+            if (error) throw error;
+            
+            // Forza il tier del DB su AppState locale
+            if (AppState.userProfile && data) {
+                AppState.userProfile.tier = data.tier || 'Free';
+                
+                // Salva lo stato su localStorage in modo reattivo aggiornato
+                updateUserProfile(AppState.userProfile);
+                
+                // Aggiorna UI se siamo nel pricing o nella home
+                if (AppState.currentRoute === 'pricing' || AppState.currentRoute === 'home') {
+                    renderView();
+                }
+            }
+        } catch (error) {
+            console.error("Errore fetch profilo autoritativo:", error);
+        }
+    },
+
+    // --- Sincronizzazione Storico Prove ---
+    // Pusha una singola prova nel DB, se l'utente è loggato.
+    pushResult: async function(resultObj) {
+        if (!cloud.user) return false;
+        
+        // Rimuoviamo fields finti e formattiamo per la tabella Supabase
+        const dbPayload = {
+            user_id: cloud.user.id,
+            client_id: resultObj.id,
+            materia: resultObj.materia,
+            voto: resultObj.voto,
+            text_content: resultObj.text,
+            feedback: resultObj.feedback,
+            keywords: resultObj.keywords,
+            created_at: resultObj.date
+        };
+
+        const { error } = await supabaseClient
+            .from('history')
+            .upsert(dbPayload, { onConflict: 'client_id' });
+            
+        if (error) console.error("Errore Push Supabase:", error);
+        return !error;
+    },
+
+    // Scarica lo storico e lo fonde con AppState.history locale
+    syncHistory: async function() {
+        if (!cloud.user) return;
+        
+        const { data, error } = await supabaseClient
+            .from('history')
+            .select('*')
+            .eq('user_id', cloud.user.id)
+            .order('created_at', { ascending: true });
+            
+        if (error) {
+            console.warn("Spazio History non ancora creato su Supabase o disattivo?", error);
+            return;
+        }
+        
+        if (data && data.length > 0) {
+            // Uniamo garantendo univocità (predominano i dati cloud)
+            var cloudMap = {};
+            data.forEach(row => {
+                cloudMap[row.client_id] = {
+                    id: row.client_id,
+                    materia: row.materia,
+                    voto: row.voto,
+                    text: row.text_content,
+                    feedback: row.feedback,
+                    keywords: row.keywords,
+                    date: row.created_at
+                };
+            });
+            
+            // Fonde locale con cloud e aggiorna AppState
+            var merged = AppState.history.slice();
+            for (const key in cloudMap) {
+                var exists = false;
+                for (var i = 0; i < merged.length; i++) {
+                    if (merged[i].id === key) {
+                        merged[i] = cloudMap[key];
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists) merged.push(cloudMap[key]);
+            }
+            AppState.history = merged;
+            saveHistoryState();
+            
+            // Re-renderizza se siam nella dashboard o storico per aggiornare UI
+            if (AppState.currentRoute === 'home' || AppState.currentRoute === 'history') {
+                renderView();
+            }
+        }
+    },
+
+    // --- Sincronizzazione Community ---
+    // Pusha un post della community sul DB
+    pushCommunityPost: async function(postObj) {
+        if (!cloud.user) return false;
+        
+        const dbPayload = {
+            id: postObj.id,
+            user_id: cloud.user.id,
+            channel_id: postObj.channel_id,
+            content: postObj.content,
+            likes: postObj.likes,
+            created_at: new Date().toISOString()
+        };
+
+        const { error } = await supabaseClient
+            .from('community_posts')
+            .upsert(dbPayload, { onConflict: 'id' });
+            
+        if (error) console.error("Errore Push Post Supabase:", error);
+        return !error;
+    },
+
+    // Aggiungi un like su Supabase (rpc call o update)
+    likeCommunityPost: async function(postId, newLikes) {
+        if (!cloud.user) return false;
+        const { error } = await supabaseClient
+            .from('community_posts')
+            .update({ likes: newLikes })
+            .eq('id', postId);
+        return !error;
+    },
+
+    // Scarica i post della community e li fonde con DB_COMMUNITY.posts
+    syncCommunityPosts: async function() {
+        const { data, error } = await supabaseClient
+            .from('community_posts')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(100);
+            
+        if (error) {
+            console.warn("Spazio community_posts non ancora creato su Supabase?", error);
+            return;
+        }
+        
+        if (data && data.length > 0) {
+            var cloudMap = {};
+            data.forEach(row => {
+                cloudMap[row.id] = {
+                    id: row.id,
+                    channel_id: row.channel_id,
+                    user_id: row.user_id,
+                    content: row.content,
+                    likes: row.likes || 0,
+                    timestamp: new Date(row.created_at).toLocaleDateString('it-IT')
+                };
+            });
+            
+            // Fonde i post tenendo priorità DB
+            var merged = DB_COMMUNITY.posts.slice();
+            for (const key in cloudMap) {
+                var exists = false;
+                for (var i = 0; i < merged.length; i++) {
+                    if (merged[i].id === key) {
+                        merged[i] = cloudMap[key];
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists) merged.push(cloudMap[key]);
+            }
+            
+            // Ordina decrescente
+            merged.sort((a,b) => {
+                return (a.id > b.id) ? -1 : 1; // Usando l'id come sort temporale 'p17...'
+            });
+            
+            DB_COMMUNITY.posts = merged;
+            
+            if (AppState.currentRoute === 'community-forum') {
+                renderView();
+            }
+        }
+    }
+};

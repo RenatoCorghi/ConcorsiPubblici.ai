@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Non indicizzare le cartelle di sistema o i dump
+Disallow: /api/
+Disallow: /node_modules/
+Disallow: /data/
+Disallow: /scripts/
+Disallow: /*_dump.html
+
+Sitemap: https://www.concorsipubblici.ai/sitemap.xml
