@@ -17,8 +17,8 @@ export const cloud = {
             cloud.user = session.user;
             console.log("Utente Autenticato via Supabase:", session.user.email);
             
-            // Crea profilo locale se non esiste (es. login con Google nuovo)
-            if (!AppState.userProfile) {
+            // Crea profilo locale se non esiste, o SOVRASCRIVI se era un ospite
+            if (!AppState.userProfile || AppState.userProfile.id.startsWith('guest-') || AppState.userProfile.id !== session.user.id) {
                 var name = session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email.split('@')[0];
                 var avatarUrl = session.user.user_metadata?.avatar_url || ('https://i.pravatar.cc/150?u=' + session.user.email);
                 
@@ -27,13 +27,14 @@ export const cloud = {
                     name: name,
                     avatar: avatarUrl,
                     tier: 'Free',
-                    concorso: 'Magistratura',
+                    concorso: AppState.userProfile?.concorso || 'Magistratura',
                     online: true,
-                    stats: { corretti: 0, media: 0.0, streak: 1 }
+                    stats: AppState.userProfile?.stats || { corretti: 0, media: 0.0, streak: 1 }
                 };
                 updateUserProfile(AppState.userProfile);
             } else {
                 AppState.userProfile.online = true;
+                updateUserProfile(AppState.userProfile);
             }
             
             // Sincronizzazione autoritativa del tier dal database (Il Cloud Vince)
@@ -49,6 +50,9 @@ export const cloud = {
             // Chiudi il modale di accesso se era aperto
             var modal = document.getElementById('onboarding-modal');
             if (modal) modal.classList.add('hidden');
+            
+            // Forza l'aggiornamento dell'UI per mostrare il nuovo profilo
+            renderView();
         };
 
         supabaseClient.auth.onAuthStateChange((event, session) => {
