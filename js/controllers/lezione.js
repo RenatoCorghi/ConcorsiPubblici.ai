@@ -3,7 +3,7 @@
    Sistema a moduli con prompt socratico, grounding RAG e TTS
    ============================================================ */
 import { AppState } from '../state.js';
-import { apiService, LISIA_EXPERT_SYSTEM } from '../api.js';
+import { apiService, CICERO_EXPERT_SYSTEM } from '../api.js';
 import { APP_CONFIG } from '../config.js';
 import { Metering } from '../metering.js';
 import { escapeHtml } from '../utils.js';
@@ -213,8 +213,8 @@ export const LezioneController = {
             }
 
             var concorso = AppState.userProfile?.concorso || 'Magistratura';
-            if (LISIA_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]) {
-                systemPrompt += `\nNOTA: Lo studente si prepara per il concorso in ${concorso}. ${LISIA_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]}`;
+            if (CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]) {
+                systemPrompt += `\nNOTA: Lo studente si prepara per il concorso in ${concorso}. ${CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]}`;
             }
 
             // Aggiungi istruzione speciale per la lezione da traccia
@@ -313,8 +313,8 @@ export const LezioneController = {
             }
 
             var concorso = AppState.userProfile?.concorso || 'Magistratura';
-            if (LISIA_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]) {
-                systemPrompt += `\nNOTA: Lo studente si prepara per il concorso in ${concorso}. ${LISIA_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]}`;
+            if (CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]) {
+                systemPrompt += `\nNOTA: Lo studente si prepara per il concorso in ${concorso}. ${CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]}`;
             }
 
             var response = await fetch('/api/proxy', {
@@ -399,8 +399,8 @@ export const LezioneController = {
         try {
             var systemPrompt = LECTIO_MAGISTRALIS_PROMPT;
             var concorso = AppState.userProfile?.concorso || 'Magistratura';
-            if (LISIA_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]) {
-                systemPrompt += `\nNOTA: L'uditorio si prepara per il concorso in ${concorso}. ${LISIA_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]}`;
+            if (CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]) {
+                systemPrompt += `\nNOTA: L'uditorio si prepara per il concorso in ${concorso}. ${CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]}`;
             }
 
             var response = await fetch('/api/proxy', {

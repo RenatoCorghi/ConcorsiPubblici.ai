@@ -4,7 +4,7 @@
 import { APP_CONFIG } from '../config.js';
 import { AppState } from '../state.js';
 import { handleProxyError, fixJSONNewlines, extractJSON, getAuthHeaders } from './helpers.js';
-import { LISIA_EXPERT_SYSTEM } from './prompts.js';
+import { CICERO_EXPERT_SYSTEM } from './prompts.js';
 
 export const evaluationApi = {
 
@@ -23,10 +23,10 @@ export const evaluationApi = {
         };
         var concorsoTarget = AppState.userProfile && AppState.userProfile.concorso ? AppState.userProfile.concorso : "Magistratura";
 
-        // Costruzione dinamica del Prompt basato su Lisia's Master Prompts
-        var promptSystem = LISIA_EXPERT_SYSTEM.GLOBAL_MASTER_PROMPT + "\n";
-        if (LISIA_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorsoTarget]) {
-            promptSystem += "DIRETTIVA SPECIFICA PER CONCORSO: " + LISIA_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorsoTarget] + "\n";
+        // Costruzione dinamica del Prompt basato su CiceroAI's Master Prompts
+        var promptSystem = CICERO_EXPERT_SYSTEM.GLOBAL_MASTER_PROMPT + "\n";
+        if (CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorsoTarget]) {
+            promptSystem += "DIRETTIVA SPECIFICA PER CONCORSO: " + CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorsoTarget] + "\n";
         }
         promptSystem += "\nFormato Output: Devi OBBLIGATORIAMENTE restituire SOLO un JSON valido (senza markdown o blocchi di codice esterni) con questa esatta struttura: {\"voto\": numero_da_0_a_20, \"feedback\": \"giudizio generale rigoroso\", \"keywords\": [\"keyword1\", \"keyword2\"], \"lacune\": [\"lacuna 1\", \"lacuna 2\"], \"schema_ideale\": [{\"titolo\": \"1. Inquadramento\", \"desc\": \"Descrizione\"}, {\"titolo\": \"2. Sviluppo\", \"desc\": \"Desc\"}], \"confronto\": [{\"errore_candidato\": \"Cosa ha sbagliato\", \"correzione_ideale\": \"Cosa doveva scrivere\"}], \"metriche\": {\"correttezza\": num_0-100, \"struttura\": num, \"terminologia\": num, \"pertinenza\": num}}";
 

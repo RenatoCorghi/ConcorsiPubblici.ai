@@ -3,7 +3,7 @@
    ============================================================ */
 import { APP_CONFIG } from '../config.js';
 import { handleProxyError, fixJSONNewlines, extractJSON, getAuthHeaders } from './helpers.js';
-import { LISIA_EXPERT_SYSTEM } from './prompts.js';
+import { CICERO_EXPERT_SYSTEM } from './prompts.js';
 
 export const tracesApi = {
 
@@ -11,9 +11,9 @@ export const tracesApi = {
      * Genera una traccia inedita basata sulle lacune dello studente
      */
     generateTrace: async function(apiKey, materia, concorso, weaknesses) {
-        var baseSystemPrompt = LISIA_EXPERT_SYSTEM.GLOBAL_MASTER_PROMPT + " ";
-        if (LISIA_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]) {
-            baseSystemPrompt += LISIA_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso] + " ";
+        var baseSystemPrompt = CICERO_EXPERT_SYSTEM.GLOBAL_MASTER_PROMPT + " ";
+        if (CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]) {
+            baseSystemPrompt += CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso] + " ";
         }
         
         var prompt = `${baseSystemPrompt}\n\nSei la commissione esaminatrice. Il candidato ha queste lacune specifiche tratte dai suoi ultimi temi in ${materia}: "${weaknesses}".\nCrea un'unica, realistica, difficile e inedita traccia d'esame in ${materia} che miri a testare proprio questi istituti o lacune.\nRestituisci SOLO un JSON valido con questa esatta struttura: {"materia": "${materia}", "testo": "testo della traccia molto verosimile...", "elementi_chiave": ["istituto 1", "istituto 2"], "insidie": "breve spiegazione del trabocchetto logico per il candidato"}`;

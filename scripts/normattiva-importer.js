@@ -117,7 +117,7 @@ function extractArticlesLocally(html) {
 }
 
 // ==========================================
-// 3. GENERAZIONE DOTTRINA (IL NOSTRO "LISIA")
+// 3. GENERAZIONE DOTTRINA (IL NOSTRO "CICEROAI")
 // ==========================================
 async function generaDottrina(articolo, titoloAtto) {
     let tentativi = 0;
@@ -131,7 +131,7 @@ async function generaDottrina(articolo, titoloAtto) {
         try {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${GEMINI_API_KEY}`;
             
-            const promptSistema = `Sei Lisia, esperto giurista. Scrivi un commento dottrinale di alto livello per un manuale di preparazione ai concorsi superiori.
+            const promptSistema = `Sei CiceroAI, esperto giurista. Scrivi un commento dottrinale di alto livello per un manuale di preparazione ai concorsi superiori.
 Usa come base il testo di legge fornito.
 Struttura in Markdown:
 # Art. ${articolo.numero} - ${articolo.titolo || titoloAtto}

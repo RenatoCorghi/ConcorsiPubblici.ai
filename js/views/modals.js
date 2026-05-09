@@ -244,7 +244,7 @@ export const Modals = {
                     </div>
                     <h3 class="text-2xl font-display font-bold text-white">Sartoria AI</h3>
                 </div>
-                <p class="text-gray-400 text-sm mb-6">Scegli la materia. Lisia analizzerà il tuo storico e forgerà una traccia inedita mirata esattamente sui tuoi punti deboli recenti.</p>
+                <p class="text-gray-400 text-sm mb-6">Scegli la materia. CiceroAI analizzerà il tuo storico e forgerà una traccia inedita mirata esattamente sui tuoi punti deboli recenti.</p>
                 
                 <div class="space-y-4 mb-8">
                     <div>

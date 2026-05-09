@@ -46,7 +46,7 @@ export const TutorController = {
         var historyLength = AppState.history.length;
         var avgMateria = "";
         
-        var greetingMsg = `Ciao ${name}! Cliccando questo pulsante hai evocato me, Lisia, il tuo Tutor personale per il concorso in ${c}. `;
+        var greetingMsg = `Ciao ${name}! Cliccando questo pulsante hai evocato me, CiceroAI, il tuo Tutor personale per il concorso in ${c}. `;
         
         if (historyLength > 0) {
             var validHistory = AppState.history.filter(h => h.id !== 'mock-1');

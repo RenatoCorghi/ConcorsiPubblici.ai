@@ -184,9 +184,9 @@ export async function showIstitutoDettagli(istituto, materia) {
             </div>
             
             <div class="flex flex-col lg:flex-row gap-6 lg:gap-8 flex-grow">
-                <!-- Colonna Contenuto Lisia -->
+                <!-- Colonna Contenuto CiceroAI -->
                 <div class="lg:w-2/3 flex flex-col">
-                    <h3 class="text-xs font-bold text-gray-500 uppercase mb-4 flex items-center gap-2"><i data-lucide="book-open" class="w-4 h-4"></i> Compendio Dogmatico (Lisia AI)</h3>
+                    <h3 class="text-xs font-bold text-gray-500 uppercase mb-4 flex items-center gap-2"><i data-lucide="book-open" class="w-4 h-4"></i> Compendio Dogmatico (CiceroAI)</h3>
                     
                     ${saggioReal ? `
                         <div class="prose-dottrina max-w-none bg-gray-900/40 p-6 lg:p-10 rounded-3xl border border-gray-800 shadow-2xl">
@@ -198,7 +198,7 @@ export async function showIstitutoDettagli(istituto, materia) {
                                 <i data-lucide="loader-2" class="w-6 h-6 text-magis-500 animate-spin"></i>
                             </div>
                             <h4 class="text-white font-medium mb-1">Contenuto in fase di generazione</h4>
-                            <p class="text-xs text-gray-500">Lisia sta scrivendo il manuale per questo istituto. Torna tra qualche istante.</p>
+                            <p class="text-xs text-gray-500">CiceroAI sta scrivendo il manuale per questo istituto. Torna tra qualche istante.</p>
                         </div>
                     `}
                 </div>

@@ -71,7 +71,7 @@ export function renderSimulation() {
                         
                         <!-- Suggestion Button -->
                         <div class="relative">
-                            <button id="phantom-suggestion-btn" onclick="app.showPhantomSuggestion()" class="hidden p-1.5 text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20 rounded-full transition pulse-fast" title="Lisia ha un suggerimento per te!">
+                            <button id="phantom-suggestion-btn" onclick="app.showPhantomSuggestion()" class="hidden p-1.5 text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20 rounded-full transition pulse-fast" title="CiceroAI ha un suggerimento per te!">
                                 <i data-lucide="lightbulb" class="w-4 h-4"></i>
                             </button>
                             <!-- Balloon -->

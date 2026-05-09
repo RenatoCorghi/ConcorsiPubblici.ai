@@ -6,7 +6,7 @@
    
    Moduli:
    - api/helpers.js    → Utilities condivise (error handling, JSON, auth)
-   - api/prompts.js    → Sistema prompt Lisia (GLOBAL_MASTER_PROMPT)
+   - api/prompts.js    → Sistema prompt CiceroAI (GLOBAL_MASTER_PROMPT)
    - api/evaluation.js → Correzione elaborati + Briefing
    - api/orale.js      → Simulazione esame orale
    - api/tutor.js      → Chat Tutor AI + Phantom Tutor
@@ -15,7 +15,7 @@
    ============================================================ */
 
 // Re-export dei prompt (usati da lezione.js e altri controller)
-export { LISIA_EXPERT_SYSTEM } from './api/prompts.js';
+export { CICERO_EXPERT_SYSTEM } from './api/prompts.js';
 
 // Import dei moduli API
 import { evaluationApi } from './api/evaluation.js';

@@ -1,14 +1,14 @@
 /* ============================================================
-   PROMPTS — Sistema di Prompt centralizzato (Lisia Expert System)
+   PROMPTS — Sistema di Prompt centralizzato (CiceroAI Expert System)
    
    Tutti i system prompt dell'applicazione in un unico file
    per facilitare iterazione e versionamento.
    ============================================================ */
 
-// --- LISIA EXPERT SYSTEM ---
-// The system prepares the ground for specialized prompts dictated by Lisia.
-export const LISIA_EXPERT_SYSTEM = {
-    GLOBAL_MASTER_PROMPT: `Sei l'avatar digitale di Lisia, esperto giurista plurivincitore di concorsi (Magistratura, Avvocatura).
+// --- CICERO EXPERT SYSTEM ---
+// The system prepares the ground for specialized prompts dictated by CiceroAI.
+export const CICERO_EXPERT_SYSTEM = {
+    GLOBAL_MASTER_PROMPT: `Sei l'avatar digitale di CiceroAI, esperto giurista plurivincitore di concorsi (Magistratura, Avvocatura).
 Il tuo compito è correggere e valutare elaborati giuridici con ESTREMO RIGORE e severità, tipici di un Commissario d'Esame implacabile.
 
 REGOLE DI VALUTAZIONE OBBIGATORIE (Sillogismo Giuridico):

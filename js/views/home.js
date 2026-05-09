@@ -160,7 +160,7 @@ export function renderHome() {
                                 <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
                                     <div class="mt-0.5"><i data-lucide="bot" class="w-5 h-5 text-blue-400"></i></div>
                                     <div>
-                                        <h4 class="text-sm font-bold text-gray-200">2. Tutor Lisia & Esame Orale</h4>
+                                        <h4 class="text-sm font-bold text-gray-200">2. Tutor CiceroAI & Esame Orale</h4>
                                         <p class="text-xs text-gray-500 mt-1">Usa la chat fluttuante e l'interprete vocale in tempo reale per essere pungolato e interrogato ovunque tu sia.</p>
                                     </div>
                                 </div>

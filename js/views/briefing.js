@@ -202,7 +202,7 @@ function renderBriefingContent(briefing) {
         },
         {
             icon: 'lightbulb',
-            title: 'Consiglio Strategico di Lisia',
+            title: 'Consiglio Strategico di CiceroAI',
             color: 'text-yellow-400',
             bgColor: 'bg-yellow-500/10 border-yellow-500/20',
             content: briefing.consiglio || '',
@@ -284,7 +284,7 @@ function renderSectionContent(section) {
                 <div class="relative pl-5 border-l-2 border-yellow-500/40">
                     <i data-lucide="quote" class="w-5 h-5 text-yellow-500/30 absolute -left-3 -top-1 bg-gray-900"></i>
                     <p class="text-gray-300 text-sm leading-relaxed italic">${escapeHtml(section.content)}</p>
-                    <p class="text-yellow-500/50 text-xs mt-2 font-bold">— Lisia, Tutor AI</p>
+                    <p class="text-yellow-500/50 text-xs mt-2 font-bold">— CiceroAI, Tutor AI</p>
                 </div>
             `;
         default:

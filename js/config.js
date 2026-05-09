@@ -20,7 +20,7 @@ export const APP_CONFIG = {
     AI_MODELS: {
         google: {
             CORR: 'gemini-3.1-pro-preview',    // Modello Top per ragionamento legale profondo
-            CHAT: 'gemini-3-flash-preview',    // Modello Veloce per Tutor Lisia e Orale
+            CHAT: 'gemini-3-flash-preview',    // Modello Veloce per Tutor CiceroAI e Orale
             GEN: 'gemini-3-flash-preview' // Modello Leggero per creare tracce
         },
         anthropic: {
