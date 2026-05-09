@@ -26,9 +26,16 @@ export const cloud = {
                 
                 cloud.syncHistory(); // Scarica lo storico al login
                 cloud.syncCommunityPosts(); // Scarica la community al login
+
+                // Nascondi il bottone "Accedi" dalla navbar
+                var authBtn = document.getElementById('nav-auth-btn');
+                if (authBtn) authBtn.classList.add('hidden');
             } else {
                 cloud.user = null;
                 console.log("Utente Disconnesso");
+                // Mostra di nuovo il bottone "Accedi"
+                var authBtn = document.getElementById('nav-auth-btn');
+                if (authBtn) authBtn.classList.remove('hidden');
             }
         });
         
@@ -39,6 +46,9 @@ export const cloud = {
                 cloud.syncProfile();
                 cloud.syncHistory();
                 cloud.syncCommunityPosts();
+                // Nascondi bottone se già loggato
+                var authBtn = document.getElementById('nav-auth-btn');
+                if (authBtn) authBtn.classList.add('hidden');
             }
         });
     },
