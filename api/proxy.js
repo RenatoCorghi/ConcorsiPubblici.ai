@@ -34,6 +34,7 @@ const MODEL_WHITELIST = {
         'claude-opus-4-7',
         'claude-sonnet-4-6',
         'claude-haiku-4',
+        'claude-haiku-4-5-20251001',
         'claude-3-5-sonnet-20241022',
         'claude-3-5-haiku-20241022'
     ],

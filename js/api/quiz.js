@@ -82,6 +82,7 @@ A) Prima opzione
                 body: JSON.stringify({
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].GEN,
+                    feature: 'aiQuiz',
                     messages: [{"role": "user", "content": prompt}],
                     temperature: 0.5, max_tokens: 2000
                 })
@@ -134,6 +135,7 @@ Usa il formato: TITOLO / --- / DOMANDA / A) B) C) D) / CORRETTA / SPIEGAZIONE`;
                 body: JSON.stringify({
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].GEN,
+                    feature: 'aiQuiz',
                     messages: [{"role": "user", "content": prompt}],
                     temperature: 0.5, max_tokens: 2500
                 })
