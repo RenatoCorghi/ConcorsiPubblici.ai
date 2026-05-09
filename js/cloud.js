@@ -13,23 +13,47 @@ export const cloud = {
     user: null,
 
     initAuthListener: function() {
+        const handleSession = async (session) => {
+            cloud.user = session.user;
+            console.log("Utente Autenticato via Supabase:", session.user.email);
+            
+            // Crea profilo locale se non esiste (es. login con Google nuovo)
+            if (!AppState.userProfile) {
+                var name = session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email.split('@')[0];
+                var avatarUrl = session.user.user_metadata?.avatar_url || ('https://i.pravatar.cc/150?u=' + session.user.email);
+                
+                AppState.userProfile = {
+                    id: session.user.id,
+                    name: name,
+                    avatar: avatarUrl,
+                    tier: 'Free',
+                    concorso: 'Magistratura',
+                    online: true,
+                    stats: { corretti: 0, media: 0.0, streak: 1 }
+                };
+                updateUserProfile(AppState.userProfile);
+            } else {
+                AppState.userProfile.online = true;
+            }
+            
+            // Sincronizzazione autoritativa del tier dal database (Il Cloud Vince)
+            await cloud.syncProfile();
+            
+            cloud.syncHistory(); // Scarica lo storico al login
+            cloud.syncCommunityPosts(); // Scarica la community al login
+
+            // Nascondi il bottone "Accedi" dalla navbar
+            var authBtn = document.getElementById('nav-auth-btn');
+            if (authBtn) authBtn.classList.add('hidden');
+            
+            // Chiudi il modale di accesso se era aperto
+            var modal = document.getElementById('onboarding-modal');
+            if (modal) modal.classList.add('hidden');
+        };
+
         supabaseClient.auth.onAuthStateChange((event, session) => {
             if (session) {
-                cloud.user = session.user;
-                console.log("Utente Autenticato via Supabase:", session.user.email);
-                // Aggiorna AppState se necessario per mostrare logiche premium
-                if (AppState.userProfile) {
-                    AppState.userProfile.online = true;
-                }
-                // Sincronizzazione autoritativa del tier dal database (Il Cloud Vince)
-                cloud.syncProfile();
-                
-                cloud.syncHistory(); // Scarica lo storico al login
-                cloud.syncCommunityPosts(); // Scarica la community al login
-
-                // Nascondi il bottone "Accedi" dalla navbar
-                var authBtn = document.getElementById('nav-auth-btn');
-                if (authBtn) authBtn.classList.add('hidden');
+                handleSession(session);
             } else {
                 cloud.user = null;
                 console.log("Utente Disconnesso");
@@ -42,13 +66,7 @@ export const cloud = {
         // Cerca sessione corrente subito all'avvio
         supabaseClient.auth.getSession().then(({ data: { session } }) => {
             if (session) {
-                cloud.user = session.user;
-                cloud.syncProfile();
-                cloud.syncHistory();
-                cloud.syncCommunityPosts();
-                // Nascondi bottone se già loggato
-                var authBtn = document.getElementById('nav-auth-btn');
-                if (authBtn) authBtn.classList.add('hidden');
+                handleSession(session);
             }
         });
     },

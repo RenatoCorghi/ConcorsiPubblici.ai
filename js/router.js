@@ -24,6 +24,14 @@ import { renderLezione } from './views/lezione.js';
 
 export function getRouteFromHash() {
     var hash = window.location.hash.replace('#/', '').replace('#', '');
+    
+    // Ignora gli hash generati da Supabase OAuth (es. #access_token=...)
+    if (hash.startsWith('access_token=') || hash.startsWith('error=')) {
+        // Puliamo l'hash dall'URL per sicurezza (Supabase l'ha già letto al boot)
+        window.history.replaceState(null, document.title, window.location.pathname + window.location.search);
+        return 'home';
+    }
+    
     return hash || 'home';
 }
 
