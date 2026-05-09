@@ -125,9 +125,24 @@ HAI DAVANTI UN CASO REALE tratto dalla Giustizia Amministrativa:
 - Sede: ${sentenza.sede_nome || sentenza.sede_slug}
 - Numero: ${sentenza.numero_provvedimento}/${sentenza.anno_pubblicazione}
 - Esito: ${sentenza.esito || 'Non specificato'}
+- Fatto/Oggetto: ${sentenza.oggetto_ricorso}
 
-Genera ${numQuestions} domande a risposta multipla su questo caso.
-Usa il formato: TITOLO / --- / DOMANDA / A) B) C) D) / CORRETTA / SPIEGAZIONE`;
+Genera ${numQuestions} domande difficili a risposta multipla basate sui principi di diritto di questo caso.
+
+Devi TASSATIVAMENTE usare questo esatto formato di testo semplice (NON usare JSON e NON aggiungere premesse):
+
+TITOLO: Caso Pratico: ${sentenza.tipo_provvedimento} n. ${sentenza.numero_provvedimento}
+---
+DOMANDA: Testo della prima domanda?
+A) Prima opzione
+B) Seconda opzione
+C) Terza opzione
+D) Quarta opzione
+CORRETTA: A
+SPIEGAZIONE: Breve spiegazione del perché A è corretta in base al caso.
+---
+DOMANDA: Testo della seconda domanda?
+...`;
 
             const response = await fetch('/api/proxy', {
                 method: 'POST',
