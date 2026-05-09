@@ -136,44 +136,47 @@ export function renderHome() {
 
             <!-- ONBOARDING WIZARD OVERLAY -->
             ${!AppState.tutorialSeen ? `
-                <div id="onboarding-tutorial" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-950/90 backdrop-blur-sm fade-in">
-                    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-8 max-w-lg w-full shadow-2xl relative overflow-hidden">
+                <div id="onboarding-tutorial" class="fixed inset-0 z-[100] flex items-center justify-center p-3 md:p-4 bg-gray-950/90 backdrop-blur-sm fade-in">
+                    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-5 md:p-8 max-w-lg w-full shadow-2xl relative overflow-hidden max-h-[90dvh] flex flex-col">
                         <div class="absolute -top-32 -right-32 w-64 h-64 bg-magis-600/20 rounded-full blur-3xl"></div>
                         <div class="absolute -bottom-32 -left-32 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl"></div>
                         
-                        <div class="relative z-10 text-center">
-                            <div class="w-16 h-16 bg-gradient-to-br from-magis-500 to-indigo-600 rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-lg shadow-magis-500/30">
-                                <i data-lucide="sparkles" class="w-8 h-8 text-white"></i>
+                        <div class="relative z-10 text-center flex-1 overflow-y-auto min-h-0">
+                            <div class="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-magis-500 to-indigo-600 rounded-2xl mx-auto flex items-center justify-center mb-4 md:mb-6 shadow-lg shadow-magis-500/30">
+                                <i data-lucide="sparkles" class="w-6 h-6 md:w-8 md:h-8 text-white"></i>
                             </div>
                             
-                            <h2 class="text-2xl font-bold text-white mb-2">Benvenuto a Bordo!</h2>
-                            <p class="text-gray-400 text-sm mb-8 text-balance">Usa il nostro Simulatore potenziato dall'Intelligenza Artificiale per superare l'esame.</p>
+                            <h2 class="text-xl md:text-2xl font-bold text-white mb-1 md:mb-2">Benvenuto a Bordo!</h2>
+                            <p class="text-gray-400 text-sm mb-4 md:mb-8 text-balance">Usa il nostro Simulatore potenziato dall'Intelligenza Artificiale per superare l'esame.</p>
                             
-                            <div class="space-y-4 mb-8 text-left">
-                                <div class="flex items-start gap-4 p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
-                                    <div class="mt-1"><i data-lucide="pen-tool" class="w-5 h-5 text-magis-400"></i></div>
+                            <div class="space-y-3 md:space-y-4 mb-4 md:mb-8 text-left">
+                                <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
+                                    <div class="mt-0.5"><i data-lucide="pen-tool" class="w-5 h-5 text-magis-400"></i></div>
                                     <div>
                                         <h4 class="text-sm font-bold text-gray-200">1. Il Simulatore AI</h4>
                                         <p class="text-xs text-gray-500 mt-1">Svolgi temi e ricevi una correzione spietata basata sui criteri reali della commissione d'esame.</p>
                                     </div>
                                 </div>
-                                <div class="flex items-start gap-4 p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
-                                    <div class="mt-1"><i data-lucide="bot" class="w-5 h-5 text-blue-400"></i></div>
+                                <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
+                                    <div class="mt-0.5"><i data-lucide="bot" class="w-5 h-5 text-blue-400"></i></div>
                                     <div>
                                         <h4 class="text-sm font-bold text-gray-200">2. Tutor Lisia & Esame Orale</h4>
                                         <p class="text-xs text-gray-500 mt-1">Usa la chat fluttuante e l'interprete vocale in tempo reale per essere pungolato e interrogato ovunque tu sia.</p>
                                     </div>
                                 </div>
-                                <div class="flex items-start gap-4 p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
-                                    <div class="mt-1"><i data-lucide="book-open-check" class="w-5 h-5 text-orange-400"></i></div>
+                                <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
+                                    <div class="mt-0.5"><i data-lucide="book-open-check" class="w-5 h-5 text-orange-400"></i></div>
                                     <div>
                                         <h4 class="text-sm font-bold text-gray-200">3. L'Hub Tracce</h4>
                                         <p class="text-xs text-gray-500 mt-1">Sfoglia centinaia di vecchie tracce concorsuali oppure genera le tue "Tracce Sartoriali" basate sui tuoi punti deboli.</p>
                                     </div>
                                 </div>
                             </div>
-                            
-                            <button onclick="app.skipTutorial()" class="w-full py-4 rounded-xl bg-white text-black font-bold hover:bg-gray-200 transition shadow-[0_0_20px_rgba(255,255,255,0.3)]">Ho Capito, Iniziamo!</button>
+                        </div>
+
+                        <!-- CTA sempre visibile, fuori dall'area scrollabile -->
+                        <div class="relative z-10 pt-3 md:pt-4 shrink-0">
+                            <button onclick="app.skipTutorial()" class="w-full py-3 md:py-4 rounded-xl bg-white text-black font-bold hover:bg-gray-200 transition shadow-[0_0_20px_rgba(255,255,255,0.3)]">Ho Capito, Iniziamo!</button>
                         </div>
                     </div>
                 </div>
