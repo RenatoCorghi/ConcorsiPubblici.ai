@@ -391,55 +391,60 @@ export default async function handler(req, res) {
         
         if (requestedFeature && !isLocalDev) {
             const authHeader = req.headers.authorization;
-            if (!authHeader) {
-                return res.status(401).json({ error: 'Manca token di autenticazione. Richiesta AI negata.' });
-            }
-            const token = authHeader.replace('Bearer ', '');
             
-            const supabaseUrl = process.env.SUPABASE_URL || process.env.APP_SUPABASE_URL;
-            const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
-            
-            if (supabaseUrl && supabaseKey) {
-                const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+            if (authHeader) {
+                // Utente autenticato → metering completo via Supabase DB
+                const token = authHeader.replace('Bearer ', '');
                 
-                // Valida JWT per ottenere utente
-                const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
-                if (userError || !userData?.user) {
-                    return res.status(401).json({ error: 'Token scaduto o non valido.' });
-                }
-                const userId = userData.user.id;
+                const supabaseUrl = process.env.SUPABASE_URL || process.env.APP_SUPABASE_URL;
+                const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
                 
-                // Controlla il piano
-                const { data: profile } = await supabaseAdmin.from('profiles').select('tier').eq('id', userId).single();
-                const tier = (profile && profile.tier) || 'Free';
-                
-                const freeLimits = { aiCalls: 3, oralSessions: 0, tutorChats: 5, aiTraces: 0, pdfExports: 0, aiQuiz: 5, phantomTutor: 0 };
-                
-                if (tier === 'Free') {
-                    const limit = freeLimits[requestedFeature];
-                    if (limit === undefined) return res.status(400).json({ error: 'Feature non valida.' });
-                    if (limit === 0) return res.status(403).json({ error: 'Feature esclusiva Pro.' });
+                if (supabaseUrl && supabaseKey) {
+                    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
                     
-                    const now = new Date();
-                    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-                    
-                    const { data: usageData } = await supabaseAdmin
-                        .from('usage_metering')
-                        .select(requestedFeature)
-                        .eq('user_id', userId)
-                        .eq('month', currentMonth)
-                        .single();
-                        
-                    const currentUsage = usageData ? (usageData[requestedFeature] || 0) : 0;
-                    if (currentUsage >= limit) {
-                        return res.status(403).json({ error: 'Crediti mensili esauriti per questa funzionalità.' });
+                    // Valida JWT per ottenere utente
+                    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+                    if (userError || !userData?.user) {
+                        return res.status(401).json({ error: 'Token scaduto o non valido.' });
                     }
+                    const userId = userData.user.id;
                     
-                    // Incrementa il credito
-                    const upsertPayload = { user_id: userId, month: currentMonth };
-                    upsertPayload[requestedFeature] = currentUsage + 1;
-                    await supabaseAdmin.from('usage_metering').upsert(upsertPayload, { onConflict: 'user_id, month' });
+                    // Controlla il piano
+                    const { data: profile } = await supabaseAdmin.from('profiles').select('tier').eq('id', userId).single();
+                    const tier = (profile && profile.tier) || 'Free';
+                    
+                    const freeLimits = { aiCalls: 3, oralSessions: 0, tutorChats: 5, aiTraces: 0, pdfExports: 0, aiQuiz: 5, phantomTutor: 0 };
+                    
+                    if (tier === 'Free') {
+                        const limit = freeLimits[requestedFeature];
+                        if (limit === undefined) return res.status(400).json({ error: 'Feature non valida.' });
+                        if (limit === 0) return res.status(403).json({ error: 'Feature esclusiva Pro.' });
+                        
+                        const now = new Date();
+                        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                        
+                        const { data: usageData } = await supabaseAdmin
+                            .from('usage_metering')
+                            .select(requestedFeature)
+                            .eq('user_id', userId)
+                            .eq('month', currentMonth)
+                            .single();
+                            
+                        const currentUsage = usageData ? (usageData[requestedFeature] || 0) : 0;
+                        if (currentUsage >= limit) {
+                            return res.status(403).json({ error: 'Crediti mensili esauriti per questa funzionalità.' });
+                        }
+                        
+                        // Incrementa il credito
+                        const upsertPayload = { user_id: userId, month: currentMonth };
+                        upsertPayload[requestedFeature] = currentUsage + 1;
+                        await supabaseAdmin.from('usage_metering').upsert(upsertPayload, { onConflict: 'user_id, month' });
+                    }
                 }
+            } else {
+                // Ospite (nessun token) → in fase beta, lasciamo passare.
+                // Il rate limiter in-memory (sopra) protegge già da abusi.
+                console.warn(`[Proxy] Richiesta guest senza auth per feature "${requestedFeature}" — rate limiter only.`);
             }
         }
 
