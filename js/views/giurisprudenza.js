@@ -17,7 +17,11 @@ let searchState = {
     totalCount: 0,
     offset: 0,
     stats: null,
-    selectedId: null
+    selectedId: null,
+    tab: 'amministrativa',
+    vipDocs: null,       // Cache per schede VIP
+    vipFilter: '',       // Filtro testo per schede VIP
+    vipCategory: 'all'   // Categoria attiva VIP
 };
 
 const TIPI = ['SENTENZA', 'ORDINANZA', 'DECRETO', 'PARERE'];
@@ -110,22 +114,51 @@ export function renderGiurisprudenza() {
             <!-- Header -->
             <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-                    <h1 class="text-3xl font-display font-bold text-white mb-1">Biblioteca Giuridica</h1>
-                    <p class="text-gray-400 text-sm">Consultazione Provvedimenti e Dossier d'Autore (VIP)</p>
+                    <h1 class="text-3xl font-display font-bold text-white mb-1">La Giurisprudenza Decodificata</h1>
+                    <p class="text-gray-400 text-sm">Migliaia di pronunce di Sezioni Unite, Consiglio di Stato e TAR analizzate riga per riga per estrarne il cuore dogmatico.</p>
                 </div>
             </div>
 
             <!-- TABS -->
-            <div class="flex space-x-1 bg-gray-900/50 p-1 rounded-xl border border-gray-800 w-full md:w-max">
-                <button onclick="window._biblioTab('amministrativa')" class="px-6 py-2.5 rounded-lg text-sm font-bold transition flex items-center gap-2 ${!isCassazione ? 'bg-magis-600 text-white shadow-lg shadow-magis-600/20' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">
-                    <i data-lucide="scale" class="w-4 h-4"></i> Giustizia Amministrativa
+            <div class="flex flex-wrap gap-1 bg-gray-900/50 p-1 rounded-xl border border-gray-800 w-full md:w-max">
+                <button onclick="window._biblioTab('amministrativa')" class="px-4 md:px-6 py-2.5 rounded-lg text-sm font-bold transition flex items-center gap-2 ${searchState.tab === 'amministrativa' ? 'bg-magis-600 text-white shadow-lg shadow-magis-600/20' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">
+                    <i data-lucide="scale" class="w-4 h-4"></i> Giustizia Amm.
                 </button>
-                <button onclick="window._biblioTab('cassazione')" class="px-6 py-2.5 rounded-lg text-sm font-bold transition flex items-center gap-2 ${isCassazione ? 'bg-magis-600 text-white shadow-lg shadow-magis-600/20' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">
-                    <i data-lucide="book-open" class="w-4 h-4"></i> Cassazione SS.UU. (VIP)
+                <button onclick="window._biblioTab('cassazione')" class="px-4 md:px-6 py-2.5 rounded-lg text-sm font-bold transition flex items-center gap-2 ${searchState.tab === 'cassazione' ? 'bg-magis-600 text-white shadow-lg shadow-magis-600/20' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">
+                    <i data-lucide="book-open" class="w-4 h-4"></i> SS.UU. (VIP)
+                </button>
+                <button onclick="window._biblioTab('schede')" class="px-4 md:px-6 py-2.5 rounded-lg text-sm font-bold transition flex items-center gap-2 ${searchState.tab === 'schede' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i> Schede VIP
                 </button>
             </div>
 
-            ${!isCassazione ? `
+            ${searchState.tab === 'schede' ? `
+            <!-- SCHEDE VIP TAB -->
+            <div id="ga-vip-container" class="space-y-4">
+                <div class="glass-panel border border-gray-800 rounded-2xl p-5">
+                    <div class="flex flex-col md:flex-row gap-3 mb-4">
+                        <div class="flex-grow relative">
+                            <i data-lucide="search" class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                            <input id="ga-vip-search" type="text" placeholder="Filtra schede..." 
+                                class="w-full pl-10 pr-4 py-3 bg-gray-900 border border-gray-700 rounded-xl text-white text-sm placeholder-gray-500 focus:border-emerald-500 focus:outline-none transition"
+                                value="${searchState.vipFilter}"
+                                oninput="window._gaVipFilter(this.value)">
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        ${[{id:'all',label:'Tutte',icon:'layers'},{id:'ssuu_civili',label:'SS.UU. Civili',icon:'scale'},{id:'ssuu_penali',label:'SS.UU. Penali',icon:'gavel'},{id:'massimari',label:'Massimari',icon:'book-marked'},{id:'cds',label:'Consiglio di Stato',icon:'landmark'},{id:'tar',label:'TAR Lazio',icon:'file-text'}].map(c => 
+                            `<button onclick="window._gaVipCategory('${c.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${searchState.vipCategory === c.id ? 'bg-emerald-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 border border-gray-700'}">
+                                <i data-lucide="${c.icon}" class="w-3.5 h-3.5"></i> ${c.label}
+                            </button>`
+                        ).join('')}
+                    </div>
+                </div>
+                <div id="ga-vip-results" class="space-y-2">
+                    <div class="text-center py-12"><div class="inline-block w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div><p class="text-gray-500 text-sm mt-3">Caricamento schede...</p></div>
+                </div>
+            </div>
+            ` : `
+            ${searchState.tab === 'amministrativa' ? `
             <!-- Stats Bar (Amministrativa) -->
             <div id="ga-stats-bar" class="grid grid-cols-2 md:grid-cols-4 gap-3">
                 ${renderStatsBarPlaceholder()}
@@ -183,6 +216,7 @@ export function renderGiurisprudenza() {
             <div id="ga-results" class="space-y-3">
                 ${searchState.results.length > 0 ? renderResults() : renderEmptyState()}
             </div>
+            `}
         </div>
     `;
 }
@@ -322,7 +356,24 @@ function showDetailModal(data) {
 
     let innerContent = '';
 
-    if (isCassazione) {
+    if (data._isVip) {
+        // Scheda VIP aperta dal tab Schede
+        innerContent = `
+            <div class="mb-4 flex flex-wrap items-center gap-2">
+                <span class="px-2 py-1 rounded text-xs font-bold bg-emerald-900/50 text-emerald-300 border border-emerald-800 flex items-center gap-1">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> SCHEDA VIP
+                </span>
+                <span class="text-xs text-gray-500">${escapeHtml(data._materia || '')}</span>
+            </div>
+            <h2 class="text-2xl font-display font-bold text-white mb-6">${escapeHtml(data.titolo)}</h2>
+            <div class="prose prose-invert prose-dottrina max-w-none">
+                ${data._mdHtml}
+            </div>
+            <div class="mt-8 pt-4 border-t border-gray-800 text-[10px] text-gray-600 text-center">
+                Elaborato da ConcorsiPubblici.ai — Analisi dogmatica automatizzata
+            </div>
+        `;
+    } else if (isCassazione) {
         // Formattazione per Dossier VIP (usiamo il markdown renderer se disponibile, altrimenti testo)
         let mdHtml = '';
         if (window.marked && typeof window.marked.parse === 'function') {
@@ -421,15 +472,24 @@ function updateResultsUI() {
 
 window._biblioTab = (tabId) => {
     searchState.tab = tabId;
-    window._gaReset();
+    searchState.query = '';
+    searchState.tipo = '';
+    searchState.sede = '';
+    searchState.anno = '';
+    searchState.offset = 0;
+    searchState.results = [];
     if (tabId === 'cassazione') {
-        doSearch(); // Auto-load first page for Cassazione
+        doSearch();
     }
-    // Re-render main view to update tabs
+    // Re-render
     const main = document.getElementById('main-content');
     if (main) {
         main.innerHTML = renderGiurisprudenza();
         if (window.lucide) lucide.createIcons();
+    }
+    // Load VIP schede if tab is 'schede'
+    if (tabId === 'schede') {
+        loadVIPSchede();
     }
 };
 
@@ -477,3 +537,161 @@ window._gaLoadMore = () => {
 };
 
 window._gaDetail = (id) => { loadDetail(id); };
+
+// ── VIP SCHEDE LOGIC ──
+
+async function loadVIPSchede() {
+    const container = document.getElementById('ga-vip-results');
+    if (!container) return;
+
+    // Use cache if available
+    if (searchState.vipDocs) {
+        renderVIPSchede();
+        return;
+    }
+
+    if (!window.supabaseClient) {
+        container.innerHTML = '<p class="text-red-500 text-center py-8">Database non connesso.</p>';
+        return;
+    }
+
+    try {
+        let allDocs = [];
+        let offset = 0;
+        const limit = 1000;
+        while (true) {
+            const { data, error } = await window.supabaseClient
+                .from('rag_documents')
+                .select('id, titolo, tipo, materia, filename')
+                .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'massimario_cassazione'])
+                .order('titolo', { ascending: true })
+                .range(offset, offset + limit - 1);
+            if (error) throw error;
+            if (!data || data.length === 0) break;
+            allDocs.push(...data);
+            offset += limit;
+            if (data.length < limit) break;
+        }
+
+        // Dedup
+        const seen = new Set();
+        searchState.vipDocs = allDocs.filter(d => {
+            const key = d.filename + d.titolo;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+
+        renderVIPSchede();
+    } catch (err) {
+        console.error('[VIP] Errore:', err);
+        if (container) container.innerHTML = '<p class="text-red-500 text-center py-8">Errore di caricamento.</p>';
+    }
+}
+
+function renderVIPSchede() {
+    const container = document.getElementById('ga-vip-results');
+    if (!container || !searchState.vipDocs) return;
+
+    let docs = searchState.vipDocs;
+
+    // Category filter
+    if (searchState.vipCategory !== 'all') {
+        const catMap = {
+            'ssuu_civili': d => (d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') && (d.materia === 'Diritto Civile' || d.materia === 'Giurisprudenza Civile'),
+            'ssuu_penali': d => (d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') && (d.materia === 'Diritto Penale' || d.materia === 'Giurisprudenza Penale'),
+            'massimari': d => d.tipo === 'massimario_cassazione',
+            'cds': d => d.tipo === 'sentenza_admin' && d.filename?.startsWith('cds_'),
+            'tar': d => d.tipo === 'sentenza_admin' && d.filename?.startsWith('tar-'),
+        };
+        if (catMap[searchState.vipCategory]) docs = docs.filter(catMap[searchState.vipCategory]);
+    }
+
+    // Text filter
+    if (searchState.vipFilter) {
+        const q = searchState.vipFilter.toLowerCase();
+        docs = docs.filter(d => d.titolo?.toLowerCase().includes(q) || d.filename?.toLowerCase().includes(q));
+    }
+
+    const catLabel = (d) => {
+        if (d.tipo === 'massimario_cassazione') return { text: 'Massimario', color: 'amber' };
+        if ((d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') && (d.materia === 'Diritto Penale' || d.materia === 'Giurisprudenza Penale')) return { text: 'SS.UU. Penali', color: 'red' };
+        if (d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') return { text: 'SS.UU. Civili', color: 'magis' };
+        if (d.filename?.startsWith('cds_')) return { text: 'CdS', color: 'emerald' };
+        if (d.filename?.startsWith('tar-')) return { text: 'TAR', color: 'blue' };
+        return { text: 'Altro', color: 'gray' };
+    };
+
+    let html = `<div class="text-xs text-gray-500 mb-2">${docs.length} schede${searchState.vipFilter ? ` per "${escapeHtml(searchState.vipFilter)}"` : ''}</div>`;
+
+    if (docs.length === 0) {
+        html += '<div class="text-center py-12 text-gray-500"><p>Nessuna scheda trovata.</p></div>';
+    } else {
+        html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">';
+        docs.forEach(d => {
+            const cat = catLabel(d);
+            html += `
+                <div class="p-4 rounded-xl border border-gray-800 bg-gray-900/50 hover:bg-gray-800/70 hover:border-${cat.color}-500/50 transition cursor-pointer group relative overflow-hidden" onclick="window._gaVipOpen('${escapeHtml(d.filename.replace(/'/g, "\\'"))}', '${d.tipo}')">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-${cat.color}-900/50 text-${cat.color}-300 border border-${cat.color}-800/50">${cat.text}</span>
+                    </div>
+                    <p class="text-sm font-medium text-gray-200 group-hover:text-white transition line-clamp-2 leading-snug">${escapeHtml(d.titolo || d.filename)}</p>
+                </div>
+            `;
+        });
+        html += '</div>';
+    }
+
+    container.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+}
+
+window._gaVipFilter = (val) => {
+    searchState.vipFilter = val;
+    renderVIPSchede();
+};
+
+window._gaVipCategory = (cat) => {
+    searchState.vipCategory = cat;
+    // Re-render tabs to show active state + results
+    const main = document.getElementById('main-content');
+    if (main) {
+        main.innerHTML = renderGiurisprudenza();
+        if (window.lucide) lucide.createIcons();
+    }
+    loadVIPSchede();
+};
+
+window._gaVipOpen = async (filename, tipo) => {
+    if (!window.supabaseClient) return;
+    try {
+        const { data: docData, error: docError } = await window.supabaseClient
+            .from('rag_documents')
+            .select('id, titolo, materia')
+            .eq('filename', filename)
+            .limit(1)
+            .maybeSingle();
+        if (docError || !docData) throw docError || new Error('Not found');
+
+        const { data: chunkData, error: chunkError } = await window.supabaseClient
+            .from('rag_chunks')
+            .select('content')
+            .eq('document_id', docData.id)
+            .order('chunk_index', { ascending: true });
+        if (chunkError || !chunkData || chunkData.length === 0) throw chunkError || new Error('Chunks not found');
+
+        const fullContent = chunkData.map(c => c.content).join('\n\n');
+        let mdHtml = window.marked ? window.marked.parse(fullContent) : `<div class="whitespace-pre-wrap">${escapeHtml(fullContent)}</div>`;
+
+        showDetailModal({
+            titolo: docData.titolo,
+            filename: filename,
+            testo_completo: fullContent,
+            _isVip: true,
+            _mdHtml: mdHtml,
+            _materia: docData.materia
+        });
+    } catch (err) {
+        console.error('[VIP] Errore apertura:', err);
+    }
+};

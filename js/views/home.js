@@ -271,12 +271,12 @@ export function renderHome() {
                     </button>
                 </div>
 
-                <div class="col-span-1 md:col-span-2 border border-emerald-900/50 rounded-2xl p-6 glass-panel card-hover flex flex-col md:flex-row justify-center items-center gap-4 bg-gradient-to-r from-emerald-950/30 to-gray-900/50 cursor-pointer group shadow-lg shadow-emerald-500/5 relative overflow-hidden" onclick="app.navigate('giurisprudenza')">
+                <div class="col-span-1 md:col-span-2 border border-emerald-500/30 rounded-2xl p-6 glass-panel card-hover flex flex-col md:flex-row justify-center items-center gap-4 bg-gradient-to-r from-emerald-950/30 to-gray-900/50 cursor-pointer group shadow-lg shadow-emerald-500/10 relative overflow-hidden" onclick="app.navigate('giurisprudenza')">
                     <div class="absolute top-0 right-0 p-3 opacity-10"><i data-lucide="landmark" class="w-24 h-24"></i></div>
                     <i data-lucide="scale" class="text-emerald-400 w-10 h-10 transition-transform group-hover:scale-110 shrink-0"></i>
                     <div class="text-center md:text-left relative z-10">
-                        <h3 class="text-lg font-bold text-white mb-1">Banca Dati Giurisprudenza</h3>
-                        <p class="text-gray-400 text-sm">~290.000 decisioni e pareri della Giustizia Amministrativa</p>
+                        <h3 class="text-lg font-bold text-white mb-1">La Giurisprudenza Decodificata</h3>
+                        <p class="text-gray-400 text-sm">Migliaia di pronunce di Sezioni Unite, Consiglio di Stato e TAR analizzate riga per riga per estrarne il cuore dogmatico.</p>
                     </div>
                 </div>
 
