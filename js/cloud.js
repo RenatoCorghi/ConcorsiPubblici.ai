@@ -254,6 +254,26 @@ export const cloud = {
         return !error;
     },
 
+    pushCommunityComment: async function(commentObj) {
+        if (!cloud.user) return false;
+        const dbPayload = {
+            id: commentObj.id,
+            post_id: commentObj.post_id,
+            user_id: cloud.user.id,
+            user_name: commentObj.user_name,
+            user_avatar: commentObj.user_avatar,
+            content: commentObj.content,
+            created_at: new Date().toISOString()
+        };
+
+        const { error } = await supabaseClient
+            .from('community_comments')
+            .insert(dbPayload);
+            
+        if (error) console.error("Errore Push Comment Supabase:", error);
+        return !error;
+    },
+
     // Aggiungi un like su Supabase (rpc call o update)
     likeCommunityPost: async function(postId, newLikes) {
         if (!cloud.user) return false;
@@ -291,6 +311,28 @@ export const cloud = {
                     timestamp: new Date(row.created_at).toLocaleDateString('it-IT')
                 };
             });
+            
+            // Scarica anche i commenti associati
+            const { data: commentsData, error: commentsError } = await supabaseClient
+                .from('community_comments')
+                .select('*')
+                .in('post_id', Object.keys(cloudMap))
+                .order('created_at', { ascending: true });
+                
+            if (!commentsError && commentsData) {
+                commentsData.forEach(c => {
+                    if (cloudMap[c.post_id]) {
+                        if (!cloudMap[c.post_id].comments) cloudMap[c.post_id].comments = [];
+                        cloudMap[c.post_id].comments.push({
+                            id: c.id,
+                            user_name: c.user_name || 'Concorsista',
+                            user_avatar: c.user_avatar || null,
+                            content: c.content,
+                            timestamp: new Date(c.created_at).toLocaleDateString('it-IT')
+                        });
+                    }
+                });
+            }
             
             // Fonde i post tenendo priorità DB
             var merged = DB_COMMUNITY.posts.slice();

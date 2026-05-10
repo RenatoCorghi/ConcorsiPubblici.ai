@@ -127,8 +127,20 @@ export function renderCommunityForum() {
                 <p class="text-gray-300 text-sm leading-relaxed mb-4 whitespace-pre-wrap">${escapeHtml(p.content)}</p>
                 <div class="flex items-center gap-4 border-t border-gray-800 pt-3">
                     <button id="like-btn-${p.id}" onclick="app.likePost('${p.id}')" class="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-400 transition group"><i data-lucide="heart" class="w-4 h-4 group-hover:fill-current"></i> ${p.likes}</button>
-                    <button onclick="window.showToast('La funzione Rispondi sarà attiva a breve!', 'info')" class="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-400 transition"><i data-lucide="message-circle" class="w-4 h-4"></i> Rispondi</button>
+                    <button onclick="app.toggleComments('${p.id}')" class="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-400 transition"><i data-lucide="message-circle" class="w-4 h-4"></i> Rispondi (<span id="comments-count-${p.id}">${p.comments ? p.comments.length : 0}</span>)</button>
                     <button class="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition ml-auto hidden sm:flex"><i data-lucide="share-2" class="w-4 h-4"></i> Condividi</button>
+                </div>
+                
+                <!-- COMMENTS SECTION (HIDDEN BY DEFAULT) -->
+                <div id="comments-section-${p.id}" class="hidden mt-4 pt-4 border-t border-gray-800/50">
+                    <div id="comments-list-${p.id}" class="space-y-3 mb-3 max-h-60 overflow-y-auto custom-scrollbar pr-2">
+                        <!-- Commenti renderizzati dinamicamente -->
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <img src="${AppState.userProfile?.avatar || 'https://i.pravatar.cc/150?u=guest'}" class="w-6 h-6 rounded-full border border-gray-700 shrink-0" onerror="this.src='https://i.pravatar.cc/150?u=fallback'"/>
+                        <input type="text" id="comment-input-${p.id}" onkeypress="if(event.key==='Enter') app.submitComment('${p.id}')" placeholder="Scrivi una risposta..." class="flex-grow bg-gray-950 border border-gray-800 rounded-full px-4 py-1.5 text-xs text-white focus:outline-none focus:border-magis-500 transition" />
+                        <button onclick="app.submitComment('${p.id}')" class="text-blue-500 hover:text-blue-400 transition p-1.5 shrink-0"><i data-lucide="send" class="w-4 h-4"></i></button>
+                    </div>
                 </div>
             </div>
         `;

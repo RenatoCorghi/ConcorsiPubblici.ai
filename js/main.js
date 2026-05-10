@@ -133,6 +133,8 @@ export const app = {
     closeNewPostModal: function () { CommunityController.closeNewPostModal(); },
     submitNewPost: function () { CommunityController.submitNewPost(); },
     likePost: function (id) { CommunityController.likePost(id); },
+    toggleComments: function(id) { CommunityController.toggleComments(id); },
+    submitComment: function(id) { CommunityController.submitComment(id); },
 
     // --- Glossario & SRS ---
     showIstituto: function (istituto, materia) { showIstitutoDettagli(istituto, materia); },
