@@ -842,30 +842,49 @@ export const LezioneController = {
         var msg = (AppState.lezioneChat || []).find(m => m.id === msgId);
         if (!msg) return;
 
-        // Cambia stato bottone
         var spanEl = btn.querySelector('span');
-        var svgEl = btn.querySelector('svg');
-        
-        // Se sta già riproducendo, ferma
-        if (btn.dataset.playing === 'true') {
+        var state = btn.dataset.ttsState || 'idle'; // idle | loading | playing | paused
+
+        // === PAUSA (sta suonando → metti in pausa) ===
+        if (state === 'playing') {
             if (window._currentTtsAudio) {
                 window._currentTtsAudio.pause();
-                window._currentTtsAudio = null;
             }
-            btn.dataset.playing = 'false';
-            spanEl.textContent = 'Ascolta';
+            btn.dataset.ttsState = 'paused';
+            spanEl.textContent = '▶️ Riprendi';
             btn.classList.remove('text-amber-400');
-            btn.classList.add('text-gray-500');
+            btn.classList.add('text-blue-400');
             return;
         }
 
-        // Ferma eventuale audio precedente
+        // === RIPRENDI (era in pausa → riprendi da dove eravamo) ===
+        if (state === 'paused' && window._currentTtsAudio && window._currentTtsBtn === btn) {
+            window._currentTtsAudio.play();
+            btn.dataset.ttsState = 'playing';
+            spanEl.textContent = '⏸ Pausa';
+            btn.classList.remove('text-blue-400');
+            btn.classList.add('text-amber-400');
+            return;
+        }
+
+        // === PLAY (prima volta o da un altro messaggio) ===
+
+        // Ferma eventuale audio precedente di un ALTRO messaggio
         if (window._currentTtsAudio) {
             window._currentTtsAudio.pause();
             window._currentTtsAudio = null;
+            // Reset bottone precedente
+            if (window._currentTtsBtn && window._currentTtsBtn !== btn) {
+                window._currentTtsBtn.dataset.ttsState = 'idle';
+                var prevSpan = window._currentTtsBtn.querySelector('span');
+                if (prevSpan) prevSpan.textContent = '🎧 Ascolta questo modulo';
+                window._currentTtsBtn.classList.remove('text-amber-400', 'text-blue-400', 'text-green-500');
+                window._currentTtsBtn.classList.add('text-amber-300');
+            }
         }
 
-        spanEl.textContent = 'Caricamento...';
+        btn.dataset.ttsState = 'loading';
+        spanEl.textContent = '⏳ Caricamento audio...';
         btn.classList.add('animate-pulse');
 
         try {
@@ -901,30 +920,36 @@ export const LezioneController = {
             var audio = new Audio(audioUrl);
 
             window._currentTtsAudio = audio;
-            btn.dataset.playing = 'true';
+            window._currentTtsBtn = btn;
+            btn.dataset.ttsState = 'playing';
             btn.classList.remove('animate-pulse');
-            spanEl.textContent = '⏹ Stop';
-            btn.classList.remove('text-gray-500');
+            spanEl.textContent = '⏸ Pausa';
+            btn.classList.remove('text-amber-300');
             btn.classList.add('text-amber-400');
 
             audio.onended = function() {
-                btn.dataset.playing = 'false';
-                spanEl.textContent = '✓ Ascoltato';
+                btn.dataset.ttsState = 'idle';
+                spanEl.textContent = '🔁 Riascolta';
                 btn.classList.remove('text-amber-400');
                 btn.classList.add('text-green-500');
-                btn.disabled = false;
                 URL.revokeObjectURL(audioUrl);
                 window._currentTtsAudio = null;
+                window._currentTtsBtn = null;
             };
 
             audio.play();
 
         } catch(e) {
             console.error('[TTS] Errore:', e);
+            btn.dataset.ttsState = 'idle';
             btn.classList.remove('animate-pulse');
-            spanEl.textContent = 'Errore TTS';
+            spanEl.textContent = '❌ Errore TTS';
             btn.classList.add('text-red-400');
-            setTimeout(() => { spanEl.textContent = 'Ascolta'; btn.classList.remove('text-red-400'); btn.classList.add('text-gray-500'); }, 3000);
+            setTimeout(() => { 
+                spanEl.textContent = '🎧 Ascolta questo modulo'; 
+                btn.classList.remove('text-red-400'); 
+                btn.classList.add('text-amber-300'); 
+            }, 3000);
         }
     },
 
