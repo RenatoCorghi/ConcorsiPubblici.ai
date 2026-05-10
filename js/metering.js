@@ -292,8 +292,13 @@ export const Metering = {
      * Admin whitelistati → sempre Elite.
      */
     _getTier() {
-        const email = AppState.userProfile?.email || AppState.user?.email || '';
-        if (this._ADMIN_EMAILS.includes(email.toLowerCase())) {
+        // Cerca email da userProfile, cloud.user, o session Supabase
+        const email = (
+            AppState.userProfile?.email || 
+            window.supabaseClient?._currentSession?.user?.email ||
+            ''
+        ).toLowerCase();
+        if (email && this._ADMIN_EMAILS.includes(email)) {
             return 'Elite';
         }
         return (AppState.userProfile && AppState.userProfile.tier) || 'Free';

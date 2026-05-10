@@ -12,6 +12,81 @@ import { startTimerLoop, stopTimerLoop, saveTimerState } from '../timer.js';
 import { Gamification } from '../gamification.js';
 import { Metering } from '../metering.js';
 
+/**
+ * Mostra un popup trial che spiega all'utente Free cosa sta per vedere.
+ * @param {'debrief'|'lezione'} type - Tipo di contenuto trial
+ * @param {Function} onContinue - Callback se l'utente clicca "Vedi la Demo"
+ */
+function _showTrialModal(type, onContinue) {
+    // Rimuovi eventuali modali precedenti
+    document.getElementById('trial-modal-overlay')?.remove();
+
+    const configs = {
+        debrief: {
+            icon: '📋',
+            title: 'Debrief Pre-Tema di Prova',
+            desc: 'Stai per visualizzare un <strong>Debrief di esempio</strong> sulla <em>Caparra Confirmatoria</em>. I Debrief personalizzati su qualsiasi traccia sono disponibili con i piani a pagamento.',
+            features: ['Decodifica profonda della traccia', 'Schema di svolgimento in 8 punti', 'Giurisprudenza chiave con massime', 'Insidie da evitare + consiglio strategico']
+        },
+        lezione: {
+            icon: '📖',
+            title: 'Lectio Magistralis di Prova',
+            desc: 'Stai per assistere a una <strong>Lectio Magistralis di esempio</strong> sull\'<em>Autotutela Amministrativa</em> in 5 moduli. Le Lectio personalizzate su qualsiasi argomento sono disponibili con i piani a pagamento.',
+            features: ['5 moduli di approfondimento sistematico', 'Taglio nomofilattico da concorso', 'Giurisprudenza aggiornata integrata', 'Ascolto audio con slide sincronizzate']
+        }
+    };
+    const c = configs[type] || configs.debrief;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'trial-modal-overlay';
+    overlay.className = 'fixed inset-0 z-[9998] flex items-center justify-center p-4';
+    overlay.style.background = 'rgba(0,0,0,0.75)';
+    overlay.style.backdropFilter = 'blur(8px)';
+
+    overlay.innerHTML = `
+        <div class="bg-gray-900 border border-gray-700/50 rounded-3xl max-w-md w-full p-8 modal-entry shadow-2xl relative">
+            <button onclick="this.closest('#trial-modal-overlay').remove()" class="absolute top-4 right-4 text-gray-500 hover:text-white transition text-xl">✕</button>
+            
+            <div class="text-center mb-6">
+                <span class="text-5xl mb-3 block">${c.icon}</span>
+                <h3 class="text-xl font-display font-bold text-white mb-2">${c.title}</h3>
+                <p class="text-gray-400 text-sm leading-relaxed">${c.desc}</p>
+            </div>
+
+            <div class="bg-gray-800/50 rounded-xl p-4 mb-6 border border-gray-700/30">
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Cosa vedrai:</p>
+                <ul class="space-y-2">
+                    ${c.features.map(f => `
+                        <li class="flex items-start gap-2 text-sm text-gray-300">
+                            <span class="text-green-400 mt-0.5">✓</span>
+                            <span>${f}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <button id="trial-modal-continue" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-xl font-bold text-base shadow-lg shadow-amber-500/20 transition hover:scale-[1.02]">
+                    ${c.icon} Guarda la Demo Gratuita
+                </button>
+                <button onclick="this.closest('#trial-modal-overlay').remove(); if(typeof navigateToRoute==='function') navigateToRoute('pricing')" class="w-full py-3 bg-gradient-to-r from-magis-700 to-magis-600 hover:from-magis-600 hover:to-magis-500 text-white rounded-xl font-semibold text-sm transition hover:scale-[1.02] flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    Sblocca Tutto — Vedi i Piani
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Bind del bottone "Guarda la Demo"
+    document.getElementById('trial-modal-continue').addEventListener('click', () => {
+        overlay.remove();
+        if (typeof onContinue === 'function') onContinue();
+    });
+}
+// Esponi globalmente per uso cross-controller
+window._showTrialModal = _showTrialModal;
 
 
 export const SimulationController = {
@@ -37,15 +112,13 @@ export const SimulationController = {
         // --- TRIAL GATE (Free Tier) ---
         const tier = Metering._getTier();
         if (tier === 'Free') {
-            import('../trial_content.js').then(({ TRIAL_CONTENT }) => {
-                AppState.currentSimulationTask = TRIAL_CONTENT.briefing.traccia;
-                AppState.currentBriefing = TRIAL_CONTENT.briefing.result;
-                navigateToRoute('briefing');
-                if (typeof window.app !== 'undefined' && window.app.renderView) {
-                    window.app.renderView();
-                } else if (typeof renderView === 'function') {
-                    renderView();
-                }
+            _showTrialModal('debrief', () => {
+                import('../trial_content.js').then(({ TRIAL_CONTENT }) => {
+                    AppState.currentSimulationTask = TRIAL_CONTENT.briefing.traccia;
+                    AppState.currentBriefing = TRIAL_CONTENT.briefing.result;
+                    navigateToRoute('briefing');
+                    if (typeof renderView === 'function') renderView();
+                });
             });
             return;
         }

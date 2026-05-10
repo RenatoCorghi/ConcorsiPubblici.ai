@@ -25,6 +25,7 @@ export const cloud = {
                 AppState.userProfile = {
                     id: session.user.id,
                     name: name,
+                    email: session.user.email,
                     avatar: avatarUrl,
                     tier: 'Free',
                     concorso: AppState.userProfile?.concorso || 'Magistratura',

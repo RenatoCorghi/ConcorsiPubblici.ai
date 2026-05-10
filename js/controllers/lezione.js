@@ -192,7 +192,8 @@ export const LezioneController = {
         // --- TRIAL GATE (Free Tier) ---
         const tier = Metering._getTier();
         if (tier === 'Free') {
-            this._startTrialLectio();
+            const self = this;
+            window._showTrialModal('lezione', () => self._startTrialLectio());
             return;
         }
 
@@ -301,7 +302,8 @@ export const LezioneController = {
         // --- TRIAL GATE (Free Tier) ---
         const tier = Metering._getTier();
         if (tier === 'Free') {
-            this._startTrialLectio();
+            const self = this;
+            window._showTrialModal('lezione', () => self._startTrialLectio());
             return;
         }
 
@@ -416,7 +418,8 @@ export const LezioneController = {
         // --- TRIAL GATE (Free Tier) ---
         const tier = Metering._getTier();
         if (tier === 'Free') {
-            this._startTrialLectio();
+            const self = this;
+            window._showTrialModal('lezione', () => self._startTrialLectio());
             return;
         }
 
