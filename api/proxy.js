@@ -386,6 +386,9 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Payload rifiutato: Manca la feature. Sicurezza anti-abuso attivata.' });
         }
         
+        // Feature che richiedono registrazione (niente ospiti)
+        const REGISTRATION_REQUIRED_FEATURES = ['aiCalls', 'tutorChats'];
+        
         // Bypass metering SOLO in sviluppo locale (server-side check, non spoofabile)
         const isLocalDev = process.env.VERCEL_ENV !== 'production' && process.env.NODE_ENV !== 'production';
         
@@ -413,7 +416,7 @@ export default async function handler(req, res) {
                     const { data: profile } = await supabaseAdmin.from('profiles').select('tier').eq('id', userId).single();
                     const tier = (profile && profile.tier) || 'Free';
                     
-                    const freeLimits = { aiCalls: 3, oralSessions: 0, tutorChats: 5, aiTraces: 0, pdfExports: 0, aiQuiz: 5, phantomTutor: 0 };
+                    const freeLimits = { aiCalls: 3, oralSessions: 0, tutorChats: 5, aiTraces: 0, pdfExports: 0, aiQuiz: 50, phantomTutor: 0 };
                     
                     if (tier === 'Free') {
                         const limit = freeLimits[requestedFeature];
@@ -442,8 +445,12 @@ export default async function handler(req, res) {
                     }
                 }
             } else {
-                // Ospite (nessun token) → in fase beta, lasciamo passare.
-                // Il rate limiter in-memory (sopra) protegge già da abusi.
+                // --- Ospite (nessun token) ---
+                // Blocca le feature che richiedono registrazione
+                if (REGISTRATION_REQUIRED_FEATURES.includes(requestedFeature)) {
+                    return res.status(401).json({ error: 'Devi registrarti per usare questa funzionalità. È gratuito!' });
+                }
+                // Per le altre feature (quiz), il rate limiter in-memory protegge da abusi.
                 console.warn(`[Proxy] Richiesta guest senza auth per feature "${requestedFeature}" — rate limiter only.`);
             }
         }

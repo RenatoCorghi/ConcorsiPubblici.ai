@@ -24,12 +24,23 @@ export const SimulationController = {
      * Chiamato dal pulsante Play nelle card tracce.
      */
     openBriefing: async function(tracciaId) {
+        // --- GATE 1: Ospiti devono registrarsi ---
+        if (!Metering.requireRegistration('Briefing Pre-Tema')) return;
+
         // Usa == invece di === perché tracciaId può arrivare come stringa dal DOM ('1') o intero (1)
         const traccia = DB_TRACCE.find(t => t.id == tracciaId) || (AppState.aiTraces || []).find(t => t.id == tracciaId);
         if (!traccia) {
             showToast("Traccia non trovata.", "error");
             return;
         }
+
+        // --- GATE 2: Limite settimanale per materia (Free) ---
+        const materia = traccia.materia || 'Generale';
+        if (!Metering.canUseWeekly('briefing', materia)) {
+            Metering.showWeeklyPaywall('briefing', materia);
+            return;
+        }
+
         AppState.currentSimulationTask = traccia;
         AppState.currentBriefing = { loading: true };
         navigateToRoute('briefing');
@@ -43,6 +54,8 @@ export const SimulationController = {
             );
             if (result.success) {
                 AppState.currentBriefing = result;
+                // Consuma il credito settimanale solo se il briefing è stato generato con successo
+                Metering.consumeWeekly('briefing', materia);
             } else {
                 AppState.currentBriefing = { error: result.error || 'Errore sconosciuto' };
             }

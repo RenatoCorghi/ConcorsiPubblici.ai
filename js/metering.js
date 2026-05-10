@@ -3,6 +3,7 @@
    
    Traccia l'utilizzo delle feature AI per tier (Free / Pro).
    Persiste i contatori in localStorage con reset mensile.
+   Include gating settimanale per-categoria per briefing e lezioni.
    ============================================================ */
 
 import { AppState } from './state.js';
@@ -18,7 +19,7 @@ const TIER_LIMITS = {
         tutorChats: 999,     // Messaggi tutor AI al mese (alto per sviluppo — server-side metering gestisce i limiti reali)
         aiTraces: 0,         // Tracce generate dall'AI (bloccato)
         pdfExports: 0,       // Export PDF (bloccato)
-        aiQuiz: 5,           // Quiz generati dall'AI
+        aiQuiz: 999,           // Disabilitato: ora gestito settimanalmente (10/settimana)
         phantomTutor: 0      // Correzione live silente (bloccato)
     },
     Pro: {
@@ -43,10 +44,137 @@ const FEATURE_LABELS = {
 };
 
 const STORAGE_KEY = 'concorsi_metering';
+const WEEKLY_STORAGE_KEY = 'concorsi_weekly_metering';
+
+// --- WEEKLY LIMITS PER CATEGORIA (Free tier) ---
+// 1 briefing + 1 lezione per materia per settimana
+const WEEKLY_CATEGORY_LIMITS = {
+    Free: {
+        briefing: 1,   // 1 briefing per materia/settimana
+        lezione: 1,    // 1 lezione per materia/settimana
+        quiz: 10       // 10 quiz totali a settimana
+    },
+    Pro: {
+        briefing: Infinity,
+        lezione: Infinity,
+        quiz: Infinity
+    }
+};
+
+// --- HELPERS ---
+
+/**
+ * Calcola la settimana ISO corrente (es. "2026-W19")
+ */
+function _getCurrentWeek() {
+    const now = new Date();
+    const jan1 = new Date(now.getFullYear(), 0, 1);
+    const dayOfYear = Math.floor((now - jan1) / 86400000) + 1;
+    const weekNum = Math.ceil((dayOfYear + jan1.getDay()) / 7);
+    return `${now.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+}
 
 // --- MODULO METERING ---
 
 export const Metering = {
+
+    /**
+     * Controlla se l'utente corrente è un ospite (non registrato).
+     */
+    isGuest() {
+        const p = AppState.userProfile;
+        return !p || !p.id || p.id.startsWith('guest-');
+    },
+
+    /**
+     * Verifica che l'utente sia registrato. Se è un ospite, mostra il modale
+     * di registrazione con un messaggio specifico per la feature.
+     * @param {string} featureLabel — Nome della feature (es. "Briefing Pre-Tema")
+     * @returns {boolean} true se l'utente è registrato, false se è ospite
+     */
+    requireRegistration(featureLabel) {
+        if (!this.isGuest()) return true;
+
+        // Mostra il modale di auth con messaggio personalizzato
+        const modal = document.getElementById('onboarding-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            // Aggiorna il sottotitolo con il messaggio di gating
+            const subtitle = document.getElementById('auth-subtitle');
+            if (subtitle) {
+                subtitle.innerHTML = `<span class="text-amber-400 font-bold">🔐 Registrazione richiesta</span><br><span class="text-gray-400">Per accedere a <strong>${featureLabel}</strong> devi creare un account gratuito. Bastano 30 secondi!</span>`;
+            }
+        }
+        showToast(`Per usare ${featureLabel} devi registrarti (è gratuito!).`, "warning");
+        return false;
+    },
+
+    // --- WEEKLY PER-CATEGORY METERING ---
+
+    /**
+     * Ottieni lo store settimanale per-categoria.
+     */
+    _getWeeklyStore() {
+        const currentWeek = _getCurrentWeek();
+        let store;
+        try {
+            store = JSON.parse(localStorage.getItem(WEEKLY_STORAGE_KEY));
+        } catch (_) {
+            store = null;
+        }
+        if (!store || store.week !== currentWeek) {
+            store = { week: currentWeek, usage: {} };
+            localStorage.setItem(WEEKLY_STORAGE_KEY, JSON.stringify(store));
+        }
+        return store;
+    },
+
+    _saveWeeklyStore(store) {
+        localStorage.setItem(WEEKLY_STORAGE_KEY, JSON.stringify(store));
+    },
+
+    /**
+     * Controlla se l'utente può usare una feature settimanale per una categoria.
+     * @param {'briefing'|'lezione'} feature
+     * @param {string} category — La materia (es. "Diritto Civile")
+     * @returns {boolean}
+     */
+    canUseWeekly(feature, category) {
+        const tier = this._getTier();
+        const limits = WEEKLY_CATEGORY_LIMITS[tier] || WEEKLY_CATEGORY_LIMITS.Free;
+        if (limits[feature] === Infinity) return true;
+
+        const store = this._getWeeklyStore();
+        const key = `${feature}_${category}`;
+        return (store.usage[key] || 0) < limits[feature];
+    },
+
+    /**
+     * Consuma un credito settimanale per feature+categoria.
+     */
+    consumeWeekly(feature, category) {
+        const tier = this._getTier();
+        const limits = WEEKLY_CATEGORY_LIMITS[tier] || WEEKLY_CATEGORY_LIMITS.Free;
+        if (limits[feature] === Infinity) return;
+
+        const store = this._getWeeklyStore();
+        const key = `${feature}_${category}`;
+        store.usage[key] = (store.usage[key] || 0) + 1;
+        this._saveWeeklyStore(store);
+    },
+
+    /**
+     * Mostra il paywall settimanale quando una feature è esaurita per la categoria.
+     */
+    showWeeklyPaywall(feature, category) {
+        const label = feature === 'briefing' ? 'Briefing Pre-Tema' : 'Lezione Magistrale';
+        showToast(`⏳ Hai già usato il tuo ${label} settimanale per ${category}. Passa a Pro per uso illimitato!`, "warning");
+        setTimeout(() => {
+            var modal = document.getElementById('checkout-modal');
+            if (modal) modal.classList.remove('hidden');
+        }, 500);
+    },
+
 
     /**
      * Restituisce i dati di usage correnti dal localStorage.

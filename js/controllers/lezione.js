@@ -150,6 +150,9 @@ export const LezioneController = {
      * Pre-compila argomento e materia dalla traccia corrente.
      */
     startFromTraccia: function() {
+        // --- GATE: Ospiti devono registrarsi ---
+        if (!Metering.requireRegistration('Lezione Magistrale')) return;
+
         var traccia = AppState.currentSimulationTask;
         if (!traccia) return;
 
@@ -186,7 +189,13 @@ export const LezioneController = {
      * Avvio automatico della lezione quando si arriva dalla traccia.
      */
     _startAutoFromTraccia: async function(argomento, materia) {
-        // Paywall
+        // --- GATE: Limite settimanale per materia (Free) ---
+        if (!Metering.canUseWeekly('lezione', materia)) {
+            Metering.showWeeklyPaywall('lezione', materia);
+            return;
+        }
+
+        // Paywall mensile
         if (!Metering.canUse('tutorChats')) {
             Metering.showPaywall('tutorChats');
             return;
@@ -248,6 +257,7 @@ export const LezioneController = {
             var reply = data.choices[0].message.content.trim();
 
             Metering.consume('tutorChats');
+            Metering.consumeWeekly('lezione', materia);
             this._addMessage('ai', reply);
             this._speakIfEnabled(reply);
 
@@ -262,6 +272,9 @@ export const LezioneController = {
      * Avvia una nuova lezione.
      */
     start: async function() {
+        // --- GATE: Ospiti devono registrarsi ---
+        if (!Metering.requireRegistration('Lezione Magistrale')) return;
+
         var argomento = document.getElementById('lezione-argomento')?.value?.trim();
         var materia = document.getElementById('lezione-materia')?.value;
         var livello = window._lezione_livello || 'principiante';
@@ -272,9 +285,15 @@ export const LezioneController = {
             return;
         }
 
-        // Paywall
+        // Paywall mensile
         if (!Metering.canUse('tutorChats')) {
             Metering.showPaywall('tutorChats');
+            return;
+        }
+
+        // --- GATE: Limite settimanale per materia (Free) ---
+        if (!Metering.canUseWeekly('lezione', materia)) {
+            Metering.showWeeklyPaywall('lezione', materia);
             return;
         }
 
@@ -346,6 +365,7 @@ export const LezioneController = {
             var reply = data.choices[0].message.content.trim();
 
             Metering.consume('tutorChats');
+            Metering.consumeWeekly('lezione', materia);
             this._addMessage('ai', reply);
             this._speakIfEnabled(reply);
 
@@ -361,6 +381,9 @@ export const LezioneController = {
      * Genera il Modulo 1, poi auto-continua fino al Modulo 5.
      */
     startLectio: async function() {
+        // --- GATE: Ospiti devono registrarsi ---
+        if (!Metering.requireRegistration('Lectio Magistralis')) return;
+
         var argomento = document.getElementById('lezione-argomento')?.value?.trim();
         var materia = document.getElementById('lezione-materia')?.value;
 
@@ -370,9 +393,15 @@ export const LezioneController = {
             return;
         }
 
-        // Paywall
+        // Paywall mensile
         if (!Metering.canUse('tutorChats')) {
             Metering.showPaywall('tutorChats');
+            return;
+        }
+
+        // --- GATE: Limite settimanale per materia (Free) ---
+        if (!Metering.canUseWeekly('lezione', materia)) {
+            Metering.showWeeklyPaywall('lezione', materia);
             return;
         }
 

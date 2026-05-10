@@ -11,8 +11,9 @@ let userAnswers = []; // { selectedIdx: int, isCorrect: bool, questionObj: {} }
 
 export const QuizController = {
     startGenerator: async function(materia) {
-        if (!Metering.canUse('aiQuiz')) {
-            return Metering.showPaywall('aiQuiz');
+        if (!Metering.canUseWeekly('quiz', '_global')) {
+            Metering.showWeeklyPaywall('quiz', 'Quiz AI');
+            return;
         }
 
         const apiKey = "proxy-protected";
@@ -28,7 +29,7 @@ export const QuizController = {
         document.getElementById('quiz-setup-view').classList.remove('opacity-50', 'pointer-events-none');
 
         if (res.success && res.data && res.data.domande && res.data.domande.length > 0) {
-            Metering.consume('aiQuiz');
+            Metering.consumeWeekly('quiz', '_global');
             
             currentQuizData = res.data;
             currentQuestionIndex = 0;
@@ -44,8 +45,9 @@ export const QuizController = {
     },
 
     startQuizFromCase: async function() {
-        if (!Metering.canUse('aiQuiz')) {
-            return Metering.showPaywall('aiQuiz');
+        if (!Metering.canUseWeekly('quiz', '_global')) {
+            Metering.showWeeklyPaywall('quiz', 'Quiz AI');
+            return;
         }
 
         const apiKey = "proxy-protected";
@@ -60,7 +62,7 @@ export const QuizController = {
         document.getElementById('quiz-setup-view').classList.remove('opacity-50', 'pointer-events-none');
 
         if (res.success && res.data && res.data.domande && res.data.domande.length > 0) {
-            Metering.consume('aiQuiz');
+            Metering.consumeWeekly('quiz', '_global');
 
             currentQuizData = res.data;
             currentQuestionIndex = 0;
