@@ -170,6 +170,7 @@ IMPORTANTE: Produci testi molto corposi. I valori del JSON non devono essere sin
                 method: 'POST',
                 headers: await getAuthHeaders(),
                 body: JSON.stringify({
+                    feature: 'aiCalls',
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].CORR,
                     useRAG: true,
