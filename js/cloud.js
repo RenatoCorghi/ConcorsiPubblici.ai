@@ -270,8 +270,12 @@ export const cloud = {
             .from('community_comments')
             .insert(dbPayload);
             
-        if (error) console.error("Errore Push Comment Supabase:", error);
-        return !error;
+        if (error) {
+            console.error("Errore Push Comment Supabase:", error);
+            if (window.showToast) window.showToast("Errore salvataggio commento: " + (error.message || 'Database error'), 'error');
+            return false;
+        }
+        return true;
     },
 
     // Aggiungi un like su Supabase (rpc call o update)
