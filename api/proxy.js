@@ -386,27 +386,10 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: 'Payload rifiutato: Manca la feature. Sicurezza anti-abuso attivata.' });
         }
         
-        // Feature che richiedono registrazione (niente ospiti)
-        const REGISTRATION_REQUIRED_FEATURES = ['aiCalls', 'tutorChats'];
-        
-        // --- FAST ADMIN BYPASS (decodifica JWT locale, zero query DB) ---
-        const ADMIN_EMAILS = ['renatocorghi80@gmail.com'];
-        let isAdminBypass = false;
-        try {
-            const authToken = req.headers.authorization?.replace('Bearer ', '');
-            if (authToken) {
-                const payload = JSON.parse(Buffer.from(authToken.split('.')[1], 'base64').toString());
-                if (ADMIN_EMAILS.includes((payload.email || '').toLowerCase())) {
-                    isAdminBypass = true;
-                    console.log(`[Metering] Admin bypass for ${payload.email} — skipping all DB checks`);
-                }
-            }
-        } catch(e) { /* JWT decode fallito, procedi normalmente */ }
-        
         // Bypass metering SOLO in sviluppo locale (server-side check, non spoofabile)
         const isLocalDev = process.env.VERCEL_ENV !== 'production' && process.env.NODE_ENV !== 'production';
         
-        if (requestedFeature && !isLocalDev && !isAdminBypass) {
+        if (requestedFeature && !isLocalDev) {
             const authHeader = req.headers.authorization;
             
             if (authHeader) {
@@ -417,85 +400,50 @@ export default async function handler(req, res) {
                 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
                 
                 if (supabaseUrl && supabaseKey) {
-                    try {
-                        const meteringStart = Date.now();
-                        const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+                    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+                    
+                    // Valida JWT per ottenere utente
+                    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+                    if (userError || !userData?.user) {
+                        return res.status(401).json({ error: 'Token scaduto o non valido.' });
+                    }
+                    const userId = userData.user.id;
+                    
+                    // Controlla il piano
+                    const { data: profile } = await supabaseAdmin.from('profiles').select('tier').eq('id', userId).single();
+                    const tier = (profile && profile.tier) || 'Free';
+                    
+                    const freeLimits = { aiCalls: 3, oralSessions: 0, tutorChats: 5, aiTraces: 0, pdfExports: 0, aiQuiz: 5, phantomTutor: 0 };
+                    
+                    if (tier === 'Free') {
+                        const limit = freeLimits[requestedFeature];
+                        if (limit === undefined) return res.status(400).json({ error: 'Feature non valida.' });
+                        if (limit === 0) return res.status(403).json({ error: 'Feature esclusiva Pro.' });
                         
-                        // Valida JWT per ottenere utente
-                        const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
-                        if (userError || !userData?.user) {
-                            return res.status(401).json({ error: 'Token scaduto o non valido.' });
-                        }
-                        const userId = userData.user.id;
-                        const userEmail = (userData.user.email || '').toLowerCase();
+                        const now = new Date();
+                        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
                         
-                        // Admin whitelist — bypass tier check
-                        const ADMIN_EMAILS = [
-                            'renatocorghi80@gmail.com',
-                            // Aggiungi email di David qui
-                        ];
-                        
-                        let tier = 'Free';
-                        if (ADMIN_EMAILS.includes(userEmail)) {
-                            tier = 'Elite';
-                        } else {
-                            // Controlla il piano dal DB
-                            const { data: profile } = await supabaseAdmin.from('profiles').select('tier').eq('id', userId).single();
-                            tier = (profile && profile.tier) || 'Free';
-                        }
-                        
-                        console.log(`[Metering] User: ${userEmail}, Tier: ${tier}, Feature: ${requestedFeature}, Time: ${Date.now() - meteringStart}ms`);
-                        
-                        // Limiti mensili per tier (safety net — il gating reale è settimanale, lato client)
-                        const TIER_SERVER_LIMITS = {
-                            Free:    { aiCalls: 0, oralSessions: 0, tutorChats: 0, aiTraces: 0, pdfExports: 0, aiQuiz: 50, phantomTutor: 0 },
-                            Starter: { aiCalls: 1, oralSessions: 0, tutorChats: 20, aiTraces: 0, pdfExports: 0, aiQuiz: 50, phantomTutor: 0 },
-                            Pro:     { aiCalls: 8, oralSessions: 8, tutorChats: 60, aiTraces: 8, pdfExports: 999, aiQuiz: 999, phantomTutor: 0 },
-                            Elite:   { aiCalls: 999, oralSessions: 999, tutorChats: 999, aiTraces: 999, pdfExports: 999, aiQuiz: 999, phantomTutor: 999 }
-                        };
-                        
-                        const limits = TIER_SERVER_LIMITS[tier] || TIER_SERVER_LIMITS.Free;
-                        
-                        if (tier !== 'Elite') {
-                            const limit = limits[requestedFeature];
-                            if (limit === undefined) return res.status(400).json({ error: 'Feature non valida.' });
-                            if (limit === 0) {
-                                const tierLabel = tier === 'Free' ? 'Starter' : 'Pro';
-                                return res.status(403).json({ error: `Questa funzionalità è disponibile dal piano ${tierLabel} in su.` });
-                            }
+                        const { data: usageData } = await supabaseAdmin
+                            .from('usage_metering')
+                            .select(requestedFeature)
+                            .eq('user_id', userId)
+                            .eq('month', currentMonth)
+                            .single();
                             
-                            const now = new Date();
-                            const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-                            
-                            const { data: usageData } = await supabaseAdmin
-                                .from('usage_metering')
-                                .select(requestedFeature)
-                                .eq('user_id', userId)
-                                .eq('month', currentMonth)
-                                .single();
-                                
-                            const currentUsage = usageData ? (usageData[requestedFeature] || 0) : 0;
-                            if (currentUsage >= limit) {
-                                return res.status(403).json({ error: 'Crediti esauriti per questa funzionalità.' });
-                            }
-                            
-                            // Incrementa il credito
-                            const upsertPayload = { user_id: userId, month: currentMonth };
-                            upsertPayload[requestedFeature] = currentUsage + 1;
-                            await supabaseAdmin.from('usage_metering').upsert(upsertPayload, { onConflict: 'user_id, month' });
+                        const currentUsage = usageData ? (usageData[requestedFeature] || 0) : 0;
+                        if (currentUsage >= limit) {
+                            return res.status(403).json({ error: 'Crediti mensili esauriti per questa funzionalità.' });
                         }
-                    } catch (meteringError) {
-                        // Non bloccare la richiesta se il metering fallisce
-                        console.error('[Metering] Errore non bloccante:', meteringError.message);
+                        
+                        // Incrementa il credito
+                        const upsertPayload = { user_id: userId, month: currentMonth };
+                        upsertPayload[requestedFeature] = currentUsage + 1;
+                        await supabaseAdmin.from('usage_metering').upsert(upsertPayload, { onConflict: 'user_id, month' });
                     }
                 }
             } else {
-                // --- Ospite (nessun token) ---
-                // Blocca le feature che richiedono registrazione
-                if (REGISTRATION_REQUIRED_FEATURES.includes(requestedFeature)) {
-                    return res.status(401).json({ error: 'Devi registrarti per usare questa funzionalità. È gratuito!' });
-                }
-                // Per le altre feature (quiz), il rate limiter in-memory protegge da abusi.
+                // Ospite (nessun token) → in fase beta, lasciamo passare.
+                // Il rate limiter in-memory (sopra) protegge già da abusi.
                 console.warn(`[Proxy] Richiesta guest senza auth per feature "${requestedFeature}" — rate limiter only.`);
             }
         }
