@@ -219,6 +219,7 @@ export const LezioneController = {
         var userPrompt = `ATTENZIONE: Questa lezione è propedeutica allo svolgimento di un tema d'esame. La traccia che lo studente dovrà svolgere dopo la lezione è la seguente:\n\n"${argomento}"\n\nMateria: ${materia}.\n\nLo studente si è dichiarato di livello avanzato. Calibra la lezione con focus specifico sui profili problematici di QUESTA traccia. Nel Modulo 5, dai consigli specifici su come impostare QUESTO tema, non consigli generici.`;
 
         this._addMessage('user', `📝 Vorrei una lezione preparatoria alla traccia:\n*"${argomento.substring(0, 200)}..."*`);
+        this._addMessage('ai', `⏳ **Preparazione della lezione sulla traccia in corso...**\n\n_Sto analizzando la traccia d'esame, cercando i profili giuridici chiave e costruendo un percorso didattico mirato._\n\n🕐 **Tempo stimato: 30–60 secondi.** Non chiudere questa pagina.`);
         this._showTyping();
 
         var ragContext = await this._fetchRAGContext(argomento, materia);
@@ -334,6 +335,9 @@ export const LezioneController = {
         // Aggiungi messaggio utente alla chat
         this._addMessage('user', `Vorrei una lezione su: **${argomento}** (${materia})`);
 
+        // Avviso tempo di attesa
+        this._addMessage('ai', `⏳ **Sto preparando la tua lezione personalizzata...**\n\n_Un'analisi approfondita richiede il suo tempo — sto consultando il database giurisprudenziale e costruendo un percorso didattico su misura per te._\n\n🕐 **Tempo stimato: 30–60 secondi.** Non chiudere questa pagina.`);
+
         // Mostra indicatore
         this._showTyping();
 
@@ -445,6 +449,7 @@ export const LezioneController = {
 
         // Messaggio iniziale
         this._addMessage('user', `📖 Lectio Magistralis su: **${argomento}** (${materia})`);
+        this._addMessage('ai', `⏳ **Preparazione della Lectio Magistralis in corso...**\n\n_Il Maestro sta strutturando 5 moduli di lezione con analisi dogmatica e giurisprudenziale approfondita._\n\n🕐 **Tempo stimato: 30–60 secondi.** Non chiudere questa pagina.`);
         this._showTyping();
 
         var userPrompt = `Argomento della Lectio Magistralis: "${argomento}" (Materia: ${materia}). Genera ora il MODULO 1.`;

@@ -114,28 +114,43 @@ function renderLoadingState() {
             
             <div class="text-center space-y-4">
                 <h3 class="text-2xl font-bold font-display text-transparent bg-clip-text bg-gradient-to-r from-magis-400 to-indigo-400 animate-pulse">
-                    Elaborazione Strategia in corso...
+                    Il Commissario sta preparando il tuo Debrief...
                 </h3>
                 
-                <div class="space-y-2 opacity-80">
-                    <div class="flex items-center justify-center gap-3 text-sm text-gray-400">
-                        <i data-lucide="database" class="w-4 h-4 text-magis-500 animate-bounce"></i>
-                        <span>Ricerca giurisprudenza pertinente nel database</span>
+                <!-- Messaggio ad effetto -->
+                <div class="max-w-md mx-auto px-6 py-4 rounded-2xl bg-gradient-to-br from-magis-500/10 to-indigo-500/10 border border-magis-500/20">
+                    <p class="text-gray-300 text-sm leading-relaxed italic">
+                        "Un'analisi giurisprudenziale profonda richiede tempo — come quella di un vero Magistrato di Cassazione."
+                    </p>
+                    <div class="mt-3 flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        <span class="text-amber-300 font-bold text-sm">Tempo stimato: 30–60 secondi</span>
                     </div>
-                    <div class="flex items-center justify-center gap-3 text-sm text-gray-400">
-                        <i data-lucide="shield-alert" class="w-4 h-4 text-red-400 animate-bounce" style="animation-delay: 0.2s"></i>
-                        <span>Analisi delle insidie e trabocchetti nascosti</span>
+                    <p class="text-gray-500 text-xs mt-2">Non chiudere questa pagina.</p>
+                </div>
+                
+                <div class="space-y-2 opacity-80 mt-4">
+                    <div class="flex items-center justify-center gap-3 text-sm text-gray-400" id="loading-step-1">
+                        <div class="w-4 h-4 rounded-full border-2 border-magis-500 border-t-transparent animate-spin"></div>
+                        <span>Ricerca giurisprudenza nel database RAG</span>
                     </div>
-                    <div class="flex items-center justify-center gap-3 text-sm text-gray-400">
-                        <i data-lucide="map" class="w-4 h-4 text-blue-400 animate-bounce" style="animation-delay: 0.4s"></i>
+                    <div class="flex items-center justify-center gap-3 text-sm text-gray-500" id="loading-step-2">
+                        <div class="w-4 h-4 rounded-full border-2 border-gray-600"></div>
+                        <span>Analisi delle insidie e trabocchetti</span>
+                    </div>
+                    <div class="flex items-center justify-center gap-3 text-sm text-gray-500" id="loading-step-3">
+                        <div class="w-4 h-4 rounded-full border-2 border-gray-600"></div>
                         <span>Stesura dello schema logico di svolgimento</span>
                     </div>
                 </div>
             </div>
             
-            <!-- Barra di caricamento infinita -->
-            <div class="w-64 h-1.5 bg-gray-800 rounded-full overflow-hidden mt-6 relative shadow-[0_0_15px_rgba(99,102,241,0.5)]">
-                <div class="absolute top-0 left-0 h-full w-1/2 bg-gradient-to-r from-transparent via-magis-500 to-transparent animate-scan"></div>
+            <!-- Barra di caricamento con timer -->
+            <div class="w-72 space-y-2">
+                <div class="h-1.5 bg-gray-800 rounded-full overflow-hidden relative shadow-[0_0_15px_rgba(99,102,241,0.5)]">
+                    <div class="absolute top-0 left-0 h-full w-1/2 bg-gradient-to-r from-transparent via-magis-500 to-transparent animate-scan"></div>
+                </div>
+                <div class="text-center text-gray-600 text-xs font-mono" id="briefing-timer">00:00</div>
             </div>
         </div>
         <style>
@@ -154,6 +169,35 @@ function renderLoadingState() {
                 animation: spin-reverse 3s linear infinite;
             }
         </style>
+        <script>
+            (function() {
+                var start = Date.now();
+                var steps = ['loading-step-1','loading-step-2','loading-step-3'];
+                var stepTimes = [8000, 18000, 30000];
+                var timerEl = document.getElementById('briefing-timer');
+                var iv = setInterval(function() {
+                    var elapsed = Math.floor((Date.now() - start) / 1000);
+                    var m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+                    var s = String(elapsed % 60).padStart(2, '0');
+                    if (timerEl) timerEl.textContent = m + ':' + s;
+                    for (var i = 0; i < steps.length; i++) {
+                        var el = document.getElementById(steps[i]);
+                        if (el && Date.now() - start > stepTimes[i]) {
+                            el.querySelector('div').className = 'w-4 h-4 rounded-full border-2 border-magis-500 border-t-transparent animate-spin';
+                            el.querySelector('span').className = 'text-gray-300';
+                            if (i > 0) {
+                                var prevEl = document.getElementById(steps[i-1]);
+                                if (prevEl) {
+                                    prevEl.querySelector('div').className = 'w-4 h-4 rounded-full bg-green-500';
+                                    prevEl.querySelector('div').innerHTML = '<svg class="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+                                }
+                            }
+                        }
+                    }
+                    if (!document.getElementById('briefing-timer')) clearInterval(iv);
+                }, 1000);
+            })();
+        </script>
     `;
 }
 
