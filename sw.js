@@ -1,4 +1,4 @@
-const CACHE_NAME = 'concorsi-ai-v31';
+const CACHE_NAME = 'concorsi-ai-v32';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -11,6 +11,13 @@ const ASSETS_TO_CACHE = [
     './js/state.js',
     './js/cloud.js',
     './js/api.js',
+    './js/api/helpers.js',
+    './js/api/prompts.js',
+    './js/api/evaluation.js',
+    './js/api/orale.js',
+    './js/api/tutor.js',
+    './js/api/quiz.js',
+    './js/api/traces.js',
     './js/utils.js',
     './js/timer.js',
     './js/theme.js',
