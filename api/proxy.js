@@ -411,10 +411,22 @@ export default async function handler(req, res) {
                         return res.status(401).json({ error: 'Token scaduto o non valido.' });
                     }
                     const userId = userData.user.id;
+                    const userEmail = (userData.user.email || '').toLowerCase();
                     
-                    // Controlla il piano
-                    const { data: profile } = await supabaseAdmin.from('profiles').select('tier').eq('id', userId).single();
-                    const tier = (profile && profile.tier) || 'Free';
+                    // Admin whitelist — bypass tier check
+                    const ADMIN_EMAILS = [
+                        'renatocorghi80@gmail.com',
+                        // Aggiungi email di David qui
+                    ];
+                    
+                    let tier = 'Free';
+                    if (ADMIN_EMAILS.includes(userEmail)) {
+                        tier = 'Elite';
+                    } else {
+                        // Controlla il piano dal DB
+                        const { data: profile } = await supabaseAdmin.from('profiles').select('tier').eq('id', userId).single();
+                        tier = (profile && profile.tier) || 'Free';
+                    }
                     
                     // Limiti mensili per tier (safety net — il gating reale è settimanale, lato client)
                     const TIER_SERVER_LIMITS = {
