@@ -161,17 +161,43 @@ export const CommunityController = {
         }
 
         container.innerHTML = post.comments.map(c => `
-            <div class="flex items-start gap-2">
+            <div class="flex items-start gap-2 group/comment">
                 <img src="${c.user_avatar || 'https://i.pravatar.cc/150?u=fallback'}" onerror="this.src='https://i.pravatar.cc/150?u=guest'" class="w-6 h-6 rounded-full object-cover border border-gray-700 shrink-0" />
-                <div class="bg-gray-800/60 rounded-xl rounded-tl-sm px-3 py-2 text-sm text-gray-200">
-                    <div class="flex items-center gap-2 mb-0.5">
-                        <span class="font-bold text-[11px] text-gray-300">${c.user_name || 'Concorsista'}</span>
-                        <span class="text-[9px] text-gray-500">${c.timestamp || 'Adesso'}</span>
+                <div class="bg-gray-800/60 rounded-xl rounded-tl-sm px-3 py-2 text-sm text-gray-200 w-full relative">
+                    <div class="flex items-center justify-between mb-0.5 gap-4">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-[11px] text-gray-300">${c.user_name || 'Concorsista'}</span>
+                            <span class="text-[9px] text-gray-500">${c.timestamp || 'Adesso'}</span>
+                        </div>
+                        ${(window.cloud && cloud.user && c.user_id === cloud.user.id) || (AppState.userProfile?.id === c.user_id) ? `
+                        <button onclick="app.deleteComment('${postId}', '${c.id}')" class="text-gray-600 hover:text-red-400 transition opacity-0 group-hover/comment:opacity-100" title="Elimina">
+                            <i data-lucide="trash-2" class="w-3 h-3"></i>
+                        </button>
+                        ` : ''}
                     </div>
-                    <p class="text-xs">${c.content}</p>
+                    <p class="text-xs break-words">${c.content}</p>
                 </div>
             </div>
         `).join('');
+        if (window.lucide) lucide.createIcons();
+    },
+
+    deleteComment: function(postId, commentId) {
+        if (!confirm("Sei sicuro di voler eliminare questo commento?")) return;
+
+        var post = DB_COMMUNITY.posts.find(p => p.id === postId);
+        if (!post) return;
+
+        post.comments = post.comments.filter(c => c.id !== commentId);
+        
+        var countSpan = document.getElementById('comments-count-' + postId);
+        if (countSpan) countSpan.innerText = post.comments.length;
+        
+        this.renderCommentsList(postId);
+
+        if (window.cloud && cloud.user) {
+            cloud.deleteCommunityComment(commentId);
+        }
     },
 
     submitComment: function(postId) {

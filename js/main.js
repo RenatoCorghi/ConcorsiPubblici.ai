@@ -135,6 +135,7 @@ export const app = {
     likePost: function (id) { CommunityController.likePost(id); },
     toggleComments: function(id) { CommunityController.toggleComments(id); },
     submitComment: function(id) { CommunityController.submitComment(id); },
+    deleteComment: function(postId, commentId) { CommunityController.deleteComment(postId, commentId); },
 
     // --- Glossario & SRS ---
     showIstituto: function (istituto, materia) { showIstitutoDettagli(istituto, materia); },

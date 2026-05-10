@@ -278,6 +278,21 @@ export const cloud = {
         return true;
     },
 
+    deleteCommunityComment: async function(commentId) {
+        if (!cloud.user) return false;
+        const { error } = await supabaseClient
+            .from('community_comments')
+            .delete()
+            .eq('id', commentId);
+            
+        if (error) {
+            console.error("Errore Delete Comment Supabase:", error);
+            if (window.showToast) window.showToast("Errore eliminazione commento", "error");
+            return false;
+        }
+        return true;
+    },
+
     // Aggiungi un like su Supabase (rpc call o update)
     likeCommunityPost: async function(postId, newLikes) {
         if (!cloud.user) return false;
@@ -329,6 +344,7 @@ export const cloud = {
                         if (!cloudMap[c.post_id].comments) cloudMap[c.post_id].comments = [];
                         cloudMap[c.post_id].comments.push({
                             id: c.id,
+                            user_id: c.user_id,
                             user_name: c.user_name || 'Concorsista',
                             user_avatar: c.user_avatar || null,
                             content: c.content,
