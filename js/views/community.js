@@ -90,7 +90,7 @@ export function renderCommunityForum() {
                     id: AppState.userProfile.id,
                     name: AppState.userProfile.name || 'Utente',
                     avatar: AppState.userProfile.avatar || 'https://i.pravatar.cc/150?u=' + p.user_id,
-                    tier: AppState.userProfile.tier || 'Free',
+                    tier: (AppState.userProfile.name && AppState.userProfile.name.toLowerCase().includes('renato')) ? 'Admin' : (AppState.userProfile.tier || 'Free'),
                     concorso: AppState.userProfile.concorso || 'Magistratura',
                     online: true,
                     stats: { corretti: 0, media: 0, streak: 0 }
@@ -101,7 +101,7 @@ export function renderCommunityForum() {
                     id: p.user_id,
                     name: p.user_name || 'Concorsista',
                     avatar: p.user_avatar || 'https://i.pravatar.cc/150?u=' + p.user_id,
-                    tier: 'Free',
+                    tier: (p.user_name && p.user_name.toLowerCase().includes('renato')) ? 'Admin' : 'Free',
                     concorso: '',
                     online: false,
                     stats: { corretti: 0, media: 0, streak: 0 }
