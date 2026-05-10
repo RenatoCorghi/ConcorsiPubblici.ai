@@ -8,6 +8,7 @@
 
 import { AppState } from './state.js';
 import { APP_CONFIG } from './config.js';
+import { cloud } from './cloud.js';
 import { showToast } from './utils.js';
 
 // --- LIMITI PER TIER (mensili — safety net server-side) ---
@@ -292,10 +293,10 @@ export const Metering = {
      * Admin whitelistati → sempre Elite.
      */
     _getTier() {
-        // Cerca email da userProfile, cloud.user, o session Supabase
+        // Cerca email da cloud.user (Supabase session) o userProfile
         const email = (
+            cloud?.user?.email || 
             AppState.userProfile?.email || 
-            window.supabaseClient?._currentSession?.user?.email ||
             ''
         ).toLowerCase();
         if (email && this._ADMIN_EMAILS.includes(email)) {

@@ -283,6 +283,14 @@ export const LezioneController = {
         // --- GATE: Ospiti devono registrarsi ---
         if (!Metering.requireRegistration('Lezione Magistrale')) return;
 
+        // --- TRIAL GATE (Free Tier) — bypass input validation ---
+        const tier = Metering._getTier();
+        if (tier === 'Free') {
+            const self = this;
+            window._showTrialModal('lezione', () => self._startTrialLectio());
+            return;
+        }
+
         var argomento = document.getElementById('lezione-argomento')?.value?.trim();
         var materia = document.getElementById('lezione-materia')?.value;
         var livello = window._lezione_livello || 'principiante';
@@ -296,14 +304,6 @@ export const LezioneController = {
         // Paywall mensile
         if (!Metering.canUse('tutorChats')) {
             Metering.showPaywall('tutorChats');
-            return;
-        }
-
-        // --- TRIAL GATE (Free Tier) ---
-        const tier = Metering._getTier();
-        if (tier === 'Free') {
-            const self = this;
-            window._showTrialModal('lezione', () => self._startTrialLectio());
             return;
         }
 
@@ -400,6 +400,14 @@ export const LezioneController = {
         // --- GATE: Ospiti devono registrarsi ---
         if (!Metering.requireRegistration('Lectio Magistralis')) return;
 
+        // --- TRIAL GATE (Free Tier) — bypass input validation ---
+        const tier = Metering._getTier();
+        if (tier === 'Free') {
+            const self = this;
+            window._showTrialModal('lezione', () => self._startTrialLectio());
+            return;
+        }
+
         var argomento = document.getElementById('lezione-argomento')?.value?.trim();
         var materia = document.getElementById('lezione-materia')?.value;
 
@@ -412,14 +420,6 @@ export const LezioneController = {
         // Paywall mensile
         if (!Metering.canUse('tutorChats')) {
             Metering.showPaywall('tutorChats');
-            return;
-        }
-
-        // --- TRIAL GATE (Free Tier) ---
-        const tier = Metering._getTier();
-        if (tier === 'Free') {
-            const self = this;
-            window._showTrialModal('lezione', () => self._startTrialLectio());
             return;
         }
 
