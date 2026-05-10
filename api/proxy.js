@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Vercel Hobby: max 60s (default = 10s, troppo poco per AI generation)
+export const config = { maxDuration: 60 };
+
 /* ============================================================
    PROXY.JS — Serverless API Proxy for OpenAI
    

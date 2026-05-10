@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { isOriginAllowed } from './_cors.js';
 
+// Vercel Hobby: max 60s per la generazione audio
+export const config = { maxDuration: 60 };
+
 /* ============================================================
    TTS.JS — Serverless TTS Proxy via Azure Cognitive Services
    
