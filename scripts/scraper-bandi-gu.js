@@ -5,12 +5,16 @@
    Scarica i bandi pubblicati nella 4ª Serie Speciale (Concorsi ed Esami)
    e li salva su Supabase.
    
-   Fonti (in ordine di priorità):
-   1. RSS Feed GU Serie Concorsi
+   Le descrizioni NON vengono copiate da fonti terze (copyright).
+   Vengono generate da AI (Gemini Flash) a partire dal solo titolo
+   del bando, producendo contenuto 100% originale.
+   
+   Fonti metadati (in ordine di priorità):
+   1. RSS Feed GU Serie Concorsi (solo titolo/data/categoria)
    2. Archivio ultimi 30 giorni GU
    3. InPA (fallback)
    
-   Uso: node scripts/scraper-bandi-gu.js [--limit=100]
+   Uso: node scripts/scraper-bandi-gu.js [--limit=100] [--skip-ai]
    ============================================================ */
 
 import { createClient } from '@supabase/supabase-js';
@@ -19,6 +23,7 @@ import { JSDOM } from 'jsdom';
 // --- CONFIG ---
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://wggjfuqsjqwptuprutza.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 if (!SUPABASE_KEY) {
     console.error('❌ SUPABASE_SERVICE_KEY non trovata. Imposta la variabile d\'ambiente.');
@@ -29,6 +34,7 @@ if (!SUPABASE_KEY) {
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const LIMIT = parseInt(process.argv.find(a => a.startsWith('--limit='))?.split('=')[1] || '500');
+const SKIP_AI = process.argv.includes('--skip-ai');
 
 const HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -44,7 +50,7 @@ const DELAY_MS = 2000;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // --- CONTATORI ---
-let stats = { inseriti: 0, duplicati: 0, errori: 0, totale: 0 };
+let stats = { inseriti: 0, duplicati: 0, errori: 0, totale: 0, ai_generati: 0 };
 
 // ============================================================
 // STRATEGIA 1: RSS Feed (TiConsiglio.com / Concorsi Pubblici)
@@ -83,8 +89,6 @@ async function fetchFromRSS() {
             const link = item.querySelector('link')?.textContent?.trim() || '';
             const pubDate = item.querySelector('pubDate')?.textContent?.trim() || '';
             const content = item.querySelector('description')?.textContent?.trim() || '';
-            // Prova a prendere il contenuto esteso (content:encoded)
-            const contentEncoded = item.querySelector('encoded')?.textContent?.trim() || '';
 
             if (title && link) {
                 // Genera un ID univoco dal link per evitare duplicati
@@ -94,19 +98,9 @@ async function fetchFromRSS() {
 
                 const { ente, posti, categoria } = parseTitolo(title);
                 const scadenza = estraiScadenza(title + ' ' + content);
-                
-                // Estrai testo pulito dalla descrizione HTML
-                let descrizioneText = '';
-                if (contentEncoded) {
-                    const descDom = new JSDOM(`<body>${contentEncoded}</body>`);
-                    descrizioneText = descDom.window.document.body.textContent.trim();
-                } else if (content) {
-                    const descDom = new JSDOM(`<body>${content}</body>`);
-                    descrizioneText = descDom.window.document.body.textContent.trim();
-                }
-                // Limita a 5000 caratteri per non appesantire il DB
-                descrizioneText = descrizioneText.substring(0, 5000);
 
+                // NON copiamo il testo editoriale di TiConsiglio (copyright)
+                // La descrizione verrà generata da AI in un passaggio successivo
                 bandi.push({
                     codice_redazionale: 'TC-' + codice.substring(0, 30).toUpperCase(),
                     titolo: title.substring(0, 500),
@@ -116,8 +110,8 @@ async function fetchFromRSS() {
                     data_pubblicazione: dataPub,
                     numero_gazzetta: null,
                     scadenza: scadenza,
-                    url_gazzetta: null, // Non salvare link a ticonsiglio
-                    descrizione: descrizioneText || null,
+                    url_gazzetta: null,
+                    descrizione: null, // Sarà generata da AI
                     posti: posti
                 });
             }
@@ -381,6 +375,76 @@ async function saveBandi(bandi) {
 }
 
 // ============================================================
+// GENERAZIONE DESCRIZIONI AI (Gemini Flash Lite)
+// ============================================================
+async function generateAIDescription(titolo, ente, categoria, posti) {
+    if (!GEMINI_API_KEY) return null;
+    
+    const prompt = `Sei un esperto di concorsi pubblici italiani. Genera una scheda informativa ORIGINALE (4-6 frasi, max 600 caratteri) per un candidato che vuole capire rapidamente di cosa si tratta questo concorso.
+
+Titolo del bando: "${titolo}"
+${ente ? `Ente banditore: ${ente}` : ''}
+${categoria ? `Categoria: ${categoria}` : ''}
+${posti ? `Posti disponibili: ${posti}` : ''}
+
+Regole:
+- Scrivi SOLO informazioni deducibili dal titolo (tipo di ruolo, ente, area professionale)
+- NON inventare requisiti specifici, date o dettagli non presenti nel titolo
+- Usa tono professionale e informativo
+- Suggerisci brevemente il tipo di prove da aspettarsi (generiche, basate sulla categoria)
+- Chiudi invitando a consultare il bando integrale sulla Gazzetta Ufficiale
+- Rispondi SOLO con il testo della scheda, senza titoli o formattazione`;
+
+    try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { maxOutputTokens: 300, temperature: 0.4 }
+            }),
+            signal: AbortSignal.timeout(15000)
+        });
+        
+        if (!res.ok) return null;
+        const json = await res.json();
+        const text = json?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        return text ? text.substring(0, 2000) : null;
+    } catch (e) {
+        console.log(`      ⚠️ AI fallita: ${e.message}`);
+        return null;
+    }
+}
+
+async function enrichWithAI(bandi) {
+    if (SKIP_AI || !GEMINI_API_KEY) {
+        if (!GEMINI_API_KEY) console.log('\n⚠️ GEMINI_API_KEY non impostata, skip generazione AI.');
+        if (SKIP_AI) console.log('\n⚠️ Flag --skip-ai attivo, skip generazione AI.');
+        return;
+    }
+    
+    const toEnrich = bandi.filter(b => !b.descrizione);
+    console.log(`\n🤖 Generazione descrizioni AI per ${toEnrich.length} bandi (Gemini Flash Lite)...`);
+    
+    for (let i = 0; i < toEnrich.length; i++) {
+        const b = toEnrich[i];
+        process.stdout.write(`   [${i+1}/${toEnrich.length}] ${b.titolo.substring(0, 60)}...`);
+        
+        const desc = await generateAIDescription(b.titolo, b.ente, b.categoria, b.posti);
+        if (desc) {
+            b.descrizione = desc;
+            stats.ai_generati++;
+            console.log(' ✅');
+        } else {
+            console.log(' ❌');
+        }
+        
+        // Rate limit: ~4 req/sec per Gemini Flash free tier
+        await sleep(300);
+    }
+}
+
+// ============================================================
 // MAIN
 // ============================================================
 async function main() {
@@ -388,6 +452,7 @@ async function main() {
     console.log('  📢  SCRAPER BANDI — Gazzetta Ufficiale');
     console.log('  📅  ' + new Date().toLocaleString('it-IT'));
     console.log('  🔢  Limite: ' + LIMIT + ' bandi');
+    console.log('  🤖  AI: ' + (SKIP_AI ? 'DISABILITATA' : (GEMINI_API_KEY ? 'Gemini Flash Lite' : 'non configurata')));
     console.log('═══════════════════════════════════════════════════');
     
     let allBandi = [];
@@ -421,6 +486,9 @@ async function main() {
     
     console.log(`\n📊 Totale bandi trovati (dedup): ${allBandi.length}`);
     
+    // Arricchisci con descrizioni AI
+    await enrichWithAI(allBandi);
+    
     if (allBandi.length > 0) {
         await saveBandi(allBandi);
     }
@@ -430,6 +498,7 @@ async function main() {
     console.log('  📊  REPORT FINALE');
     console.log('═══════════════════════════════════════════════════');
     console.log(`  ✅ Inseriti:   ${stats.inseriti}`);
+    console.log(`  🤖 AI Gen:     ${stats.ai_generati}`);
     console.log(`  🔄 Duplicati:  ${stats.duplicati}`);
     console.log(`  ❌ Errori:     ${stats.errori}`);
     console.log(`  📦 Totale:     ${stats.totale}`);
