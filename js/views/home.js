@@ -158,16 +158,24 @@ export function renderHome() {
                                     </div>
                                 </div>
                                 <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
+                                    <div class="mt-0.5"><i data-lucide="compass" class="w-5 h-5 text-red-400"></i></div>
+                                    <div>
+                                        <h4 class="text-sm font-bold text-gray-200">2. Debrief Strategico & Commissario AI</h4>
+                                        <p class="text-xs text-gray-500 mt-1">Domina la traccia in anticipo grazie al Debrief Strategico, la tua mappa mentale per individuare i nodi nomofilattici e schivare le insidie.</p>
+                                        <p class="text-xs text-gray-500 mt-1">Affida poi la tua prova al Commissario AI: una correzione spietata, riga per riga, con gli stessi criteri di valutazione e le "matite blu" di una vera Commissione.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
                                     <div class="mt-0.5"><i data-lucide="list-todo" class="w-5 h-5 text-yellow-500"></i></div>
                                     <div>
-                                        <h4 class="text-sm font-bold text-gray-200">2. Quiz AI & Casi Reali</h4>
+                                        <h4 class="text-sm font-bold text-gray-200">3. Quiz AI & Casi Reali</h4>
                                         <p class="text-xs text-gray-500 mt-1">Mettiti alla prova con il nostro sistema di Quiz: affronta le varianti infinite generate dall'Intelligenza Artificiale o cimentati con le insidie dei casi reali. L'allenamento definitivo per trasformare lo studio dogmatico in prontezza operativa.</p>
                                     </div>
                                 </div>
                                 <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
                                     <div class="mt-0.5"><i data-lucide="scale" class="w-5 h-5 text-magis-400"></i></div>
                                     <div>
-                                        <h4 class="text-sm font-bold text-gray-200">3. L'Arsenale Completo</h4>
+                                        <h4 class="text-sm font-bold text-gray-200">4. L'Arsenale Completo</h4>
                                         <p class="text-xs text-gray-500 mt-1">Sfida il rigore del Tutor, esplora un Glossario con centinaia di schede tra dottrina e sentenze storiche, e confrontati con l'élite della nostra Community. Un ecosistema vivo e in continua evoluzione.</p>
                                     </div>
                                 </div>
