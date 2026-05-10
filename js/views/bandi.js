@@ -223,46 +223,64 @@ function renderBandiContent() {
         return;
     }
 
-    resultsContainer.innerHTML = bandiState.risultati.map(b => {
+    resultsContainer.innerHTML = bandiState.risultati.map((b, idx) => {
         const giorni = giorniAllaScadenza(b.scadenza);
         const isScaduto = giorni !== null && giorni < 0;
         const borderColor = isScaduto ? 'border-gray-800 opacity-60' : (giorni !== null && giorni <= 7) ? 'border-red-900/50' : 'border-gray-800';
         const gradientColor = categoriaColor(b.categoria);
+        const hasDescrizione = b.descrizione && b.descrizione.length > 10;
+        // Genera link GU ufficiale se possibile, altrimenti link originale
+        const guLink = b.url_gazzetta && !b.url_gazzetta.includes('ticonsiglio') ? b.url_gazzetta : (b.codice_redazionale && !b.codice_redazionale.startsWith('TC-') ? `https://www.gazzettaufficiale.it/atto/concorsi/caricaDettaglioAtto/originario?atto.dataPubblicazioneGazzetta=&atto.codiceRedazionale=${b.codice_redazionale}` : null);
         
         return `
-            <div class="bg-gray-900 border ${borderColor} rounded-2xl p-5 hover:border-gray-700 transition group ${isScaduto ? 'hover:opacity-80' : ''}">
-                <div class="flex flex-col md:flex-row gap-4">
-                    <!-- Icona Categoria -->
-                    <div class="flex-shrink-0">
-                        <div class="w-12 h-12 bg-gradient-to-br ${gradientColor} rounded-xl flex items-center justify-center shadow-lg">
-                            <i data-lucide="${categoriaIcon(b.categoria)}" class="w-6 h-6 text-white"></i>
+            <div class="bg-gray-900 border ${borderColor} rounded-2xl overflow-hidden hover:border-gray-700 transition group ${isScaduto ? 'hover:opacity-80' : ''}">
+                <div class="p-5">
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <!-- Icona Categoria -->
+                        <div class="flex-shrink-0">
+                            <div class="w-12 h-12 bg-gradient-to-br ${gradientColor} rounded-xl flex items-center justify-center shadow-lg">
+                                <i data-lucide="${categoriaIcon(b.categoria)}" class="w-6 h-6 text-white"></i>
+                            </div>
                         </div>
-                    </div>
-                    <!-- Contenuto -->
-                    <div class="flex-grow min-w-0">
-                        <div class="flex flex-wrap items-center gap-2 mb-2">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-800 text-gray-400 border border-gray-700">${escapeHtml(b.tipo || 'CONCORSO')}</span>
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-800 text-amber-400 border border-gray-700">${escapeHtml(b.categoria || 'Altro')}</span>
-                            ${b.posti ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-900/50 text-blue-300 border border-blue-800">${b.posti} post${b.posti > 1 ? 'i' : 'o'}</span>` : ''}
-                            ${badgeScadenza(b.scadenza)}
+                        <!-- Contenuto -->
+                        <div class="flex-grow min-w-0">
+                            <div class="flex flex-wrap items-center gap-2 mb-2">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-800 text-gray-400 border border-gray-700">${escapeHtml(b.tipo || 'CONCORSO')}</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-800 text-amber-400 border border-gray-700">${escapeHtml(b.categoria || 'Altro')}</span>
+                                ${b.posti ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-900/50 text-blue-300 border border-blue-800">${b.posti} post${b.posti > 1 ? 'i' : 'o'}</span>` : ''}
+                                ${badgeScadenza(b.scadenza)}
+                            </div>
+                            <h3 class="text-white font-bold text-sm md:text-base leading-snug mb-2 group-hover:text-amber-300 transition line-clamp-2">${escapeHtml(b.titolo)}</h3>
+                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+                                ${b.ente ? `<span class="flex items-center gap-1"><i data-lucide="building-2" class="w-3 h-3"></i> ${escapeHtml(b.ente.substring(0, 60))}</span>` : ''}
+                                ${b.data_pubblicazione ? `<span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i> GU ${new Date(b.data_pubblicazione).toLocaleDateString('it-IT')}</span>` : ''}
+                                ${b.scadenza ? `<span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> Scade: ${new Date(b.scadenza).toLocaleDateString('it-IT')}</span>` : ''}
+                            </div>
                         </div>
-                        <h3 class="text-white font-bold text-sm md:text-base leading-snug mb-2 group-hover:text-amber-300 transition line-clamp-2">${escapeHtml(b.titolo)}</h3>
-                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
-                            ${b.ente ? `<span class="flex items-center gap-1"><i data-lucide="building-2" class="w-3 h-3"></i> ${escapeHtml(b.ente.substring(0, 60))}</span>` : ''}
-                            ${b.data_pubblicazione ? `<span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i> GU ${new Date(b.data_pubblicazione).toLocaleDateString('it-IT')}</span>` : ''}
-                            ${b.scadenza ? `<span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> Scade: ${new Date(b.scadenza).toLocaleDateString('it-IT')}</span>` : ''}
+                        <!-- CTA -->
+                        <div class="flex-shrink-0 flex items-center gap-2">
+                            ${hasDescrizione ? `
+                                <button onclick="app.toggleBandoDescrizione(${idx})"
+                                    class="px-4 py-2.5 bg-amber-600 hover:bg-amber-500 border border-amber-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap shadow-sm">
+                                    <i data-lucide="eye" class="w-3.5 h-3.5"></i> Dettagli
+                                </button>
+                            ` : ''}
+                            ${guLink ? `
+                                <a href="${escapeHtml(guLink)}" target="_blank" rel="noopener noreferrer"
+                                    class="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap shadow-sm" title="Fonte ufficiale: Gazzetta Ufficiale">
+                                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Fonte GU
+                                </a>
+                            ` : ''}
                         </div>
-                    </div>
-                    <!-- CTA -->
-                    <div class="flex-shrink-0 flex items-center">
-                        ${b.url_gazzetta ? `
-                            <a href="${escapeHtml(b.url_gazzetta)}" target="_blank" rel="noopener noreferrer"
-                                class="px-4 py-2.5 bg-gray-800 hover:bg-amber-600 border border-gray-700 hover:border-amber-500 text-gray-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap shadow-sm">
-                                <i data-lucide="external-link" class="w-3.5 h-3.5"></i> Leggi Bando
-                            </a>
-                        ` : ''}
                     </div>
                 </div>
+                <!-- Pannello Descrizione (nascosto di default) -->
+                ${hasDescrizione ? `
+                <div id="bando-desc-${idx}" class="hidden border-t border-gray-800 bg-gray-950/50 p-5">
+                    <div class="text-sm text-gray-300 leading-relaxed whitespace-pre-line max-h-96 overflow-y-auto custom-scrollbar">${escapeHtml(b.descrizione)}</div>
+                    ${guLink ? `<div class="mt-4 pt-3 border-t border-gray-800 flex items-center gap-2 text-[10px] text-gray-600"><i data-lucide="info" class="w-3 h-3"></i> Fonte: Gazzetta Ufficiale della Repubblica Italiana — 4ª Serie Speciale</div>` : ''}
+                </div>
+                ` : ''}
             </div>
         `;
     }).join('');
@@ -305,4 +323,13 @@ export function bandiPagina(dir) {
     bandiState.offset = Math.max(0, bandiState.offset + (dir * bandiState.limit));
     fetchBandi();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+export function toggleBandoDescrizione(idx) {
+    const panel = document.getElementById(`bando-desc-${idx}`);
+    if (!panel) return;
+    panel.classList.toggle('hidden');
+    if (!panel.classList.contains('hidden') && window.lucide) {
+        lucide.createIcons();
+    }
 }

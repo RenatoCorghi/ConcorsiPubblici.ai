@@ -83,6 +83,8 @@ async function fetchFromRSS() {
             const link = item.querySelector('link')?.textContent?.trim() || '';
             const pubDate = item.querySelector('pubDate')?.textContent?.trim() || '';
             const content = item.querySelector('description')?.textContent?.trim() || '';
+            // Prova a prendere il contenuto esteso (content:encoded)
+            const contentEncoded = item.querySelector('encoded')?.textContent?.trim() || '';
 
             if (title && link) {
                 // Genera un ID univoco dal link per evitare duplicati
@@ -92,6 +94,18 @@ async function fetchFromRSS() {
 
                 const { ente, posti, categoria } = parseTitolo(title);
                 const scadenza = estraiScadenza(title + ' ' + content);
+                
+                // Estrai testo pulito dalla descrizione HTML
+                let descrizioneText = '';
+                if (contentEncoded) {
+                    const descDom = new JSDOM(`<body>${contentEncoded}</body>`);
+                    descrizioneText = descDom.window.document.body.textContent.trim();
+                } else if (content) {
+                    const descDom = new JSDOM(`<body>${content}</body>`);
+                    descrizioneText = descDom.window.document.body.textContent.trim();
+                }
+                // Limita a 5000 caratteri per non appesantire il DB
+                descrizioneText = descrizioneText.substring(0, 5000);
 
                 bandi.push({
                     codice_redazionale: 'TC-' + codice.substring(0, 30).toUpperCase(),
@@ -102,7 +116,8 @@ async function fetchFromRSS() {
                     data_pubblicazione: dataPub,
                     numero_gazzetta: null,
                     scadenza: scadenza,
-                    url_gazzetta: link,
+                    url_gazzetta: null, // Non salvare link a ticonsiglio
+                    descrizione: descrizioneText || null,
                     posti: posti
                 });
             }

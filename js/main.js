@@ -31,7 +31,7 @@ import { LezioneController } from './controllers/lezione.js';
 import { Metering } from './metering.js';
 import { QuizController } from './controllers/quiz.js';
 import { applyThemeColor } from './theme.js';
-import { searchBandi, filterBandiCategoria, toggleBandiAperti, bandiPagina } from './views/bandi.js';
+import { searchBandi, filterBandiCategoria, toggleBandiAperti, bandiPagina, toggleBandoDescrizione } from './views/bandi.js';
 
 // --- ERROR BOUNDARY GLOBALE ---
 
@@ -522,6 +522,7 @@ export const app = {
     filterBandiCategoria: function(cat) { filterBandiCategoria(cat); },
     toggleBandiAperti: function() { toggleBandiAperti(); },
     bandiPagina: function(dir) { bandiPagina(dir); },
+    toggleBandoDescrizione: function(idx) { toggleBandoDescrizione(idx); },
 
     async init() {
         console.log("App Booting...");
