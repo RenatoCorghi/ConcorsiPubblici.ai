@@ -34,10 +34,9 @@ export const SimulationController = {
             return;
         }
 
-        // --- GATE 2: Limite settimanale per materia (Free) ---
-        const materia = traccia.materia || 'Generale';
-        if (!Metering.canUseWeekly('briefing', materia)) {
-            Metering.showWeeklyPaywall('briefing', materia);
+        // --- GATE 2: Limite settimanale Debrief ---
+        if (!Metering.canUseWeekly('briefing', '_global')) {
+            Metering.showWeeklyPaywall('briefing', '_global');
             return;
         }
 
@@ -55,7 +54,7 @@ export const SimulationController = {
             if (result.success) {
                 AppState.currentBriefing = result;
                 // Consuma il credito settimanale solo se il briefing è stato generato con successo
-                Metering.consumeWeekly('briefing', materia);
+                Metering.consumeWeekly('briefing', '_global');
             } else {
                 AppState.currentBriefing = { error: result.error || 'Errore sconosciuto' };
             }

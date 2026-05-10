@@ -416,12 +416,23 @@ export default async function handler(req, res) {
                     const { data: profile } = await supabaseAdmin.from('profiles').select('tier').eq('id', userId).single();
                     const tier = (profile && profile.tier) || 'Free';
                     
-                    const freeLimits = { aiCalls: 3, oralSessions: 0, tutorChats: 5, aiTraces: 0, pdfExports: 0, aiQuiz: 50, phantomTutor: 0 };
+                    // Limiti mensili per tier (safety net — il gating reale è settimanale, lato client)
+                    const TIER_SERVER_LIMITS = {
+                        Free:    { aiCalls: 0, oralSessions: 0, tutorChats: 0, aiTraces: 0, pdfExports: 0, aiQuiz: 50, phantomTutor: 0 },
+                        Starter: { aiCalls: 1, oralSessions: 0, tutorChats: 20, aiTraces: 0, pdfExports: 0, aiQuiz: 50, phantomTutor: 0 },
+                        Pro:     { aiCalls: 8, oralSessions: 8, tutorChats: 60, aiTraces: 8, pdfExports: 999, aiQuiz: 999, phantomTutor: 0 },
+                        Elite:   { aiCalls: 999, oralSessions: 999, tutorChats: 999, aiTraces: 999, pdfExports: 999, aiQuiz: 999, phantomTutor: 999 }
+                    };
                     
-                    if (tier === 'Free') {
-                        const limit = freeLimits[requestedFeature];
+                    const limits = TIER_SERVER_LIMITS[tier] || TIER_SERVER_LIMITS.Free;
+                    
+                    if (tier !== 'Elite') {
+                        const limit = limits[requestedFeature];
                         if (limit === undefined) return res.status(400).json({ error: 'Feature non valida.' });
-                        if (limit === 0) return res.status(403).json({ error: 'Feature esclusiva Pro.' });
+                        if (limit === 0) {
+                            const tierLabel = tier === 'Free' ? 'Starter' : 'Pro';
+                            return res.status(403).json({ error: `Questa funzionalità è disponibile dal piano ${tierLabel} in su.` });
+                        }
                         
                         const now = new Date();
                         const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -435,7 +446,7 @@ export default async function handler(req, res) {
                             
                         const currentUsage = usageData ? (usageData[requestedFeature] || 0) : 0;
                         if (currentUsage >= limit) {
-                            return res.status(403).json({ error: 'Crediti mensili esauriti per questa funzionalità.' });
+                            return res.status(403).json({ error: 'Crediti esauriti per questa funzionalità.' });
                         }
                         
                         // Incrementa il credito

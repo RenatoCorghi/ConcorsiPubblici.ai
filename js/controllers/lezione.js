@@ -189,9 +189,9 @@ export const LezioneController = {
      * Avvio automatico della lezione quando si arriva dalla traccia.
      */
     _startAutoFromTraccia: async function(argomento, materia) {
-        // --- GATE: Limite settimanale per materia (Free) ---
-        if (!Metering.canUseWeekly('lezione', materia)) {
-            Metering.showWeeklyPaywall('lezione', materia);
+        // --- GATE: Limite settimanale (Lezione Socratica) ---
+        if (!Metering.canUseWeekly('lezione', '_global')) {
+            Metering.showWeeklyPaywall('lezione', '_global');
             return;
         }
 
@@ -257,7 +257,7 @@ export const LezioneController = {
             var reply = data.choices[0].message.content.trim();
 
             Metering.consume('tutorChats');
-            Metering.consumeWeekly('lezione', materia);
+            Metering.consumeWeekly('lezione', '_global');
             this._addMessage('ai', reply);
             this._speakIfEnabled(reply);
 
@@ -291,9 +291,9 @@ export const LezioneController = {
             return;
         }
 
-        // --- GATE: Limite settimanale per materia (Free) ---
-        if (!Metering.canUseWeekly('lezione', materia)) {
-            Metering.showWeeklyPaywall('lezione', materia);
+        // --- GATE: Limite settimanale (Lezione Socratica) ---
+        if (!Metering.canUseWeekly('lezione', '_global')) {
+            Metering.showWeeklyPaywall('lezione', '_global');
             return;
         }
 
@@ -365,7 +365,7 @@ export const LezioneController = {
             var reply = data.choices[0].message.content.trim();
 
             Metering.consume('tutorChats');
-            Metering.consumeWeekly('lezione', materia);
+            Metering.consumeWeekly('lezione', '_global');
             this._addMessage('ai', reply);
             this._speakIfEnabled(reply);
 
@@ -399,9 +399,9 @@ export const LezioneController = {
             return;
         }
 
-        // --- GATE: Limite settimanale per materia (Free) ---
-        if (!Metering.canUseWeekly('lezione', materia)) {
-            Metering.showWeeklyPaywall('lezione', materia);
+        // --- GATE: Limite settimanale (Lectio Magistralis) ---
+        if (!Metering.canUseWeekly('lectio', '_global')) {
+            Metering.showWeeklyPaywall('lectio', '_global');
             return;
         }
 

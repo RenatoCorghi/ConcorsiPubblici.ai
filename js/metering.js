@@ -10,19 +10,39 @@ import { AppState } from './state.js';
 import { APP_CONFIG } from './config.js';
 import { showToast } from './utils.js';
 
-// --- LIMITI PER TIER ---
+// --- LIMITI PER TIER (mensili — safety net server-side) ---
+// I limiti reali sono ora gestiti SETTIMANALMENTE sotto.
+// Questi restano come cap mensile anti-abuso lato server.
 
 const TIER_LIMITS = {
     Free: {
-        aiCalls: 3,         // Correzioni AI scritte al mese
-        oralSessions: 0,    // Sessioni orale AI (bloccato)
-        tutorChats: 999,     // Messaggi tutor AI al mese (alto per sviluppo — server-side metering gestisce i limiti reali)
-        aiTraces: 0,         // Tracce generate dall'AI (bloccato)
-        pdfExports: 0,       // Export PDF (bloccato)
-        aiQuiz: 999,           // Disabilitato: ora gestito settimanalmente (10/settimana)
-        phantomTutor: 0      // Correzione live silente (bloccato)
+        aiCalls: 0,          // Correzioni AI: bloccate per Free
+        oralSessions: 0,     // Sessioni orale AI: bloccate
+        tutorChats: 0,       // Lezioni AI: bloccate per Free
+        aiTraces: 0,         // Tracce generate dall'AI: bloccate
+        pdfExports: 0,       // Export PDF: bloccato
+        aiQuiz: 999,         // Quiz: gestito settimanalmente (10/settimana)
+        phantomTutor: 0      // Correzione live silente: bloccata
+    },
+    Starter: {
+        aiCalls: 1,          // 1 correzione tema (pacchetto di prova)
+        oralSessions: 0,     // Non incluso
+        tutorChats: 999,     // Per le lezioni socratiche (messaggi multipli)
+        aiTraces: 0,         // Non incluso
+        pdfExports: 0,       // Non incluso
+        aiQuiz: 999,         // Quiz: gestito settimanalmente
+        phantomTutor: 0      // Non incluso
     },
     Pro: {
+        aiCalls: 999,        // Gestito settimanalmente (1/settimana)
+        oralSessions: 999,   // Gestito settimanalmente
+        tutorChats: 999,     // Per le lezioni (messaggi multipli)
+        aiTraces: 999,       // Gestito settimanalmente
+        pdfExports: 999,     // Incluso
+        aiQuiz: Infinity,    // Quiz illimitati
+        phantomTutor: 0      // Non ancora disponibile
+    },
+    Elite: {
         aiCalls: Infinity,
         oralSessions: Infinity,
         tutorChats: Infinity,
@@ -34,32 +54,51 @@ const TIER_LIMITS = {
 };
 
 const FEATURE_LABELS = {
-    aiCalls: 'Correzioni AI',
+    aiCalls: 'Correzione Tema',
     oralSessions: 'Simulatore Orale',
-    tutorChats: 'Chat Tutor AI',
+    tutorChats: 'Lezione AI',
     aiTraces: 'Tracce AI',
     pdfExports: 'Export PDF',
-    aiQuiz: 'Generazione Quiz AI',
+    aiQuiz: 'Quiz AI',
     phantomTutor: 'Tutor in Tempo Reale'
 };
 
 const STORAGE_KEY = 'concorsi_metering';
 const WEEKLY_STORAGE_KEY = 'concorsi_weekly_metering';
 
-// --- WEEKLY LIMITS PER CATEGORIA (Free tier) ---
-// 1 briefing + 1 lezione per materia per settimana
+// --- WEEKLY LIMITS ---
+// Gestiscono i limiti reali per Starter (one-shot) e Pro (settimanali)
 const WEEKLY_CATEGORY_LIMITS = {
     Free: {
-        briefing: 1,   // 1 briefing per materia/settimana
-        lezione: 1,    // 1 lezione per materia/settimana
-        quiz: 10       // 10 quiz totali a settimana
+        briefing: 0,       // Bloccato (solo anteprima)
+        lezione: 0,        // Bloccato (solo anteprima)
+        lectio: 0,         // Bloccato (solo anteprima)
+        correzione: 0,     // Bloccato
+        quiz: 10           // 10 quiz totali a settimana
+    },
+    Starter: {
+        briefing: 1,       // 1 debrief (pacchetto di prova, non resetta)
+        lezione: 1,        // 1 lezione socratica
+        lectio: 1,         // 1 lectio magistralis
+        correzione: 1,     // 1 correzione tema
+        quiz: 10           // 10 quiz a settimana
     },
     Pro: {
+        briefing: 1,       // 1 debrief a settimana
+        lezione: 1,        // 1 lezione socratica a settimana
+        lectio: 1,         // 1 lectio magistralis a settimana
+        correzione: 1,     // 1 correzione tema a settimana
+        quiz: Infinity     // Quiz illimitati
+    },
+    Elite: {
         briefing: Infinity,
         lezione: Infinity,
+        lectio: Infinity,
+        correzione: Infinity,
         quiz: Infinity
     }
 };
+
 
 // --- HELPERS ---
 
@@ -164,16 +203,39 @@ export const Metering = {
     },
 
     /**
-     * Mostra il paywall settimanale quando una feature è esaurita per la categoria.
+     * Mostra il paywall quando una feature settimanale è bloccata o esaurita.
+     * Per Free: rimanda alla pagina pricing.
+     * Per Starter/Pro: mostra il modale checkout.
      */
     showWeeklyPaywall(feature, category) {
-        const label = feature === 'briefing' ? 'Briefing Pre-Tema' : 'Lezione Magistrale';
-        showToast(`⏳ Hai già usato il tuo ${label} settimanale per ${category}. Passa a Pro per uso illimitato!`, "warning");
-        setTimeout(() => {
-            var modal = document.getElementById('checkout-modal');
-            if (modal) modal.classList.remove('hidden');
-        }, 500);
+        const tier = this._getTier();
+        const limits = WEEKLY_CATEGORY_LIMITS[tier] || WEEKLY_CATEGORY_LIMITS.Free;
+        const featureLabels = {
+            briefing: 'Debrief Pre-Tema',
+            lezione: 'Lezione Socratica',
+            lectio: 'Lectio Magistralis',
+            correzione: 'Correzione Tema',
+            quiz: 'Quiz AI'
+        };
+        const label = featureLabels[feature] || category;
+
+        if (limits[feature] === 0) {
+            // Feature completamente bloccata per questo tier
+            showToast(`🔒 ${label} è disponibile dal piano Starter in su. Scopri i piani!`, "warning");
+            // Naviga alla pagina pricing
+            setTimeout(() => {
+                if (window.app && window.app.navigate) window.app.navigate('pricing');
+            }, 500);
+        } else {
+            // Crediti settimanali esauriti
+            showToast(`⏳ Hai già usato il tuo ${label} settimanale. Torna la prossima settimana o passa a un piano superiore!`, "warning");
+            setTimeout(() => {
+                var modal = document.getElementById('checkout-modal');
+                if (modal) modal.classList.remove('hidden');
+            }, 500);
+        }
     },
+
 
 
     /**
