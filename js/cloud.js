@@ -238,6 +238,8 @@ export const cloud = {
         const dbPayload = {
             id: postObj.id,
             user_id: cloud.user.id,
+            user_name: AppState.userProfile?.name || cloud.user.email?.split('@')[0] || 'Utente',
+            user_avatar: AppState.userProfile?.avatar || null,
             channel_id: postObj.channel_id,
             content: postObj.content,
             likes: postObj.likes,
@@ -282,6 +284,8 @@ export const cloud = {
                     id: row.id,
                     channel_id: row.channel_id,
                     user_id: row.user_id,
+                    user_name: row.user_name || 'Concorsista',
+                    user_avatar: row.user_avatar || null,
                     content: row.content,
                     likes: row.likes || 0,
                     timestamp: new Date(row.created_at).toLocaleDateString('it-IT')

@@ -82,11 +82,38 @@ export function renderCommunityForum() {
     var posts = DB_COMMUNITY.posts.filter(p => p.channel_id === AppState.community.forumFilterChannel).map(p => {
         var user = DB_COMMUNITY.users.find(u => u.id === p.user_id);
         
+        // Fallback: se l'utente non è nei mock, potrebbe essere un utente reale
+        if (!user) {
+            // Se è il nostro post, usa il nostro profilo
+            if (AppState.userProfile && p.user_id === AppState.userProfile.id) {
+                user = {
+                    id: AppState.userProfile.id,
+                    name: AppState.userProfile.name || 'Utente',
+                    avatar: AppState.userProfile.avatar || 'https://i.pravatar.cc/150?u=' + p.user_id,
+                    tier: AppState.userProfile.tier || 'Free',
+                    concorso: AppState.userProfile.concorso || 'Magistratura',
+                    online: true,
+                    stats: { corretti: 0, media: 0, streak: 0 }
+                };
+            } else {
+                // Utente sconosciuto dal cloud
+                user = {
+                    id: p.user_id,
+                    name: p.user_name || 'Concorsista',
+                    avatar: p.user_avatar || 'https://i.pravatar.cc/150?u=' + p.user_id,
+                    tier: 'Free',
+                    concorso: '',
+                    online: false,
+                    stats: { corretti: 0, media: 0, streak: 0 }
+                };
+            }
+        }
+        
         return `
             <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 lg:p-5 mb-4 shadow-sm fade-in hover:border-gray-700 transition">
                 <div class="flex items-start justify-between mb-3">
                     <div class="flex items-center gap-3 cursor-pointer" onclick="app.openUserModal('${user.id}')">
-                        <img src="${user.avatar}" class="w-9 h-9 lg:w-10 lg:h-10 rounded-full object-cover border-2 border-gray-800" />
+                        <img src="${user.avatar}" class="w-9 h-9 lg:w-10 lg:h-10 rounded-full object-cover border-2 border-gray-800" onerror="this.src='https://i.pravatar.cc/150?u=fallback'" />
                         <div>
                             <div class="flex items-center gap-1.5">
                                 <h4 class="font-bold text-white text-sm hover:underline">${escapeHtml(user.name)}</h4>
