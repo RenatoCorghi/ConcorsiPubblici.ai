@@ -237,16 +237,22 @@ export function renderHome() {
                     </div>
                 </div>
                 
-                <div class="col-span-1 border border-gray-800 rounded-2xl p-6 glass-panel card-hover flex flex-col justify-center items-center bg-gray-900/50 cursor-pointer" onclick="app.navigate('schedule')">
-                    <i data-lucide="calendar" class="text-gray-400 w-8 h-8 mb-3"></i>
+                <div class="col-span-1 border border-blue-500/30 rounded-2xl p-6 glass-panel card-hover flex flex-col justify-center items-center bg-gradient-to-br from-blue-950/30 to-gray-900/50 cursor-pointer group relative overflow-hidden shadow-lg shadow-blue-500/10" onclick="app.navigate('schedule')">
+                    <div class="absolute top-0 right-0 p-3 opacity-10"><i data-lucide="calendar-days" class="w-20 h-20 text-blue-400"></i></div>
+                    <div class="w-12 h-12 rounded-xl bg-blue-500/15 border border-blue-500/20 flex items-center justify-center mb-3 transition-transform group-hover:scale-110">
+                        <i data-lucide="calendar-days" class="text-blue-400 w-6 h-6"></i>
+                    </div>
                     <h3 class="text-lg font-bold text-white mb-1">Piano di Studio</h3>
-                    <p class="text-gray-500 text-sm text-center">Organizza la settimana</p>
+                    <p class="text-gray-400 text-sm text-center">Organizza la settimana</p>
                 </div>
 
-                <div class="col-span-1 border border-gray-800 rounded-2xl p-6 glass-panel card-hover flex flex-col justify-center items-center bg-gray-900/50 cursor-pointer" onclick="app.navigate('history')">
-                    <i data-lucide="history" class="text-gray-400 w-8 h-8 mb-3"></i>
+                <div class="col-span-1 border border-purple-500/30 rounded-2xl p-6 glass-panel card-hover flex flex-col justify-center items-center bg-gradient-to-br from-purple-950/30 to-gray-900/50 cursor-pointer group relative overflow-hidden shadow-lg shadow-purple-500/10" onclick="app.navigate('history')">
+                    <div class="absolute top-0 right-0 p-3 opacity-10"><i data-lucide="clock" class="w-20 h-20 text-purple-400"></i></div>
+                    <div class="w-12 h-12 rounded-xl bg-purple-500/15 border border-purple-500/20 flex items-center justify-center mb-3 transition-transform group-hover:scale-110">
+                        <i data-lucide="clock" class="text-purple-400 w-6 h-6"></i>
+                    </div>
                     <h3 class="text-lg font-bold text-white mb-1">Storico Prove</h3>
-                    <p class="text-gray-500 text-sm text-center">Rivedi i progressi</p>
+                    <p class="text-gray-400 text-sm text-center">Rivedi i progressi</p>
                 </div>
 
                 <div class="col-span-1 md:col-span-2 border border-yellow-500/30 rounded-2xl p-6 glass-panel card-hover flex flex-col md:flex-row justify-between items-center gap-4 bg-gradient-to-br from-yellow-950/20 to-gray-900/50 cursor-pointer group shadow-lg shadow-yellow-500/10 relative overflow-hidden" onclick="app.navigate('quiz')">
@@ -274,7 +280,7 @@ export function renderHome() {
                     </div>
                 </div>
 
-                <div class="col-span-1 md:col-span-4 border border-amber-900/50 rounded-2xl p-6 glass-panel card-hover flex flex-col md:flex-row justify-between items-center gap-4 bg-gradient-to-r from-gray-900/50 to-amber-950/20 cursor-pointer group shadow-lg shadow-amber-500/5 relative overflow-hidden" onclick="app.navigate('bandi')">
+                <div class="col-span-1 md:col-span-4 border border-amber-500/30 rounded-2xl p-6 glass-panel card-hover flex flex-col md:flex-row justify-between items-center gap-4 bg-gradient-to-r from-gray-900/50 to-amber-950/20 cursor-pointer group shadow-lg shadow-amber-500/10 relative overflow-hidden" onclick="app.navigate('bandi')">
                     <div class="absolute top-0 right-0 p-3 opacity-10"><i data-lucide="megaphone" class="w-24 h-24 text-amber-500"></i></div>
                     <div class="flex items-center gap-4 relative z-10">
                         <div class="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center shrink-0">
@@ -289,6 +295,19 @@ export function renderHome() {
                         <button class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm font-bold rounded-lg transition border border-gray-700 flex items-center gap-2">
                             Esplora <i data-lucide="arrow-right" class="w-4 h-4"></i>
                         </button>
+                    </div>
+                </div>
+
+                <!-- Orale — Coming Soon -->
+                <div class="col-span-1 md:col-span-4 border border-dashed border-gray-700 rounded-2xl p-5 flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-900/30 opacity-60 group relative overflow-hidden">
+                    <div class="flex items-center gap-4 relative z-10">
+                        <div class="w-12 h-12 bg-gray-800 rounded-xl flex items-center justify-center shrink-0">
+                            <i data-lucide="mic" class="text-gray-500 w-6 h-6"></i>
+                        </div>
+                        <div class="text-left">
+                            <h3 class="text-lg font-bold text-gray-400 mb-1 flex items-center gap-2">Simulatore Orale <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-gray-800 text-gray-500 border border-gray-700">COMING SOON</span></h3>
+                            <p class="text-gray-600 text-sm">Allenati per l'esame orale con l'esaminatore AI vocale</p>
+                        </div>
                     </div>
                 </div>
             </div>
