@@ -221,8 +221,17 @@ function renderBriefingContent(briefing) {
         type: 'quote'
     });
 
+    const ragCount = (briefing.rag_sources && briefing.rag_sources.length > 0) ? briefing.rag_sources.length : 0;
+    const ragBadgeHtml = ragCount > 0 ? `
+        <div class="mb-6 flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl max-w-fit">
+            <i data-lucide="database" class="w-4 h-4 text-emerald-400"></i>
+            <span class="text-xs font-bold text-emerald-300">Intelligenza Giuridica Attiva: estratti ${ragCount} frammenti normativi/giurisprudenziali dal database.</span>
+        </div>
+    ` : '';
+
     return `
         <div class="space-y-6">
+            ${ragBadgeHtml}
             ${sections.map((section, idx) => {
                 if (!section.content || (Array.isArray(section.content) && section.content.length === 0)) return '';
                 
