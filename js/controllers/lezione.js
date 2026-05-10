@@ -793,6 +793,9 @@ export const LezioneController = {
             .replace(/\*(.*?)\*/g, '<em>$1</em>')
             .replace(/\n/g, '<br/>');
 
+        // Determina se è un messaggio di "attesa" (non ha senso leggerlo ad alta voce)
+        var isWaitMsg = content.includes('Tempo stimato:') || content.includes('Preparazione della');
+
         if (role === 'user') {
             container.innerHTML += `
             <div class="flex flex-col max-w-[85%] ml-auto items-end">
@@ -801,6 +804,18 @@ export const LezioneController = {
                 </div>
             </div>`;
         } else {
+            var ttsBtn = '';
+            if (!isWaitMsg) {
+                ttsBtn = `
+                <div class="flex items-center gap-2 mt-3 pt-2 border-t border-gray-700/30">
+                    <button onclick="window.Lezione?._playMessageTTS(this, '${msg.id}')" 
+                        class="tts-msg-btn flex items-center gap-1.5 text-xs text-gray-500 hover:text-amber-400 transition group px-2 py-1 rounded-lg hover:bg-amber-500/10"
+                        title="Ascolta questo messaggio">
+                        <svg class="w-3.5 h-3.5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+                        <span>Ascolta</span>
+                    </button>
+                </div>`;
+            }
             container.innerHTML += `
             <div class="flex gap-3 max-w-[95%]">
                 <div class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center bg-gradient-to-tr from-amber-600 to-orange-500 mt-1 shadow-lg shadow-amber-500/20">
@@ -808,12 +823,109 @@ export const LezioneController = {
                 </div>
                 <div class="bg-gray-800/80 border border-gray-700/50 text-gray-200 rounded-2xl rounded-tl-sm px-5 py-4 shadow-md relative leading-relaxed text-sm format-content">
                     ${formatted}
+                    ${ttsBtn}
                 </div>
             </div>`;
         }
 
         lucide.createIcons();
         container.scrollTop = container.scrollHeight;
+    },
+
+    /**
+     * Riproduce il TTS di un singolo messaggio AI.
+     * @param {HTMLElement} btn - Il bottone cliccato
+     * @param {string} msgId - L'ID del messaggio
+     */
+    _playMessageTTS: async function(btn, msgId) {
+        // Trova il messaggio
+        var msg = (AppState.lezioneChat || []).find(m => m.id === msgId);
+        if (!msg) return;
+
+        // Cambia stato bottone
+        var spanEl = btn.querySelector('span');
+        var svgEl = btn.querySelector('svg');
+        
+        // Se sta già riproducendo, ferma
+        if (btn.dataset.playing === 'true') {
+            if (window._currentTtsAudio) {
+                window._currentTtsAudio.pause();
+                window._currentTtsAudio = null;
+            }
+            btn.dataset.playing = 'false';
+            spanEl.textContent = 'Ascolta';
+            btn.classList.remove('text-amber-400');
+            btn.classList.add('text-gray-500');
+            return;
+        }
+
+        // Ferma eventuale audio precedente
+        if (window._currentTtsAudio) {
+            window._currentTtsAudio.pause();
+            window._currentTtsAudio = null;
+        }
+
+        spanEl.textContent = 'Caricamento...';
+        btn.classList.add('animate-pulse');
+
+        try {
+            var { getAuthHeaders } = await import('../api/helpers.js');
+            var headers = await getAuthHeaders();
+
+            // Pulisci il testo per il TTS
+            var cleanText = msg.content
+                .replace(/\*\*/g, '')
+                .replace(/\*/g, '')
+                .replace(/#{1,6}\s*/g, '')
+                .replace(/\[CONTINUA[^\]]*\]/g, '')
+                .replace(/---/g, '')
+                .replace(/⏳|🕐|📝|📖|🎧/g, '')
+                .trim();
+
+            if (cleanText.length > 5000) cleanText = cleanText.substring(0, 5000);
+
+            var response = await fetch('/api/tts', {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({
+                    text: cleanText,
+                    voice: 'it-IT-GiuseppeNeural',
+                    rate: '-5%'
+                })
+            });
+
+            if (!response.ok) throw new Error('TTS error ' + response.status);
+
+            var blob = await response.blob();
+            var audioUrl = URL.createObjectURL(blob);
+            var audio = new Audio(audioUrl);
+
+            window._currentTtsAudio = audio;
+            btn.dataset.playing = 'true';
+            btn.classList.remove('animate-pulse');
+            spanEl.textContent = '⏹ Stop';
+            btn.classList.remove('text-gray-500');
+            btn.classList.add('text-amber-400');
+
+            audio.onended = function() {
+                btn.dataset.playing = 'false';
+                spanEl.textContent = '✓ Ascoltato';
+                btn.classList.remove('text-amber-400');
+                btn.classList.add('text-green-500');
+                btn.disabled = false;
+                URL.revokeObjectURL(audioUrl);
+                window._currentTtsAudio = null;
+            };
+
+            audio.play();
+
+        } catch(e) {
+            console.error('[TTS] Errore:', e);
+            btn.classList.remove('animate-pulse');
+            spanEl.textContent = 'Errore TTS';
+            btn.classList.add('text-red-400');
+            setTimeout(() => { spanEl.textContent = 'Ascolta'; btn.classList.remove('text-red-400'); btn.classList.add('text-gray-500'); }, 3000);
+        }
     },
 
     _showTyping: function() {
