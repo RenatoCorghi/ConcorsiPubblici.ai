@@ -406,68 +406,76 @@ export default async function handler(req, res) {
                 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
                 
                 if (supabaseUrl && supabaseKey) {
-                    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
-                    
-                    // Valida JWT per ottenere utente
-                    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
-                    if (userError || !userData?.user) {
-                        return res.status(401).json({ error: 'Token scaduto o non valido.' });
-                    }
-                    const userId = userData.user.id;
-                    const userEmail = (userData.user.email || '').toLowerCase();
-                    
-                    // Admin whitelist — bypass tier check
-                    const ADMIN_EMAILS = [
-                        'renatocorghi80@gmail.com',
-                        // Aggiungi email di David qui
-                    ];
-                    
-                    let tier = 'Free';
-                    if (ADMIN_EMAILS.includes(userEmail)) {
-                        tier = 'Elite';
-                    } else {
-                        // Controlla il piano dal DB
-                        const { data: profile } = await supabaseAdmin.from('profiles').select('tier').eq('id', userId).single();
-                        tier = (profile && profile.tier) || 'Free';
-                    }
-                    
-                    // Limiti mensili per tier (safety net — il gating reale è settimanale, lato client)
-                    const TIER_SERVER_LIMITS = {
-                        Free:    { aiCalls: 0, oralSessions: 0, tutorChats: 0, aiTraces: 0, pdfExports: 0, aiQuiz: 50, phantomTutor: 0 },
-                        Starter: { aiCalls: 1, oralSessions: 0, tutorChats: 20, aiTraces: 0, pdfExports: 0, aiQuiz: 50, phantomTutor: 0 },
-                        Pro:     { aiCalls: 8, oralSessions: 8, tutorChats: 60, aiTraces: 8, pdfExports: 999, aiQuiz: 999, phantomTutor: 0 },
-                        Elite:   { aiCalls: 999, oralSessions: 999, tutorChats: 999, aiTraces: 999, pdfExports: 999, aiQuiz: 999, phantomTutor: 999 }
-                    };
-                    
-                    const limits = TIER_SERVER_LIMITS[tier] || TIER_SERVER_LIMITS.Free;
-                    
-                    if (tier !== 'Elite') {
-                        const limit = limits[requestedFeature];
-                        if (limit === undefined) return res.status(400).json({ error: 'Feature non valida.' });
-                        if (limit === 0) {
-                            const tierLabel = tier === 'Free' ? 'Starter' : 'Pro';
-                            return res.status(403).json({ error: `Questa funzionalità è disponibile dal piano ${tierLabel} in su.` });
+                    try {
+                        const meteringStart = Date.now();
+                        const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+                        
+                        // Valida JWT per ottenere utente
+                        const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+                        if (userError || !userData?.user) {
+                            return res.status(401).json({ error: 'Token scaduto o non valido.' });
+                        }
+                        const userId = userData.user.id;
+                        const userEmail = (userData.user.email || '').toLowerCase();
+                        
+                        // Admin whitelist — bypass tier check
+                        const ADMIN_EMAILS = [
+                            'renatocorghi80@gmail.com',
+                            // Aggiungi email di David qui
+                        ];
+                        
+                        let tier = 'Free';
+                        if (ADMIN_EMAILS.includes(userEmail)) {
+                            tier = 'Elite';
+                        } else {
+                            // Controlla il piano dal DB
+                            const { data: profile } = await supabaseAdmin.from('profiles').select('tier').eq('id', userId).single();
+                            tier = (profile && profile.tier) || 'Free';
                         }
                         
-                        const now = new Date();
-                        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                        console.log(`[Metering] User: ${userEmail}, Tier: ${tier}, Feature: ${requestedFeature}, Time: ${Date.now() - meteringStart}ms`);
                         
-                        const { data: usageData } = await supabaseAdmin
-                            .from('usage_metering')
-                            .select(requestedFeature)
-                            .eq('user_id', userId)
-                            .eq('month', currentMonth)
-                            .single();
+                        // Limiti mensili per tier (safety net — il gating reale è settimanale, lato client)
+                        const TIER_SERVER_LIMITS = {
+                            Free:    { aiCalls: 0, oralSessions: 0, tutorChats: 0, aiTraces: 0, pdfExports: 0, aiQuiz: 50, phantomTutor: 0 },
+                            Starter: { aiCalls: 1, oralSessions: 0, tutorChats: 20, aiTraces: 0, pdfExports: 0, aiQuiz: 50, phantomTutor: 0 },
+                            Pro:     { aiCalls: 8, oralSessions: 8, tutorChats: 60, aiTraces: 8, pdfExports: 999, aiQuiz: 999, phantomTutor: 0 },
+                            Elite:   { aiCalls: 999, oralSessions: 999, tutorChats: 999, aiTraces: 999, pdfExports: 999, aiQuiz: 999, phantomTutor: 999 }
+                        };
+                        
+                        const limits = TIER_SERVER_LIMITS[tier] || TIER_SERVER_LIMITS.Free;
+                        
+                        if (tier !== 'Elite') {
+                            const limit = limits[requestedFeature];
+                            if (limit === undefined) return res.status(400).json({ error: 'Feature non valida.' });
+                            if (limit === 0) {
+                                const tierLabel = tier === 'Free' ? 'Starter' : 'Pro';
+                                return res.status(403).json({ error: `Questa funzionalità è disponibile dal piano ${tierLabel} in su.` });
+                            }
                             
-                        const currentUsage = usageData ? (usageData[requestedFeature] || 0) : 0;
-                        if (currentUsage >= limit) {
-                            return res.status(403).json({ error: 'Crediti esauriti per questa funzionalità.' });
+                            const now = new Date();
+                            const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                            
+                            const { data: usageData } = await supabaseAdmin
+                                .from('usage_metering')
+                                .select(requestedFeature)
+                                .eq('user_id', userId)
+                                .eq('month', currentMonth)
+                                .single();
+                                
+                            const currentUsage = usageData ? (usageData[requestedFeature] || 0) : 0;
+                            if (currentUsage >= limit) {
+                                return res.status(403).json({ error: 'Crediti esauriti per questa funzionalità.' });
+                            }
+                            
+                            // Incrementa il credito
+                            const upsertPayload = { user_id: userId, month: currentMonth };
+                            upsertPayload[requestedFeature] = currentUsage + 1;
+                            await supabaseAdmin.from('usage_metering').upsert(upsertPayload, { onConflict: 'user_id, month' });
                         }
-                        
-                        // Incrementa il credito
-                        const upsertPayload = { user_id: userId, month: currentMonth };
-                        upsertPayload[requestedFeature] = currentUsage + 1;
-                        await supabaseAdmin.from('usage_metering').upsert(upsertPayload, { onConflict: 'user_id, month' });
+                    } catch (meteringError) {
+                        // Non bloccare la richiesta se il metering fallisce
+                        console.error('[Metering] Errore non bloccante:', meteringError.message);
                     }
                 }
             } else {
