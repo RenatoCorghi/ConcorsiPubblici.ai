@@ -136,8 +136,8 @@ export function renderHome() {
 
             <!-- ONBOARDING WIZARD OVERLAY -->
             ${!AppState.tutorialSeen ? `
-                <div id="onboarding-tutorial" class="fixed inset-0 z-[100] flex items-center justify-center p-3 md:p-4 bg-gray-950/90 backdrop-blur-sm fade-in">
-                    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-5 md:p-8 max-w-lg w-full shadow-2xl relative overflow-hidden max-h-[90dvh] flex flex-col">
+                <div id="onboarding-tutorial" class="fixed inset-0 z-[100] flex items-start md:items-center justify-center p-3 md:p-4 pt-16 md:pt-4 bg-gray-950/90 backdrop-blur-sm fade-in">
+                    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-5 md:p-8 max-w-lg w-full shadow-2xl relative overflow-hidden max-h-[85dvh] flex flex-col">
                         <div class="absolute -top-32 -right-32 w-64 h-64 bg-magis-600/20 rounded-full blur-3xl"></div>
                         <div class="absolute -bottom-32 -left-32 w-64 h-64 bg-blue-600/20 rounded-full blur-3xl"></div>
                         
