@@ -151,24 +151,24 @@ export function renderHome() {
                             
                             <div class="space-y-3 md:space-y-4 mb-4 md:mb-8 text-left">
                                 <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
-                                    <div class="mt-0.5"><i data-lucide="pen-tool" class="w-5 h-5 text-magis-400"></i></div>
+                                    <div class="mt-0.5"><i data-lucide="book-open" class="w-5 h-5 text-amber-400"></i></div>
                                     <div>
-                                        <h4 class="text-sm font-bold text-gray-200">1. Il Simulatore AI</h4>
-                                        <p class="text-xs text-gray-500 mt-1">Svolgi temi e ricevi una correzione spietata basata sui criteri reali della commissione d'esame.</p>
+                                        <h4 class="text-sm font-bold text-gray-200">1. Lectio Magistralis Interattiva</h4>
+                                        <p class="text-xs text-gray-500 mt-1">Vivi l'esperienza di una vera e propria lezione di livello concorsuale. Un'alta docenza simulata in tempo reale, alimentata dal nostro vastissimo database giuridico per garantirti un rigore dogmatico inattaccabile.</p>
                                     </div>
                                 </div>
                                 <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
-                                    <div class="mt-0.5"><i data-lucide="bot" class="w-5 h-5 text-blue-400"></i></div>
+                                    <div class="mt-0.5"><i data-lucide="list-todo" class="w-5 h-5 text-yellow-500"></i></div>
                                     <div>
-                                        <h4 class="text-sm font-bold text-gray-200">2. Tutor CiceroAI & Esame Orale</h4>
-                                        <p class="text-xs text-gray-500 mt-1">Usa la chat fluttuante e l'interprete vocale in tempo reale per essere pungolato e interrogato ovunque tu sia.</p>
+                                        <h4 class="text-sm font-bold text-gray-200">2. Quiz AI & Casi Reali</h4>
+                                        <p class="text-xs text-gray-500 mt-1">Mettiti alla prova con il nostro sistema di Quiz: affronta le varianti infinite generate dall'Intelligenza Artificiale o cimentati con le insidie dei casi reali. L'allenamento definitivo per trasformare lo studio dogmatico in prontezza operativa.</p>
                                     </div>
                                 </div>
                                 <div class="flex items-start gap-3 md:gap-4 p-3 md:p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
-                                    <div class="mt-0.5"><i data-lucide="book-open-check" class="w-5 h-5 text-orange-400"></i></div>
+                                    <div class="mt-0.5"><i data-lucide="scale" class="w-5 h-5 text-magis-400"></i></div>
                                     <div>
-                                        <h4 class="text-sm font-bold text-gray-200">3. L'Hub Tracce</h4>
-                                        <p class="text-xs text-gray-500 mt-1">Sfoglia centinaia di vecchie tracce concorsuali oppure genera le tue "Tracce Sartoriali" basate sui tuoi punti deboli.</p>
+                                        <h4 class="text-sm font-bold text-gray-200">3. L'Arsenale Completo</h4>
+                                        <p class="text-xs text-gray-500 mt-1">Sfida il rigore del Tutor, esplora un Glossario con centinaia di schede tra dottrina e sentenze storiche, e confrontati con l'élite della nostra Community. Un ecosistema vivo e in continua evoluzione.</p>
                                     </div>
                                 </div>
                             </div>
