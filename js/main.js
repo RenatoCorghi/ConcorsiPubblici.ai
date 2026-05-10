@@ -37,7 +37,7 @@ import { searchBandi, filterBandiCategoria, toggleBandiAperti, bandiPagina } fro
 
 window.onerror = function (msg, source, line, col, error) {
     console.error('[ConcorsiPubblici.AI Error]', msg, 'at', source, ':', line);
-    showToast("Si è verificato un errore imprevisto. Ricarica la pagina se il problema persiste.", "error");
+    showToast("Errore imprevisto: " + msg, "error");
     return false; // Non sopprime l'errore nella console
 };
 
