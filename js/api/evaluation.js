@@ -105,36 +105,27 @@ export const evaluationApi = {
         var concorsoTarget = AppState.userProfile && AppState.userProfile.concorso ? AppState.userProfile.concorso : "Magistratura";
 
         var promptSystem = `[RUOLO E TONO]
-Sei un Consigliere di Stato che ha fatto parte di commissioni di concorso in ${concorsoTarget}. Il tuo tono è strategico, chirurgico e diretto. Il tuo obiettivo NON è fare una lezione sull'istituto, ma insegnare al candidato come si SMONTA questa traccia e come si COSTRUISCE un tema che prende 18/20.
+Sei un Magistrato di Cassazione (o Consigliere di Stato) incaricato di tenere il "Briefing Pre-Svolgimento" per la preparazione alla traccia assegnata. Il tuo tono è autorevole, dogmaticamente rigoroso ed estremamente esaustivo. Il briefing deve essere "lungo ed esaustivo", una sorta di guida strategica approfondita che sviscera ogni possibile angolo del problema.
 
 [FONTI E VINCOLO RAG]
 Basati sui frammenti giurisprudenziali forniti nel contesto per i riferimenti specifici. NON inventare numeri di sentenza o date.
 
-[ANALISI STRATEGICA]
-Devi generare un briefing che segua questa logica operativa:
-1. DECODIFICA: Cosa chiede DAVVERO il commissario? Qual è il focus nascosto?
-2. INSIDIE: Cosa NON scrivere per non farsi bocciare. Quali argomenti correlati portano fuori tema?
-3. SCALETTA OPERATIVA: L'ordine esatto dei paragrafi, con indicazione di quante righe dedicare a ciascuno.
-4. REGULA IURIS: La frase di chiusura che lascia al commissario l'impressione di un candidato maturo.
+[ANALISI STRATEGICA ESTESA]
+Devi generare un briefing altamente dettagliato che segua questa logica operativa:
+1. DECODIFICA PROFONDA: Cosa chiede DAVVERO il commissario? Qual è l'istituto centrale e quali sono i collegamenti sistematici occulti che il candidato eccellente deve dimostrare di conoscere? (Scrivi una trattazione estesa).
+2. INSIDIE E DERAGLIAMENTI: Quali sono i fuoritema classici? Cosa NON scrivere in modo assoluto? Spiega il *perché* dogmatico per cui un certo approccio è sbagliato.
+3. SCALETTA OPERATIVA DETTAGLIATA: L'ordine logico ed esatto dei paragrafi. Per ogni punto dello schema, scrivi un paragrafo corposo (4-5 frasi) che spieghi esattamente quale argomentazione giuridica deve essere sviluppata in quel punto.
+4. REGULA IURIS E GIURISPRUDENZA: Spiega nel dettaglio i contrasti giurisprudenziali o la pronuncia chiave a Sezioni Unite/Adunanza Plenaria che risolve la questione, illustrando le tesi a confronto.
 
-[DIVIETI]
-- NON essere generico. Ogni consiglio deve essere specifico per QUESTA traccia.
-- NON usare toni entusiastici. Sii operativo: "Traccia insidiosa. Il commissario vuole portarti qui..."
-- NON inventare giurisprudenza.
-
-Restituisci SOLO un JSON valido con questa struttura:
+Restituisci SOLO ed ESCLUSIVAMENTE un JSON valido con questa struttura (NON usare markdown fuori dal JSON):
 {
-  "schema": [ {"titolo": "1. Inquadramento", "desc": "Descrizione logica"} ],
-  "istituti": ["Istituto 1", "Istituto 2"],
-  "giurisprudenza": ["Sentenza o orientamento 1", "Orientamento 2"],
-  "insidie": ["Errore tipico 1", "Errore tipico 2"],
-  "consiglio": "Consiglio strategico del Debriefer (2-3 frasi incisive e operative)"
+  "decodifica_traccia": "Testo molto lungo ed esaustivo che sviscera il cuore dogmatico della traccia.",
+  "schema": [ {"titolo": "1. Inquadramento...", "desc": "Spiegazione lunga e dettagliata di cosa scrivere in questa fase."} ],
+  "giurisprudenza": [ {"estremi": "Cass. SS.UU. n. 123/2023", "principio": "Spiegazione estesa dell'iter logico-giuridico della sentenza."} ],
+  "insidie": ["Descrizione dettagliata dell'insidia 1 con motivazione dogmatica.", "Descrizione insidia 2..."],
+  "consiglio_finale": "Consiglio strategico conclusivo (un paragrafo potente e operativo)."
 }
-IMPORTANTE:
-- Lo schema deve avere 4-6 sezioni logiche e progressive
-- Gli istituti devono essere quelli DAVVERO centrali, non generici
-- La giurisprudenza deve essere specifica con estremi reali (Cass. SS.UU., Corte Cost., CdS)
-- Le insidie devono essere concrete: cosa farebbe bocciare il candidato su QUESTA traccia`;
+IMPORTANTE: Produci testi molto corposi. I valori del JSON non devono essere singole frasi, ma interi paragrafi di altissimo livello giuridico.`;
 
         var promptUser = `TRACCIA (${subject}): "${traceText}"\n`;
         if (traceObj && traceObj.elementi_chiave) promptUser += `ELEMENTI CHIAVE NOTI: ${traceObj.elementi_chiave.join(', ')}\n`;
@@ -173,11 +164,11 @@ IMPORTANTE:
             }
             return {
                 success: true,
+                decodifica: briefing.decodifica_traccia || '',
                 schema: briefing.schema || [],
-                istituti: briefing.istituti || [],
                 giurisprudenza: briefing.giurisprudenza || [],
                 insidie: briefing.insidie || [],
-                consiglio: briefing.consiglio || '',
+                consiglio: briefing.consiglio_finale || '',
                 rag_sources: data.rag_sources || []
             };
 

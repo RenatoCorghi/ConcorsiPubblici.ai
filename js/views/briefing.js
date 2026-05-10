@@ -167,48 +167,54 @@ function renderErrorState(error) {
 }
 
 function renderBriefingContent(briefing) {
-    const sections = [
-        {
-            icon: 'map',
-            title: 'Schema di Svolgimento Consigliato',
-            color: 'text-magis-400',
-            bgColor: 'bg-magis-500/10 border-magis-500/20',
-            content: briefing.schema || [],
-            type: 'steps'
-        },
-        {
-            icon: 'scale',
-            title: 'Istituti Giuridici Chiave',
-            color: 'text-blue-400',
-            bgColor: 'bg-blue-500/10 border-blue-500/20',
-            content: briefing.istituti || [],
-            type: 'tags'
-        },
-        {
-            icon: 'book-open',
-            title: 'Riferimenti Giurisprudenziali',
-            color: 'text-amber-400',
-            bgColor: 'bg-amber-500/10 border-amber-500/20',
-            content: briefing.giurisprudenza || [],
-            type: 'references'
-        },
-        {
-            icon: 'alert-triangle',
-            title: 'Insidie e Trappole da Evitare',
-            color: 'text-red-400',
-            bgColor: 'bg-red-500/10 border-red-500/20',
-            content: briefing.insidie || [],
-            type: 'warnings'
-        },
-        {
-            icon: 'lightbulb',
-            title: 'Consiglio Strategico di CiceroAI',
-            color: 'text-yellow-400',
-            bgColor: 'bg-yellow-500/10 border-yellow-500/20',
-            content: briefing.consiglio || '',
-            type: 'quote'
-        }
-    ];
+    const sections = [];
+
+    if (briefing.decodifica) {
+        sections.push({
+            icon: 'microscope',
+            title: 'Decodifica Profonda della Traccia',
+            color: 'text-indigo-400',
+            bgColor: 'bg-indigo-500/10 border-indigo-500/20',
+            content: briefing.decodifica,
+            type: 'paragraph'
+        });
+    }
+
+    sections.push({
+        icon: 'map',
+        title: 'Schema di Svolgimento Consigliato',
+        color: 'text-magis-400',
+        bgColor: 'bg-magis-500/10 border-magis-500/20',
+        content: briefing.schema || [],
+        type: 'steps'
+    });
+
+    sections.push({
+        icon: 'book-open',
+        title: 'Riferimenti Giurisprudenziali e Regula Iuris',
+        color: 'text-amber-400',
+        bgColor: 'bg-amber-500/10 border-amber-500/20',
+        content: briefing.giurisprudenza || [],
+        type: 'references'
+    });
+
+    sections.push({
+        icon: 'alert-triangle',
+        title: 'Insidie e Trappole da Evitare',
+        color: 'text-red-400',
+        bgColor: 'bg-red-500/10 border-red-500/20',
+        content: briefing.insidie || [],
+        type: 'warnings'
+    });
+
+    sections.push({
+        icon: 'lightbulb',
+        title: 'Consiglio Strategico Finale',
+        color: 'text-yellow-400',
+        bgColor: 'bg-yellow-500/10 border-yellow-500/20',
+        content: briefing.consiglio || '',
+        type: 'quote'
+    });
 
     return `
         <div class="space-y-6">
@@ -233,17 +239,23 @@ function renderBriefingContent(briefing) {
 
 function renderSectionContent(section) {
     switch (section.type) {
+        case 'paragraph':
+            return `
+                <div class="prose prose-sm prose-invert max-w-none text-gray-300 leading-relaxed whitespace-pre-wrap">
+                    ${escapeHtml(section.content)}
+                </div>
+            `;
         case 'steps':
             return `
-                <div class="space-y-3 ml-1">
+                <div class="space-y-4 ml-1">
                     ${section.content.map((step, i) => `
                         <div class="flex gap-3">
-                            <div class="flex-shrink-0 w-7 h-7 rounded-full bg-magis-600/20 border border-magis-500/30 flex items-center justify-center mt-0.5">
-                                <span class="text-xs font-bold text-magis-400">${i + 1}</span>
+                            <div class="flex-shrink-0 w-8 h-8 rounded-full bg-magis-600/20 border border-magis-500/30 flex items-center justify-center mt-0.5">
+                                <span class="text-sm font-bold text-magis-400">${i + 1}</span>
                             </div>
                             <div>
-                                <p class="text-gray-200 font-medium text-sm">${escapeHtml(step.titolo || step)}</p>
-                                ${step.desc ? `<p class="text-gray-500 text-xs mt-1 leading-relaxed">${escapeHtml(step.desc)}</p>` : ''}
+                                <p class="text-gray-100 font-bold text-sm">${escapeHtml(step.titolo || step)}</p>
+                                ${step.desc ? `<p class="text-gray-400 text-sm mt-1.5 leading-relaxed">${escapeHtml(step.desc)}</p>` : ''}
                             </div>
                         </div>
                     `).join('')}
@@ -259,11 +271,14 @@ function renderSectionContent(section) {
             `;
         case 'references':
             return `
-                <div class="space-y-2">
+                <div class="space-y-3">
                     ${section.content.map(ref => `
-                        <div class="flex items-start gap-2 p-3 bg-gray-800/30 rounded-xl">
-                            <i data-lucide="bookmark" class="w-4 h-4 text-amber-400 mt-0.5 shrink-0"></i>
-                            <p class="text-gray-300 text-sm leading-relaxed">${escapeHtml(typeof ref === 'string' ? ref : ref.testo || ref)}</p>
+                        <div class="flex items-start gap-3 p-4 bg-gray-800/30 rounded-xl border border-gray-700/50">
+                            <i data-lucide="bookmark" class="w-5 h-5 text-amber-400 mt-0.5 shrink-0"></i>
+                            <div>
+                                ${typeof ref === 'object' && ref.estremi ? `<p class="font-bold text-amber-300 text-sm mb-1">${escapeHtml(ref.estremi)}</p>` : ''}
+                                <p class="text-gray-300 text-sm leading-relaxed">${escapeHtml(typeof ref === 'string' ? ref : ref.principio || ref.testo || ref)}</p>
+                            </div>
                         </div>
                     `).join('')}
                 </div>
