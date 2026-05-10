@@ -208,6 +208,26 @@ export function renderHome() {
                 </div>
 
                 ${resumeCard}
+
+                <!-- LEZIONE AI — Hero Card -->
+                <div class="col-span-1 md:col-span-2 border border-amber-500/30 rounded-2xl p-6 glass-panel card-hover flex flex-col justify-between bg-gradient-to-br from-amber-950/30 to-gray-900/50 cursor-pointer group relative overflow-hidden shadow-lg shadow-amber-500/10" onclick="app.navigate('lezione')">
+                    <div class="absolute top-0 right-0 p-3 opacity-10"><i data-lucide="graduation-cap" class="w-28 h-28 text-amber-400"></i></div>
+                    <div class="relative z-10">
+                        <span class="px-3 py-1 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-300 border border-amber-700/50 mb-4 inline-block uppercase tracking-widest">Consigliato</span>
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-11 h-11 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
+                                <i data-lucide="book-open" class="w-6 h-6 text-amber-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-white">Lezione AI Interattiva</h3>
+                                <p class="text-gray-400 text-sm">Studia qualsiasi argomento giuridico con CiceroAI</p>
+                            </div>
+                        </div>
+                        <button class="mt-2 px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg font-bold transition shadow-lg shadow-amber-600/30 flex items-center gap-2 text-sm">
+                            <i data-lucide="play" class="w-4 h-4"></i> Inizia Lezione
+                        </button>
+                    </div>
+                </div>
                 
                 <div class="col-span-1 border border-gray-800 rounded-2xl p-6 glass-panel card-hover flex flex-col justify-center items-center bg-gray-900/50 cursor-pointer" onclick="app.navigate('schedule')">
                     <i data-lucide="calendar" class="text-gray-400 w-8 h-8 mb-3"></i>
@@ -221,10 +241,20 @@ export function renderHome() {
                     <p class="text-gray-500 text-sm text-center">Rivedi i progressi</p>
                 </div>
 
-                <div class="col-span-1 border border-gray-800 rounded-2xl p-6 glass-panel card-hover flex flex-col justify-center items-center bg-gray-900/50 cursor-pointer group shadow-lg shadow-yellow-500/5" onclick="app.navigate('quiz')">
-                    <i data-lucide="list-todo" class="text-yellow-500 w-8 h-8 mb-3 transition-transform group-hover:scale-110"></i>
-                    <h3 class="text-lg font-bold text-white mb-1">Quiz AI</h3>
-                    <p class="text-gray-500 text-sm text-center">Simulazioni rapide</p>
+                <div class="col-span-1 md:col-span-2 border border-yellow-500/30 rounded-2xl p-6 glass-panel card-hover flex flex-col md:flex-row justify-between items-center gap-4 bg-gradient-to-br from-yellow-950/20 to-gray-900/50 cursor-pointer group shadow-lg shadow-yellow-500/10 relative overflow-hidden" onclick="app.navigate('quiz')">
+                    <div class="absolute top-0 right-0 p-3 opacity-10"><i data-lucide="brain" class="w-24 h-24 text-yellow-400"></i></div>
+                    <div class="flex items-center gap-4 relative z-10">
+                        <div class="w-11 h-11 rounded-xl bg-yellow-500/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
+                            <i data-lucide="list-todo" class="text-yellow-500 w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-white mb-1">Quiz AI & Casi Reali</h3>
+                            <p class="text-gray-400 text-sm">Domande generate dall'AI su materie giuridiche e sentenze reali</p>
+                        </div>
+                    </div>
+                    <button class="relative z-10 shrink-0 px-5 py-2.5 bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg font-bold transition shadow-lg shadow-yellow-600/30 flex items-center gap-2 text-sm">
+                        <i data-lucide="zap" class="w-4 h-4"></i> Avvia Quiz
+                    </button>
                 </div>
 
                 <div class="col-span-1 md:col-span-2 border border-emerald-900/50 rounded-2xl p-6 glass-panel card-hover flex flex-col md:flex-row justify-center items-center gap-4 bg-gradient-to-r from-emerald-950/30 to-gray-900/50 cursor-pointer group shadow-lg shadow-emerald-500/5 relative overflow-hidden" onclick="app.navigate('giurisprudenza')">
