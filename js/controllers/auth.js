@@ -254,5 +254,73 @@ export var AuthController = {
         showToast("Accesso come Ospite eseguito!", "success");
         applyThemeColor();
         setTimeout(renderView, 300);
+    },
+
+    // --- Profile Page Methods ---
+    toggleProfileEdit: function() {
+        var panel = document.getElementById('profile-edit-panel');
+        if (panel) {
+            panel.classList.toggle('hidden');
+            // Attach bio counter
+            var bioInput = document.getElementById('profile-edit-bio');
+            if (bioInput) {
+                bioInput.addEventListener('input', function() {
+                    var counter = document.getElementById('profile-bio-count');
+                    if (counter) counter.textContent = this.value.length;
+                });
+            }
+        }
+    },
+
+    saveProfile: function() {
+        var nameInput = document.getElementById('profile-edit-name');
+        var bioInput = document.getElementById('profile-edit-bio');
+        var concorsoInput = document.getElementById('profile-edit-concorso');
+        var avatarUrlInput = document.getElementById('profile-edit-avatar-url');
+
+        if (!AppState.userProfile) return;
+
+        if (nameInput && nameInput.value.trim()) {
+            AppState.userProfile.name = nameInput.value.trim();
+        }
+        if (bioInput) {
+            AppState.userProfile.bio = bioInput.value.trim();
+        }
+        if (concorsoInput) {
+            AppState.userProfile.concorso = concorsoInput.value;
+        }
+        if (avatarUrlInput && avatarUrlInput.value.trim()) {
+            AppState.userProfile.avatar = avatarUrlInput.value.trim();
+        }
+
+        updateUserProfile(AppState.userProfile);
+        applyThemeColor();
+        showToast("Profilo aggiornato con successo!", "success");
+        renderView(); // Re-render per mostrare le modifiche
+    },
+
+    updateProfileAvatar: function(inputElement) {
+        var file = inputElement.files?.[0];
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) {
+            showToast("L'immagine è troppo grande (max 2MB).", "warning");
+            return;
+        }
+
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            AppState.userProfile.avatar = e.target.result;
+            updateUserProfile(AppState.userProfile);
+            
+            // Update preview immediately
+            var preview = document.getElementById('profile-avatar-preview');
+            if (preview) preview.src = e.target.result;
+            
+            var urlInput = document.getElementById('profile-edit-avatar-url');
+            if (urlInput) urlInput.value = '(immagine caricata)';
+            
+            showToast("Avatar aggiornato!", "success");
+        };
+        reader.readAsDataURL(file);
     }
 };

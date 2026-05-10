@@ -43,9 +43,17 @@ export const cloud = {
             cloud.syncHistory(); // Scarica lo storico al login
             cloud.syncCommunityPosts(); // Scarica la community al login
 
-            // Nascondi il bottone "Accedi" dalla navbar
+            // Nascondi il bottone "Accedi" dalla navbar e mostra avatar
             var authBtn = document.getElementById('nav-auth-btn');
             if (authBtn) authBtn.classList.add('hidden');
+            var avatarBtn = document.getElementById('nav-avatar-btn');
+            if (avatarBtn) {
+                avatarBtn.classList.remove('hidden');
+                var avatarImg = document.getElementById('nav-avatar-img');
+                if (avatarImg && AppState.userProfile?.avatar) {
+                    avatarImg.src = AppState.userProfile.avatar;
+                }
+            }
             
             // Chiudi il modale di accesso se era aperto
             var modal = document.getElementById('onboarding-modal');
@@ -66,9 +74,11 @@ export const cloud = {
             } else {
                 cloud.user = null;
                 console.log("Utente Disconnesso");
-                // Mostra di nuovo il bottone "Accedi"
+                // Mostra di nuovo il bottone "Accedi" e nascondi avatar
                 var authBtn = document.getElementById('nav-auth-btn');
                 if (authBtn) authBtn.classList.remove('hidden');
+                var avatarBtn = document.getElementById('nav-avatar-btn');
+                if (avatarBtn) avatarBtn.classList.add('hidden');
             }
         });
         

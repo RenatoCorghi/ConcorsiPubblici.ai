@@ -19,6 +19,7 @@ import { renderGiurisprudenza } from './views/giurisprudenza.js';
 import { renderBandiView } from './views/bandi.js';
 import { renderBriefing } from './views/briefing.js';
 import { renderLezione } from './views/lezione.js';
+import { renderProfile } from './views/profile.js';
 
 // --- HASH ROUTER: supporta browser back/forward e deep-linking ---
 
@@ -163,6 +164,9 @@ function _injectRouteContent(main) {
             break;
         case 'legal':
             main.innerHTML = renderLegal();
+            break;
+        case 'profile':
+            main.innerHTML = renderProfile();
             break;
         case 'community-forum':
         case 'community-users':

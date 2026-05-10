@@ -102,6 +102,9 @@ export const app = {
     logout: function () { AuthController.logout(); },
     openAuthModal: function () { AuthController.openAuthModal(); },
     saveUserProfile: function () { AuthController.saveUserProfile(); },
+    toggleProfileEdit: function () { AuthController.toggleProfileEdit(); },
+    saveProfile: function () { AuthController.saveProfile(); },
+    updateProfileAvatar: function (el) { AuthController.updateProfileAvatar(el); },
     upgradeTier: function () { AuthController.upgradeTier(); },
     joinWaitlist: function () {
         var emailInput = document.getElementById('waitlist-email');
