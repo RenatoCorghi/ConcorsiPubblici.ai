@@ -807,12 +807,12 @@ export const LezioneController = {
             var ttsBtn = '';
             if (!isWaitMsg) {
                 ttsBtn = `
-                <div class="flex items-center gap-2 mt-3 pt-2 border-t border-gray-700/30">
+                <div class="mt-4 pt-3 border-t border-gray-700/30">
                     <button onclick="window.Lezione?._playMessageTTS(this, '${msg.id}')" 
-                        class="tts-msg-btn flex items-center gap-1.5 text-xs text-gray-500 hover:text-amber-400 transition group px-2 py-1 rounded-lg hover:bg-amber-500/10"
+                        class="tts-msg-btn w-full flex items-center justify-center gap-2 text-sm font-semibold text-amber-300 hover:text-white bg-amber-500/10 hover:bg-amber-500/25 border border-amber-500/30 hover:border-amber-400/60 transition-all duration-200 px-4 py-2.5 rounded-xl group"
                         title="Ascolta questo messaggio">
-                        <svg class="w-3.5 h-3.5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
-                        <span>Ascolta</span>
+                        <svg class="w-5 h-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+                        <span>🎧 Ascolta questo modulo</span>
                     </button>
                 </div>`;
             }
