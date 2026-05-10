@@ -117,7 +117,15 @@ export const CommunityController = {
         var post = DB_COMMUNITY.posts.find(p => p.id === postId);
         if (post) {
             post.likes += 1;
-            renderView();
+            
+            // Aggiorna solo il counter nel DOM per evitare un fastidioso re-render di tutta la vista
+            var likeBtn = document.getElementById('like-btn-' + postId);
+            if (likeBtn) {
+                likeBtn.innerHTML = '<i data-lucide="heart" class="w-4 h-4 fill-current text-red-500"></i> ' + post.likes;
+                likeBtn.classList.add('text-red-500');
+                likeBtn.classList.remove('text-gray-500');
+                if (window.lucide) lucide.createIcons();
+            }
             
             // Cloud sync asincrono
             if (window.cloud && cloud.user) {

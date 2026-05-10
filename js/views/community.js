@@ -126,8 +126,8 @@ export function renderCommunityForum() {
                 </div>
                 <p class="text-gray-300 text-sm leading-relaxed mb-4 whitespace-pre-wrap">${escapeHtml(p.content)}</p>
                 <div class="flex items-center gap-4 border-t border-gray-800 pt-3">
-                    <button onclick="app.likePost('${p.id}')" class="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-400 transition group"><i data-lucide="heart" class="w-4 h-4 group-hover:fill-current"></i> ${p.likes}</button>
-                    <button class="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-400 transition"><i data-lucide="message-circle" class="w-4 h-4"></i> Rispondi</button>
+                    <button id="like-btn-${p.id}" onclick="app.likePost('${p.id}')" class="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-400 transition group"><i data-lucide="heart" class="w-4 h-4 group-hover:fill-current"></i> ${p.likes}</button>
+                    <button onclick="window.showToast('La funzione Rispondi sarà attiva a breve!', 'info')" class="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-400 transition"><i data-lucide="message-circle" class="w-4 h-4"></i> Rispondi</button>
                     <button class="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition ml-auto hidden sm:flex"><i data-lucide="share-2" class="w-4 h-4"></i> Condividi</button>
                 </div>
             </div>
