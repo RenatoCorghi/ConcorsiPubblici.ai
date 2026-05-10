@@ -34,6 +34,22 @@ export const SimulationController = {
             return;
         }
 
+        // --- TRIAL GATE (Free Tier) ---
+        const tier = Metering._getTier();
+        if (tier === 'Free') {
+            import('../data/trial_content.js').then(({ TRIAL_CONTENT }) => {
+                AppState.currentSimulationTask = TRIAL_CONTENT.briefing.traccia;
+                AppState.currentBriefing = TRIAL_CONTENT.briefing.result;
+                navigateToRoute('briefing');
+                if (typeof window.app !== 'undefined' && window.app.renderView) {
+                    window.app.renderView();
+                } else if (typeof renderView === 'function') {
+                    renderView();
+                }
+            });
+            return;
+        }
+
         // --- GATE 2: Limite settimanale Debrief ---
         if (!Metering.canUseWeekly('briefing', '_global')) {
             Metering.showWeeklyPaywall('briefing', '_global');

@@ -189,6 +189,13 @@ export const LezioneController = {
      * Avvio automatico della lezione quando si arriva dalla traccia.
      */
     _startAutoFromTraccia: async function(argomento, materia) {
+        // --- TRIAL GATE (Free Tier) ---
+        const tier = Metering._getTier();
+        if (tier === 'Free') {
+            this._startTrialLectio();
+            return;
+        }
+
         // --- GATE: Limite settimanale (Lezione Socratica) ---
         if (!Metering.canUseWeekly('lezione', '_global')) {
             Metering.showWeeklyPaywall('lezione', '_global');
@@ -288,6 +295,13 @@ export const LezioneController = {
         // Paywall mensile
         if (!Metering.canUse('tutorChats')) {
             Metering.showPaywall('tutorChats');
+            return;
+        }
+
+        // --- TRIAL GATE (Free Tier) ---
+        const tier = Metering._getTier();
+        if (tier === 'Free') {
+            this._startTrialLectio();
             return;
         }
 
@@ -396,6 +410,13 @@ export const LezioneController = {
         // Paywall mensile
         if (!Metering.canUse('tutorChats')) {
             Metering.showPaywall('tutorChats');
+            return;
+        }
+
+        // --- TRIAL GATE (Free Tier) ---
+        const tier = Metering._getTier();
+        if (tier === 'Free') {
+            this._startTrialLectio();
             return;
         }
 
@@ -845,5 +866,59 @@ export const LezioneController = {
         utterance.onend = () => { this.isSpeaking = false; };
 
         this.synth.speak(utterance);
+    },
+
+    // ==========================================
+    // TRIAL LECTIO (Free Tier)
+    // ==========================================
+    
+    _startTrialLectio: async function() {
+        try {
+            const { TRIAL_CONTENT } = await import('../data/trial_content.js');
+            const trial = TRIAL_CONTENT.lectio;
+            
+            AppState.lezioneChat = [];
+            AppState.lezioneMeta = { argomento: trial.argomento, materia: trial.materia, livello: 'avanzato', isLectio: true, isTrial: true };
+            this.currentModule = 1;
+            this.isLectio = true;
+            this.autoGenerating = true;
+
+            document.getElementById('lezione-setup')?.classList.add('hidden');
+            document.getElementById('lezione-chat-area')?.classList.remove('hidden');
+            var inputArea = document.querySelector('#lezione-input-form')?.parentElement;
+            if (inputArea) inputArea.style.display = 'none';
+            this._updateProgressBar(1);
+
+            this._addMessage('user', \`📖 Lectio Magistralis (Versione di Prova): **\${trial.argomento}**\`);
+            this._showTyping();
+            
+            // Simula generazione del primo modulo
+            setTimeout(() => {
+                this._hideTyping();
+                this._addMessage('ai', trial.moduli[0]);
+                this._continueTrialLectio(1, trial.moduli);
+            }, 1500);
+        } catch (e) {
+            console.error("Trial content non trovato", e);
+        }
+    },
+
+    _continueTrialLectio: function(currentIndex, moduli) {
+        if (currentIndex >= moduli.length) {
+            this.autoGenerating = false;
+            return;
+        }
+        
+        setTimeout(() => {
+            this._addMessage('user', 'Continua la lezione.');
+            this._showTyping();
+            setTimeout(() => {
+                this._hideTyping();
+                this._addMessage('ai', moduli[currentIndex]);
+                this.currentModule = currentIndex + 1;
+                this._updateProgressBar(this.currentModule);
+                this._continueTrialLectio(currentIndex + 1, moduli);
+            }, 3000); // simula tempo di generazione AI
+        }, 2000); // pausa di lettura prima del prossimo
     }
 };
