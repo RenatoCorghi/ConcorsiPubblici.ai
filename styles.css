@@ -599,3 +599,349 @@ body {
     background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     background-size: 24px 24px;
 }
+
+/* ============================================================
+   LECTURE PLAYER — Full-screen Audio+Slide Player
+   ============================================================ */
+
+#lecture-player-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.97);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    /* Anti-download */
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+#lecture-player-overlay.lp-visible {
+    opacity: 1;
+}
+
+.lp-container {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1rem 1.5rem;
+}
+
+/* --- Header --- */
+.lp-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+}
+.lp-back-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.04);
+    color: #9ca3af;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.lp-back-btn:hover {
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border-color: rgba(255,255,255,0.2);
+}
+.lp-header-info {
+    flex: 1;
+    min-width: 0;
+}
+.lp-materia-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--lp-accent);
+    background: var(--lp-glow);
+    border: 1px solid color-mix(in srgb, var(--lp-accent) 30%, transparent);
+}
+.lp-title {
+    margin: 4px 0 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: 'Outfit', sans-serif;
+}
+.lp-header-meta {
+    color: #6b7280;
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+}
+
+/* --- Slide Area --- */
+.lp-slide-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 2rem 0;
+}
+.lp-slide {
+    width: 100%;
+    max-width: 720px;
+    padding: 2.5rem;
+    border-radius: 24px;
+    background: linear-gradient(145deg, rgba(30,30,50,0.9), rgba(20,20,35,0.95));
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 
+        0 30px 60px -20px rgba(0,0,0,0.5),
+        inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.lp-slide-enter {
+    animation: slideEnter 0.4s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+@keyframes slideEnter {
+    from { opacity: 0; transform: translateX(30px) scale(0.98); }
+    to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+.lp-slide-module {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--lp-accent);
+    background: var(--lp-glow);
+    border: 1px solid color-mix(in srgb, var(--lp-accent) 20%, transparent);
+    margin-bottom: 1.25rem;
+}
+.lp-slide-title {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: white;
+    line-height: 1.4;
+    margin: 0 0 1.5rem 0;
+    font-family: 'Outfit', sans-serif;
+}
+.lp-slide-bullets {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.5rem 0;
+}
+.lp-slide-bullets li {
+    position: relative;
+    padding-left: 1.5rem;
+    margin-bottom: 0.75rem;
+    color: #d1d5db;
+    font-size: 0.95rem;
+    line-height: 1.65;
+}
+.lp-slide-bullets li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.6em;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--lp-accent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--lp-accent) 50%, transparent);
+}
+.lp-slide-articles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 1rem;
+}
+.lp-article-tag {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.08);
+    border: 1px solid rgba(251, 191, 36, 0.2);
+}
+.lp-slide-terms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.lp-term-tag {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--lp-accent);
+    background: var(--lp-glow);
+    border: 1px solid color-mix(in srgb, var(--lp-accent) 20%, transparent);
+}
+
+/* --- Controls --- */
+.lp-controls {
+    flex-shrink: 0;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+.lp-progress-wrapper {
+    margin-bottom: 0.75rem;
+}
+.lp-progress-bar {
+    position: relative;
+    width: 100%;
+    height: 5px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    cursor: pointer;
+    margin-bottom: 4px;
+}
+.lp-progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--lp-accent), color-mix(in srgb, var(--lp-accent) 70%, #818cf8));
+    transition: width 0.3s ease;
+    box-shadow: 0 0 10px color-mix(in srgb, var(--lp-accent) 40%, transparent);
+}
+.lp-progress-dot {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    transition: left 0.3s ease;
+    opacity: 0;
+}
+.lp-progress-bar:hover .lp-progress-dot {
+    opacity: 1;
+}
+.lp-time {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: #6b7280;
+    font-variant-numeric: tabular-nums;
+}
+
+.lp-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    margin-bottom: 0.75rem;
+}
+.lp-btn {
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+.lp-btn-secondary {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    color: #9ca3af;
+}
+.lp-btn-secondary:hover {
+    background: rgba(255,255,255,0.12);
+    color: white;
+    transform: scale(1.1);
+}
+.lp-btn-primary {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--lp-accent), color-mix(in srgb, var(--lp-accent) 70%, #6366f1));
+    color: white;
+    box-shadow: 0 8px 25px -5px color-mix(in srgb, var(--lp-accent) 50%, transparent);
+}
+.lp-btn-primary:hover {
+    transform: scale(1.08);
+    box-shadow: 0 12px 35px -5px color-mix(in srgb, var(--lp-accent) 60%, transparent);
+}
+.lp-btn-primary:active {
+    transform: scale(0.95);
+}
+
+/* Spinner */
+.lp-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(255,255,255,0.2);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* --- Slide Dots --- */
+.lp-dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding-bottom: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.lp-dots::-webkit-scrollbar { display: none; }
+.lp-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.15);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 0;
+    flex-shrink: 0;
+}
+.lp-dot:hover {
+    background: rgba(255,255,255,0.35);
+    transform: scale(1.3);
+}
+.lp-dot-active {
+    background: var(--lp-accent);
+    width: 24px;
+    border-radius: 4px;
+    box-shadow: 0 0 10px color-mix(in srgb, var(--lp-accent) 50%, transparent);
+}
+.lp-dot-played {
+    background: color-mix(in srgb, var(--lp-accent) 40%, transparent);
+}
+
+/* --- Mobile Responsive --- */
+@media (max-width: 768px) {
+    .lp-container { padding: 0.75rem 1rem; }
+    .lp-slide { padding: 1.5rem; border-radius: 16px; }
+    .lp-slide-title { font-size: 1.15rem; }
+    .lp-btn-primary { width: 56px; height: 56px; }
+    .lp-btn-secondary { width: 38px; height: 38px; }
+    .lp-dots { gap: 4px; }
+    .lp-dot { width: 6px; height: 6px; }
+    .lp-dot-active { width: 18px; }
+}

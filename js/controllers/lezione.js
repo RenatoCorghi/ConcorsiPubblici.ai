@@ -513,6 +513,8 @@ export const LezioneController = {
             this.autoGenerating = false;
             this._updateProgressBar(5);
             console.log('[Lectio] ✅ Completata! Tutti i moduli generati.');
+            // Mostra pulsante Ascolta
+            this._showListenButton();
             // Mostra input per domande post-lectio
             var inputArea = document.querySelector('#lezione-input-form')?.parentElement;
             if (inputArea) inputArea.style.display = '';
@@ -691,6 +693,45 @@ export const LezioneController = {
             input.value = text;
             this.sendMessage(new Event('submit'));
         }
+    },
+
+    /**
+     * Apre il Lecture Player full-screen (audio + slide).
+     */
+    openLectureMode: function() {
+        if (!AppState.lezioneChat || AppState.lezioneChat.length === 0) return;
+        
+        // Estrai solo i messaggi AI (i moduli della lezione)
+        var moduleTexts = AppState.lezioneChat
+            .filter(m => m.role === 'ai')
+            .map(m => m.content);
+        
+        if (moduleTexts.length === 0) return;
+        
+        var argomento = AppState.lezioneMeta?.argomento || 'Lezione';
+        var materia = AppState.lezioneMeta?.materia || 'Civile';
+        
+        import('../views/lecture-player.js').then(({ openLecturePlayer }) => {
+            openLecturePlayer(moduleTexts, argomento, materia);
+        });
+    },
+
+    /**
+     * Mostra il pulsante "Ascolta la Lezione" nella chat.
+     */
+    _showListenButton: function() {
+        var container = document.getElementById('lezione-messages');
+        if (!container) return;
+        
+        container.innerHTML += `
+        <div class="flex justify-center my-6 fade-in">
+            <button onclick="window.Lezione?.openLectureMode()" 
+                class="px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-amber-500/30 flex items-center gap-3 transition hover:scale-105 group">
+                <svg class="w-6 h-6 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18v-6a9 9 0 0118 0v6"/><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/></svg>
+                🎧 Ascolta la Lezione
+            </button>
+        </div>`;
+        container.scrollTop = container.scrollHeight;
     },
 
     /**
@@ -889,7 +930,7 @@ export const LezioneController = {
             if (inputArea) inputArea.style.display = 'none';
             this._updateProgressBar(1);
 
-            this._addMessage('user', \`📖 Lectio Magistralis (Versione di Prova): **\${trial.argomento}**\`);
+            this._addMessage('user', '📖 Lectio Magistralis (Versione di Prova): **' + trial.argomento + '**');
             this._showTyping();
             
             // Simula generazione del primo modulo
@@ -906,6 +947,8 @@ export const LezioneController = {
     _continueTrialLectio: function(currentIndex, moduli) {
         if (currentIndex >= moduli.length) {
             this.autoGenerating = false;
+            // Mostra pulsante Ascolta al termine del trial
+            this._showListenButton();
             return;
         }
         

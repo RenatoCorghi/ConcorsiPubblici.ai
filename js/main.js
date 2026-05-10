@@ -28,6 +28,7 @@ import { Modals } from './views/modals.js';
 import { Gamification } from './gamification.js';
 import { TutorController } from './controllers/tutor.js';
 import { LezioneController } from './controllers/lezione.js';
+window.Lezione = LezioneController; // Esposto per il pulsante "Ascolta la Lezione"
 import { Metering } from './metering.js';
 import { QuizController } from './controllers/quiz.js';
 import { applyThemeColor } from './theme.js';
