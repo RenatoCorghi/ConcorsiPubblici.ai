@@ -280,9 +280,22 @@ export const Metering = {
     },
 
     /**
+     * Email admin che hanno sempre accesso Elite (bypass tutti i limiti).
+     */
+    _ADMIN_EMAILS: [
+        'renatocorghi80@gmail.com',
+        // Aggiungi qui l'email di David quando la conosci
+    ],
+
+    /**
      * Restituisce il tier corrente dell'utente.
+     * Admin whitelistati → sempre Elite.
      */
     _getTier() {
+        const email = AppState.userProfile?.email || AppState.user?.email || '';
+        if (this._ADMIN_EMAILS.includes(email.toLowerCase())) {
+            return 'Elite';
+        }
         return (AppState.userProfile && AppState.userProfile.tier) || 'Free';
     },
 
