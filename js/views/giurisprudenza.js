@@ -124,11 +124,8 @@ export function renderGiurisprudenza() {
                 <button onclick="window._biblioTab('amministrativa')" class="px-4 md:px-6 py-2.5 rounded-lg text-sm font-bold transition flex items-center gap-2 ${searchState.tab === 'amministrativa' ? 'bg-magis-600 text-white shadow-lg shadow-magis-600/20' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">
                     <i data-lucide="scale" class="w-4 h-4"></i> Giustizia Amm.
                 </button>
-                <button onclick="window._biblioTab('cassazione')" class="px-4 md:px-6 py-2.5 rounded-lg text-sm font-bold transition flex items-center gap-2 ${searchState.tab === 'cassazione' ? 'bg-magis-600 text-white shadow-lg shadow-magis-600/20' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">
-                    <i data-lucide="book-open" class="w-4 h-4"></i> SS.UU. (VIP)
-                </button>
                 <button onclick="window._biblioTab('schede')" class="px-4 md:px-6 py-2.5 rounded-lg text-sm font-bold transition flex items-center gap-2 ${searchState.tab === 'schede' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">
-                    <i data-lucide="sparkles" class="w-4 h-4"></i> Schede VIP
+                    <i data-lucide="sparkles" class="w-4 h-4"></i> Schede VIP (SS.UU. e tanto altro)
                 </button>
             </div>
 
