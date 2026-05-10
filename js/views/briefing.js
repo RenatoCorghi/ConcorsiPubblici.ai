@@ -104,7 +104,12 @@ function renderLoadingState() {
                 <div class="absolute inset-0 rounded-full border-4 border-magis-500/20 border-t-magis-500 animate-spin" style="animation-duration: 2s;"></div>
                 <div class="absolute inset-4 rounded-full bg-magis-500/10 animate-ping" style="animation-duration: 1.5s;"></div>
                 <div class="absolute inset-8 rounded-full border border-indigo-500/30 animate-spin-reverse"></div>
-                <i data-lucide="brain" class="w-12 h-12 text-magis-400 relative z-10 animate-pulse"></i>
+                <svg class="w-12 h-12 text-magis-400 relative z-10 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/>
+                    <path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/>
+                    <path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/>
+                    <path d="M12 18v4"/><path d="M9 2.5a3 3 0 0 1 6 0"/>
+                </svg>
             </div>
             
             <div class="text-center space-y-4">
