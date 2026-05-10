@@ -24,9 +24,9 @@ export const APP_CONFIG = {
             GEN: 'gemini-3-flash-preview' // Modello Leggero per creare tracce
         },
         anthropic: {
-            CORR: 'claude-opus-4-7',             // Modello top: costoso, ma eccellente per la correzione profonda
-            CHAT: 'claude-sonnet-4-6',            // Modello medio: Tutor CiceroAI, Orale, Lezione
-            GEN: 'claude-haiku-4-5-20251001'      // Modello veloce: Quiz AI e generazione tracce
+            CORR: 'claude-sonnet-4-6',             // Sonnet: ottimo per ragionamento giuridico, 3x più veloce di Opus
+            CHAT: 'claude-sonnet-4-6',              // Modello medio: Tutor CiceroAI, Orale, Lezione
+            GEN: 'claude-haiku-4-5-20251001'        // Modello veloce: Quiz AI e generazione tracce
         }
     },
 
