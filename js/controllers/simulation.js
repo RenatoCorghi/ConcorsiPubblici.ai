@@ -150,13 +150,17 @@ export const SimulationController = {
             var subject = AppState.currentSimulationTask ? AppState.currentSimulationTask.materia : 'Generale';
             var apiKey = "proxy-protected";
             var baseVoto = 10;
-            var feedbackText = '';
             var matchedKeys = [];
-            var lacuneFound = [];
             var schemaPunti = [];
             var confrontoPunti = [];
             var metrix = { correttezza: 60, struttura: 60, terminologia: 60, pertinenza: 60 };
             var sentenzeCitate = [];
+            var giudizio_idoneita = 'NON IDONEO';
+            var feedback_centratura = '';
+            var feedback_inquadramento = '';
+            var feedback_gerarchia = '';
+            var matita_blu = [];
+            var consiglio_presidente = '';
             
             if (apiKey && userText.trim().length > APP_CONFIG.MIN_WORDS_FOR_AI) {
                 // Paywall gate: controlla crediti AI
@@ -181,12 +185,16 @@ export const SimulationController = {
                 }
                 
                 baseVoto = result.voto;
-                feedbackText = result.feedback;
-                matchedKeys = result.keywords;
-                lacuneFound = result.lacune;
-                schemaPunti = result.schema_ideale;
-                confrontoPunti = result.confronto;
-                metrix = result.metriche;
+                giudizio_idoneita = result.giudizio_idoneita || (baseVoto >= 12 ? 'IDONEO' : 'NON IDONEO');
+                feedback_centratura = result.feedback_centratura || '';
+                feedback_inquadramento = result.feedback_inquadramento || '';
+                feedback_gerarchia = result.feedback_gerarchia || '';
+                matita_blu = result.matita_blu || [];
+                consiglio_presidente = result.consiglio_presidente || '';
+                matchedKeys = result.keywords || [];
+                schemaPunti = result.schema_ideale || [];
+                confrontoPunti = result.confronto || [];
+                metrix = result.metriche || metrix;
                 sentenzeCitate = result.rag_sources || [];
                 
                 if(loader) loader.classList.add('hidden');
@@ -196,20 +204,27 @@ export const SimulationController = {
                 
                 if (wordCount < 50) {
                     baseVoto = Math.floor(Math.random() * 3) + 6;
-                    feedbackText = "L'elaborato è estremamente carente (" + wordCount + " parole). La trattazione è abbozzata e totalmente inidonea per un concorso.";
-                    lacuneFound = ["Trattazione inesistente o troppo sintetica", "Manca inquadramento normativo", "Assenza di richiami giurisprudenziali"];
+                    feedback_centratura = "Trattazione inesistente o troppo sintetica (" + wordCount + " parole).";
+                    feedback_inquadramento = "Inquadramento completamente assente.";
+                    feedback_gerarchia = "Impossibile valutare la gerarchia argomentativa su un testo così breve.";
+                    matita_blu = ["Assenza totale di analisi dogmatica.", "Elaborato incompatibile con la funzione giudiziaria."];
                     metrix = { correttezza: 40, struttura: 30, terminologia: 40, pertinenza: 50 };
                 } else if (wordCount < 200) {
                     baseVoto = Math.floor(Math.random() * 3) + 10;
-                    feedbackText = "Trattazione superficiale (" + wordCount + " parole). Gli argomenti sono stati solo sfiorati, è mancato l'approfondimento sugli snodi giurisprudenziali.";
-                    lacuneFound = ["Analisi dogmatica superficiale", "Mancato bilanciamento degli interessi contrari", "Conclusione debole"];
+                    feedback_centratura = "Trattazione superficiale (" + wordCount + " parole). Gli argomenti sono stati solo sfiorati.";
+                    feedback_inquadramento = "Inquadramento superficiale delle fonti.";
+                    feedback_gerarchia = "La scaletta logica è appena abbozzata.";
                     metrix = { correttezza: 65, struttura: 55, terminologia: 60, pertinenza: 70 };
                 } else {
                     baseVoto = 13 + Math.floor(Math.random() * 3);
-                    feedbackText = "Buona ampiezza argomentativa (" + wordCount + " parole). La struttura regge l'impalcatura teorica.";
-                    lacuneFound = ["Alcuni passaggi logici potrebbero essere più lineari", "Mancano un paio di riferimenti al codice"];
+                    feedback_centratura = "Buona ampiezza argomentativa (" + wordCount + " parole). La struttura regge l'impalcatura teorica.";
+                    feedback_inquadramento = "L'istituto è stato inquadrato correttamente nel sistema delle fonti.";
+                    feedback_gerarchia = "La scaletta logica segue i principi generali, sebbene alcune conclusioni siano affrettate.";
                     metrix = { correttezza: 85, struttura: 80, terminologia: 80, pertinenza: 90 };
                 }
+                
+                giudizio_idoneita = baseVoto >= 12 ? 'IDONEO' : 'NON IDONEO';
+                consiglio_presidente = "Si raccomanda uno studio più approfondito delle sentenze a Sezioni Unite e una maggiore attenzione alla gerarchia argomentativa.";
                 
                 schemaPunti = [
                     { titolo: "1. Inquadramento dogmatico", desc: "Definizione dell'istituto e fondamento normativo." },
@@ -245,12 +260,7 @@ export const SimulationController = {
                     } else {
                         metrix.terminologia -= 10;
                     }
-                var guidizio_idoneita = baseVoto >= 12 ? 'IDONEO' : 'NON IDONEO';
-                var feedback_centratura = wordCount < 50 ? "Trattazione inesistente o troppo sintetica." : "Buona aderenza alla traccia, ma con margini di miglioramento.";
-                var feedback_inquadramento = wordCount < 200 ? "Inquadramento superficiale delle fonti." : "L'istituto è stato inquadrato correttamente nel sistema.";
-                var feedback_gerarchia = "La scaletta logica segue i principi generali, sebbene alcune conclusioni siano affrettate.";
-                var matita_blu = wordCount < 50 ? ["Assenza totale di analisi dogmatica."] : [];
-                var consiglio_presidente = "Si raccomanda uno studio più approfondito delle sentenze a Sezioni Unite.";
+                }
             }
             
             if (baseVoto > APP_CONFIG.VOTO_MAX) baseVoto = APP_CONFIG.VOTO_MAX;
@@ -262,12 +272,12 @@ export const SimulationController = {
                 voto: baseVoto,
                 materia: subject,
                 text: userText || "Nessun testo inserito dal candidato.",
-                giudizio_idoneita: typeof giudizio_idoneita !== 'undefined' ? giudizio_idoneita : result?.giudizio_idoneita,
-                feedback_centratura: typeof feedback_centratura !== 'undefined' ? feedback_centratura : result?.feedback_centratura,
-                feedback_inquadramento: typeof feedback_inquadramento !== 'undefined' ? feedback_inquadramento : result?.feedback_inquadramento,
-                feedback_gerarchia: typeof feedback_gerarchia !== 'undefined' ? feedback_gerarchia : result?.feedback_gerarchia,
-                matita_blu: typeof matita_blu !== 'undefined' ? matita_blu : result?.matita_blu,
-                consiglio_presidente: typeof consiglio_presidente !== 'undefined' ? consiglio_presidente : result?.consiglio_presidente,
+                giudizio_idoneita: giudizio_idoneita,
+                feedback_centratura: feedback_centratura,
+                feedback_inquadramento: feedback_inquadramento,
+                feedback_gerarchia: feedback_gerarchia,
+                matita_blu: matita_blu,
+                consiglio_presidente: consiglio_presidente,
                 keywords: matchedKeys,
                 schema_ideale: schemaPunti,
                 confronto: confrontoPunti,
