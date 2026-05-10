@@ -245,7 +245,12 @@ export const SimulationController = {
                     } else {
                         metrix.terminologia -= 10;
                     }
-                }
+                var guidizio_idoneita = baseVoto >= 12 ? 'IDONEO' : 'NON IDONEO';
+                var feedback_centratura = wordCount < 50 ? "Trattazione inesistente o troppo sintetica." : "Buona aderenza alla traccia, ma con margini di miglioramento.";
+                var feedback_inquadramento = wordCount < 200 ? "Inquadramento superficiale delle fonti." : "L'istituto è stato inquadrato correttamente nel sistema.";
+                var feedback_gerarchia = "La scaletta logica segue i principi generali, sebbene alcune conclusioni siano affrettate.";
+                var matita_blu = wordCount < 50 ? ["Assenza totale di analisi dogmatica."] : [];
+                var consiglio_presidente = "Si raccomanda uno studio più approfondito delle sentenze a Sezioni Unite.";
             }
             
             if (baseVoto > APP_CONFIG.VOTO_MAX) baseVoto = APP_CONFIG.VOTO_MAX;
@@ -257,9 +262,13 @@ export const SimulationController = {
                 voto: baseVoto,
                 materia: subject,
                 text: userText || "Nessun testo inserito dal candidato.",
-                feedback: feedbackText,
+                giudizio_idoneita: typeof giudizio_idoneita !== 'undefined' ? giudizio_idoneita : result?.giudizio_idoneita,
+                feedback_centratura: typeof feedback_centratura !== 'undefined' ? feedback_centratura : result?.feedback_centratura,
+                feedback_inquadramento: typeof feedback_inquadramento !== 'undefined' ? feedback_inquadramento : result?.feedback_inquadramento,
+                feedback_gerarchia: typeof feedback_gerarchia !== 'undefined' ? feedback_gerarchia : result?.feedback_gerarchia,
+                matita_blu: typeof matita_blu !== 'undefined' ? matita_blu : result?.matita_blu,
+                consiglio_presidente: typeof consiglio_presidente !== 'undefined' ? consiglio_presidente : result?.consiglio_presidente,
                 keywords: matchedKeys,
-                lacune: lacuneFound,
                 schema_ideale: schemaPunti,
                 confronto: confrontoPunti,
                 metriche: metrix,

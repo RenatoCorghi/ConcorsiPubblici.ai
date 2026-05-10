@@ -93,30 +93,25 @@ export function renderResult() {
 // --- Sub-tabs ---
 
 function renderResultCorrezione(res) {
-    var lacune = res.lacune || [];
     var metriche = res.metriche || { correttezza: 60, struttura: 60, terminologia: 60, pertinenza: 60 };
 
-    var lacuneHtml = lacune.length > 0 ? lacune.map(l => `<li>${escapeHtml(l)}</li>`).join('') : '<li>Nessuna lacuna rilevata. Ottimo lavoro.</li>';
+    var matitaBluHtml = (res.matita_blu && res.matita_blu.length > 0) ? res.matita_blu.map(l => `<li class="mb-2 last:mb-0">${escapeHtml(l)}</li>`).join('') : '';
 
     return `
         <div class="fade-in space-y-8">
             <!-- Voto e Riepilogo -->
             <div class="flex flex-col md:flex-row gap-8 items-center bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
                 <div class="absolute right-0 top-0 opacity-[0.03] scale-150 transform translate-x-1/4 -translate-y-1/4"><i data-lucide="award" class="w-64 h-64"></i></div>
-                <div class="flex-shrink-0 flex flex-col items-center justify-center w-40 h-40 rounded-full border-[6px] ${res.voto >= 12 ? 'border-green-500/20 text-green-400' : 'border-red-500/20 text-red-400'} bg-gray-950 shadow-inner z-10">
-                    <span class="text-xs uppercase font-bold tracking-widest text-gray-500 mb-1">Voto Base</span>
+                <div class="flex-shrink-0 flex flex-col items-center justify-center w-40 h-40 rounded-full border-[6px] ${res.voto >= 15 ? 'border-emerald-500/30 text-emerald-400' : res.voto >= 12 ? 'border-yellow-500/30 text-yellow-400' : 'border-red-500/30 text-red-500'} bg-gray-950 shadow-inner z-10">
+                    <span class="text-xs uppercase font-bold tracking-widest text-gray-500 mb-1">Voto Finale</span>
                     <div class="text-5xl font-display font-bold leading-none">${res.voto}</div>
-                    <span class="text-sm text-gray-600 mt-1">/ 20</span>
+                    <span class="text-[10px] uppercase tracking-widest font-bold mt-2 px-3 py-1 rounded-full ${res.voto >= 12 ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'}">${escapeHtml(res.giudizio_idoneita || 'NON IDONEO')}</span>
                 </div>
-                <div class="flex-grow z-10">
-                    <h2 class="text-2xl font-bold text-white mb-2">Valutazione Generale</h2>
-                    <p class="text-gray-300 mb-4 leading-relaxed">${escapeHtml(res.feedback)}</p>
-                    ${res.keywords && res.keywords.length > 0 ? `<div class="mb-6"><div class="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-2">Parole Chiave Rilevate nell'Elaborato:</div><div class="flex flex-wrap gap-2">${res.keywords.map(function(k){ return '<span class="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs text-magis-300 font-bold">' + escapeHtml(k) + '</span>'; }).join('')}</div></div>` : ''}
-                    
-                    <div class="grid grid-cols-2 gap-4">
+                <div class="flex-grow z-10 w-full">
+                    <div class="grid grid-cols-2 gap-4 mb-6">
                         ${[
                             { n: 'Correttezza Giuridica', p: metriche.correttezza, c: 'bg-indigo-500' },
-                            { n: 'Struttura', p: metriche.struttura, c: 'bg-blue-500' },
+                            { n: 'Struttura Sistematica', p: metriche.struttura, c: 'bg-blue-500' },
                             { n: 'Terminologia', p: metriche.terminologia, c: 'bg-purple-500' },
                             { n: 'Pertinenza', p: metriche.pertinenza, c: 'bg-teal-500' }
                         ].map(crit => `
@@ -126,16 +121,47 @@ function renderResultCorrezione(res) {
                         </div>
                         `).join('')}
                     </div>
+                    
+                    ${res.keywords && res.keywords.length > 0 ? `<div class="mt-4"><div class="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-2">Keyword Rilevate:</div><div class="flex flex-wrap gap-2">${res.keywords.map(function(k){ return '<span class="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs text-magis-300 font-bold">' + escapeHtml(k) + '</span>'; }).join('')}</div></div>` : ''}
                 </div>
             </div>
 
-            <!-- Lacune -->
-            <div class="bg-[#2a131b] border border-red-900/40 rounded-2xl p-6">
-                <h3 class="text-red-400 font-bold mb-4 flex items-center gap-2"><i data-lucide="alert-circle" class="w-5 h-5"></i> Principali Lacune Rilevate</h3>
-                <ul class="list-disc list-inside text-gray-300 space-y-3 text-sm marker:text-red-600">
-                    ${lacuneHtml}
+            <!-- Matita Blu (Solo se presente) -->
+            ${matitaBluHtml ? `
+            <div class="bg-red-950/20 border border-red-900/50 rounded-2xl p-6 relative overflow-hidden">
+                <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-red-600"></div>
+                <h3 class="text-red-400 font-bold mb-4 flex items-center gap-2"><i data-lucide="edit-3" class="w-5 h-5"></i> La Matita Blu (Errori Dirimenti)</h3>
+                <ul class="list-disc list-inside text-red-200/90 text-sm marker:text-red-600 space-y-1">
+                    ${matitaBluHtml}
                 </ul>
             </div>
+            ` : ''}
+
+            <!-- Giudizio Strutturato -->
+            <div class="space-y-4">
+                <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
+                    <h3 class="text-magis-400 font-bold mb-3 flex items-center gap-2 text-sm uppercase tracking-wider"><i data-lucide="target" class="w-4 h-4"></i> 1. Centratura e Forma</h3>
+                    <p class="text-gray-300 text-sm leading-relaxed">${escapeHtml(res.feedback_centratura || '')}</p>
+                </div>
+                
+                <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
+                    <h3 class="text-blue-400 font-bold mb-3 flex items-center gap-2 text-sm uppercase tracking-wider"><i data-lucide="layers" class="w-4 h-4"></i> 2. Inquadramento Sistematico</h3>
+                    <p class="text-gray-300 text-sm leading-relaxed">${escapeHtml(res.feedback_inquadramento || '')}</p>
+                </div>
+                
+                <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
+                    <h3 class="text-indigo-400 font-bold mb-3 flex items-center gap-2 text-sm uppercase tracking-wider"><i data-lucide="network" class="w-4 h-4"></i> 3. Gerarchia e Nomofilachia</h3>
+                    <p class="text-gray-300 text-sm leading-relaxed">${escapeHtml(res.feedback_gerarchia || '')}</p>
+                </div>
+            </div>
+
+            <!-- Il Consiglio del Presidente -->
+            ${res.consiglio_presidente ? `
+            <div class="bg-gradient-to-r from-yellow-900/20 to-transparent border-l-4 border-yellow-600 rounded-r-2xl p-6">
+                <h3 class="text-yellow-500 font-bold mb-2 flex items-center gap-2 text-sm"><i data-lucide="lightbulb" class="w-4 h-4"></i> Il Consiglio del Presidente</h3>
+                <p class="text-yellow-100/80 text-sm leading-relaxed italic">"${escapeHtml(res.consiglio_presidente)}"</p>
+            </div>
+            ` : ''}
 
             <!-- Fonti RAG (Vettoriale) -->
             ${res.rag_sources && res.rag_sources.length > 0 ? `

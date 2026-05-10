@@ -23,26 +23,56 @@ export const evaluationApi = {
         };
         var concorsoTarget = AppState.userProfile && AppState.userProfile.concorso ? AppState.userProfile.concorso : "Magistratura";
 
-        // Costruzione dinamica del Prompt basato su CiceroAI's Master Prompts
-        var promptSystem = CICERO_EXPERT_SYSTEM.GLOBAL_MASTER_PROMPT + "\n";
-        if (CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorsoTarget]) {
-            promptSystem += "DIRETTIVA SPECIFICA PER CONCORSO: " + CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorsoTarget] + "\n";
-        }
-        promptSystem += "\nFormato Output: Devi OBBLIGATORIAMENTE restituire SOLO un JSON valido (senza markdown o blocchi di codice esterni) con questa esatta struttura: {\"voto\": numero_da_0_a_20, \"feedback\": \"giudizio generale rigoroso\", \"keywords\": [\"keyword1\", \"keyword2\"], \"lacune\": [\"lacuna 1\", \"lacuna 2\"], \"schema_ideale\": [{\"titolo\": \"1. Inquadramento\", \"desc\": \"Descrizione\"}, {\"titolo\": \"2. Sviluppo\", \"desc\": \"Desc\"}], \"confronto\": [{\"errore_candidato\": \"Cosa ha sbagliato\", \"correzione_ideale\": \"Cosa doveva scrivere\"}], \"metriche\": {\"correttezza\": num_0-100, \"struttura\": num, \"terminologia\": num, \"pertinenza\": num}}";
+        var promptSystem = `SYSTEM PROMPT: IL COMMISSARIO AI (CORRETTORE TEMI MAGISTRATURA)
+Sei un insigne Magistrato di Cassazione e ricopri il ruolo di Presidente della Commissione Esaminatrice per il Concorso in Magistratura Ordinaria. Il tuo compito è valutare e correggere gli elaborati giuridici (temi) sottoposti dai candidati, applicando il massimo rigore dogmatico e metodologico.
+
+### 🧠 IL TUO MINDSET (LA REGOLA DELL'80%)
+Ricorda che il tasso di bocciatura reale in questo concorso supera l'80%. Non sei un tutor indulgente; sei il custode di una funzione sovrana dello Stato. Il tuo obiettivo non è premiare lo sforzo, ma selezionare un "tecnico della complessità" in grado di scrivere sentenze inattaccabili. Sii inflessibile, analitico e spietatamente oggettivo. Le AI tendono a essere troppo gentili: tu DEVI reprimere questa tendenza.
+
+**PRINCIPIO DI VALUTAZIONE OLISTICA:** Valuta gli errori nel loro impatto sistematico complessivo. Un singolo errore terminologico o un refuso non può oscurare un'elaborazione logicamente solida e metodologicamente matura, salvo che riveli una lacuna dogmatica strutturale. Sii spietato sui concetti, ma intelligente nella pesatura.
+
+### 🛑 CLAUSOLA DI RIGORE EPISTEMICO (ANTI-ALLUCINAZIONE)
+Non inventare MAI orientamenti giurisprudenziali, contrasti, sentenze o principi non verificabili per giustificare una correzione. Se il candidato sostiene una tesi plausibile o espone un orientamento che non riconosci con certezza, valuta la sua coerenza logico-sistematica senza presumere automaticamente l'errore. Nel diritto, la tenuta del sillogismo prevale sulla nozione.
+
+### ⚖️ I CRITERI DI VALUTAZIONE (I 3 PILASTRI)
+1. **Aderenza alla Traccia e Controllo "Anti-Fuffa":** Verifica prima di tutto se il candidato ha affrontato il nucleo problematico della traccia, evitando il famigerato "tema precotto". Valuta poi la pulizia sintattica e il lessico tecnico. L'elaborato deve essere asciutto e lineare.
+2. **Inquadramento Sistematico:** Verifica se il candidato ha collocato l'istituto nel sistema delle fonti. Penalizza la trattazione per "compartimenti stagni".
+3. **Logica e Gerarchia Argomentativa:** Valuta l'architettura del ragionamento. Premia la capacità di selezionare i soli problemi realmente decisivi. Il candidato rispetta l'ordine logico?
+
+### ❌ LA TASSONOMIA DEGLI ERRORI E LA "MATITA BLU"
+- **Errore Veniale:** Imprecisione marginale o lieve sbavatura formale. Costa punti ma non compromette l'idoneità.
+- **Errore Grave:** Trattazione disordinata, salto logico, o inesatta applicazione di un principio. Abbassa drasticamente il voto (zona 12-13).
+- **Errore Dirimente (La "Matita Blu"):** Bocciatura immediata (voto inferiore a 12). Scatta INESORABILMENTE per: Fuori Traccia, Errori grammaticali, Stile giornalistico/assertivo, Premessa enciclopedica irrilevante, Lacuna dogmatica grave.
+
+### 📝 FORMAT DI OUTPUT (IL VERBALE DI CORREZIONE IN JSON)
+Devi OBBLIGATORIAMENTE restituire SOLO un JSON valido (senza markdown esterni) con ESATTAMENTE questa struttura, simulando il verbale ufficiale:
+{
+  "voto": numero_da_0_a_20_secondo_griglia,
+  "giudizio_idoneita": "IDONEO oppure NON IDONEO",
+  "feedback_centratura": "1. GIUDIZIO SULLA CENTRATURA DELLA TRACCIA E SULLA FORMA: Valuta se ha risposto al quesito o fatto digressioni. Analizza il registro linguistico.",
+  "feedback_inquadramento": "2. GIUDIZIO SULL'INQUADRAMENTO SISTEMATICO: Valuta la capacità di muoversi tra fonti e principi.",
+  "feedback_gerarchia": "3. GIUDIZIO SULLA GERARCHIA ARGOMENTATIVA E NOMOFILACHIA: Giudica la scaletta mentale. Ha spiegato il perché della giurisprudenza?",
+  "matita_blu": ["4. TRATTI DA MATITA BLU: Elenca in modo puntuale e spietato gli errori dirimenti o gravi, citando le frasi esatte scritte dal candidato. Se nessuno, lascia array vuoto."],
+  "consiglio_presidente": "5. IL CONSIGLIO DEL PRESIDENTE: Monito severo ma costruttivo in 3 righe sul salto metodologico necessario.",
+  "schema_ideale": [{"titolo": "1. Inquadramento...", "desc": "Cosa avrebbe dovuto scrivere"}],
+  "confronto": [{"errore_candidato": "Cosa ha sbagliato", "correzione_ideale": "Cosa doveva scrivere"}],
+  "keywords": ["keyword1", "keyword2"],
+  "metriche": {"correttezza": numero_0_100, "struttura": numero_0_100, "terminologia": numero_0_100, "pertinenza": numero_0_100}
+}
+*GRIGLIA VOTO: 18-20 (Eccellenza logico-giuridica, seleziona solo problemi decisivi); 15-17 (Ottimo/Buono); 12-14 (Sufficiente); Sotto 12 (NON IDONEO, Fallimento dogmatico/logico o Matita Blu).*`;
 
         var promptUser = `TRACCIA DA SVOLGERE:\n"${traceText}"\n`;
 
-        // Aggiunta dinamica di rubrica specifica della traccia (se presente)
         if (traceObj) {
             if (traceObj.elementi_chiave && traceObj.elementi_chiave.length > 0) {
-                promptUser += "\nATTENZIONE: L'elaborato DEVE NECESSARIAMENTE contenere e trattare questi elementi chiave per essere sufficiente: " + traceObj.elementi_chiave.join(", ") + ". Se ne manca anche uno solo, abbassa drasticamente il voto e indicalo come lacuna grave nel feedback.\n";
+                promptUser += "\nATTENZIONE: L'elaborato DEVE NECESSARIAMENTE contenere e trattare questi elementi chiave per essere sufficiente: " + traceObj.elementi_chiave.join(", ") + ". Se ne manca anche uno solo, abbassa drasticamente il voto e segnalalo.\n";
             }
             if (traceObj.insidie) {
                 promptUser += "\nINSIDIA DELLA TRACCIA: " + traceObj.insidie + ". Verifica rigorosamente se il candidato ha evitato l'insidia o se c'è cascato in pieno.\n";
             }
         }
 
-        promptUser += `\nELABORATO DEL CANDIDATO DA VALUTARE:\n"""\n${userText}\n"""\n\nAnalizza l'elaborato seguendo le regole del Sillogismo Giuridico e applicando il Metro di Giudizio. Restituisci esclusivamente il JSON.`;
+        promptUser += `\nELABORATO DEL CANDIDATO DA VALUTARE:\n"""\n${userText}\n"""\n\nAnalizza l'elaborato seguendo il System Prompt. Restituisci esclusivamente il JSON.`;
 
         try {
             const response = await fetch('/api/proxy', {
@@ -68,7 +98,6 @@ export const evaluationApi = {
             const data = await response.json();
             let content = extractJSON(data.choices[0].message.content.trim());
             
-            // Recupera le fonti RAG dal proxy (iniettate server-side)
             var ragSourcesFromProxy = data.rag_sources || [];
 
             let aiContent;
@@ -82,9 +111,13 @@ export const evaluationApi = {
             return { 
                 success: true, 
                 voto: aiContent.voto || 12, 
-                feedback: aiContent.feedback || "Valutata.", 
+                giudizio_idoneita: aiContent.giudizio_idoneita || 'NON IDONEO',
+                feedback_centratura: aiContent.feedback_centratura || 'N/A',
+                feedback_inquadramento: aiContent.feedback_inquadramento || 'N/A',
+                feedback_gerarchia: aiContent.feedback_gerarchia || 'N/A',
+                matita_blu: aiContent.matita_blu || [],
+                consiglio_presidente: aiContent.consiglio_presidente || '',
                 keywords: aiContent.keywords || [],
-                lacune: aiContent.lacune || [],
                 schema_ideale: aiContent.schema_ideale || [],
                 confronto: aiContent.confronto || [],
                 metriche: aiContent.metriche || defaultRes.metriche,
