@@ -293,6 +293,58 @@ export function renderHome() {
                 </div>
             </div>
 
+            <!-- DOMINA L'ECOSISTEMA -->
+            <div class="mt-16 mb-8">
+                <div class="text-center mb-10">
+                    <span class="px-4 py-1.5 text-[10px] font-bold rounded-full bg-magis-900/50 text-magis-300 border border-magis-800 uppercase tracking-widest">Il tuo arsenale</span>
+                    <h2 class="text-2xl md:text-3xl font-display font-bold text-white mt-4">Domina l'ecosistema di ConcorsiPubblici.ai</h2>
+                    <p class="text-gray-500 text-sm mt-2 max-w-xl mx-auto">Ogni strumento è progettato per portarti un passo più vicino alla Toga. Scopri cosa ti aspetta.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                    <div class="flex items-start gap-4 p-5 rounded-2xl bg-gray-900/60 border border-gray-800 hover:border-amber-500/30 transition group cursor-pointer" onclick="app.navigate('lezione')">
+                        <div class="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                            <i data-lucide="book-open" class="w-5 h-5 text-amber-400"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-bold text-white mb-1">1. Lectio Magistralis Interattiva</h4>
+                            <p class="text-xs text-gray-500 leading-relaxed">Vivi l'esperienza di una vera e propria lezione di livello concorsuale. Un'alta docenza simulata in tempo reale, alimentata dal nostro vastissimo database giuridico per garantirti un rigore dogmatico inattaccabile.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-4 p-5 rounded-2xl bg-gray-900/60 border border-gray-800 hover:border-red-500/30 transition group cursor-pointer" onclick="app.navigate('tracce')">
+                        <div class="w-11 h-11 rounded-xl bg-red-500/15 border border-red-500/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                            <i data-lucide="compass" class="w-5 h-5 text-red-400"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-bold text-white mb-1">2. Debrief Strategico & Commissario AI</h4>
+                            <p class="text-xs text-gray-500 leading-relaxed">Domina la traccia in anticipo grazie al Debrief Strategico, la tua mappa mentale per individuare i nodi nomofilattici e schivare le insidie.</p>
+                            <p class="text-xs text-gray-500 leading-relaxed mt-1">Affida poi la tua prova al Commissario AI: una correzione spietata, riga per riga, con gli stessi criteri di valutazione e le "matite blu" di una vera Commissione.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-4 p-5 rounded-2xl bg-gray-900/60 border border-gray-800 hover:border-yellow-500/30 transition group cursor-pointer" onclick="app.navigate('quiz')">
+                        <div class="w-11 h-11 rounded-xl bg-yellow-500/15 border border-yellow-500/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                            <i data-lucide="list-todo" class="w-5 h-5 text-yellow-500"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-bold text-white mb-1">3. Quiz AI & Casi Reali</h4>
+                            <p class="text-xs text-gray-500 leading-relaxed">Mettiti alla prova con il nostro sistema di Quiz: affronta le varianti infinite generate dall'Intelligenza Artificiale o cimentati con le insidie dei casi reali. L'allenamento definitivo per trasformare lo studio dogmatico in prontezza operativa.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-start gap-4 p-5 rounded-2xl bg-gray-900/60 border border-gray-800 hover:border-magis-500/30 transition group cursor-pointer" onclick="app.navigate('community')">
+                        <div class="w-11 h-11 rounded-xl bg-magis-500/15 border border-magis-500/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                            <i data-lucide="scale" class="w-5 h-5 text-magis-400"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-bold text-white mb-1">4. L'Arsenale Completo</h4>
+                            <p class="text-xs text-gray-500 leading-relaxed">Sfida il rigore del Tutor, esplora un Glossario con centinaia di schede tra dottrina e sentenze storiche, e confrontati con l'élite della nostra Community. Un ecosistema vivo e in continua evoluzione.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Footer con link legali -->
             <div class="pt-12 pb-6 border-t border-gray-900 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-600">
                 <p>© 2026 ConcorsiPubblici.ai - Tutti i diritti riservati.</p>
