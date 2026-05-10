@@ -37,7 +37,7 @@ export const SimulationController = {
         // --- TRIAL GATE (Free Tier) ---
         const tier = Metering._getTier();
         if (tier === 'Free') {
-            import('../data/trial_content.js').then(({ TRIAL_CONTENT }) => {
+            import('../trial_content.js').then(({ TRIAL_CONTENT }) => {
                 AppState.currentSimulationTask = TRIAL_CONTENT.briefing.traccia;
                 AppState.currentBriefing = TRIAL_CONTENT.briefing.result;
                 navigateToRoute('briefing');

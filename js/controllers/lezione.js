@@ -915,7 +915,7 @@ export const LezioneController = {
     
     _startTrialLectio: async function() {
         try {
-            const { TRIAL_CONTENT } = await import('../data/trial_content.js');
+            const { TRIAL_CONTENT } = await import('../trial_content.js');
             const trial = TRIAL_CONTENT.lectio;
             
             AppState.lezioneChat = [];
