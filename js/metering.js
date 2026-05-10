@@ -285,7 +285,7 @@ export const Metering = {
      */
     _ADMIN_EMAILS: [
         'renatocorghi80@gmail.com',
-        // Aggiungi qui l'email di David quando la conosci
+        'david.dimeo@gmail.com',
     ],
 
     /**

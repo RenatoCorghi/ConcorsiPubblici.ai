@@ -5,6 +5,7 @@ export function renderAdmin() {
     // Array di email abilitate (God Mode)
     const adminEmails = [
         'renatocorghi80@gmail.com',
+        'david.dimeo@gmail.com',
         'admin@concorsipubblici.ai'
     ];
 
