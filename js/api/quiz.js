@@ -20,13 +20,13 @@ function parseQuizBlocks(content) {
     for (let block of blocks) {
         if (!block.toUpperCase().includes('DOMANDA:')) continue;
         
-        let qTextMatch = block.match(/DOMANDA:\s*([\s\S]*?)(?=A\))/i);
+        let qTextMatch = block.match(/DOMANDA:\s*([\s\S]*?)(?=A[\)\.])/i);
         if (!qTextMatch) continue;
         
-        let optA = block.match(/A\)\s*(.+)/i);
-        let optB = block.match(/B\)\s*(.+)/i);
-        let optC = block.match(/C\)\s*(.+)/i);
-        let optD = block.match(/D\)\s*(.+)/i);
+        let optA = block.match(/A[\)\.]\s*(.+)/i);
+        let optB = block.match(/B[\)\.]\s*(.+)/i);
+        let optC = block.match(/C[\)\.]\s*(.+)/i);
+        let optD = block.match(/D[\)\.]\s*(.+)/i);
         let corrMatch = block.match(/CORRETTA:\s*([A-D])/i);
         let spiegMatch = block.match(/SPIEGAZIONE:\s*([\s\S]*?)$/i);
         
@@ -119,13 +119,14 @@ A) Prima opzione
             }
 
             const sentenza = sentenze[0];
+            let safeOggetto = (sentenza.oggetto_ricorso || '').substring(0, 1500);
             let prompt = `Sei l'esaminatore del concorso per ${concorsoTarget}.
 HAI DAVANTI UN CASO REALE tratto dalla Giustizia Amministrativa:
 - Tipo: ${sentenza.tipo_provvedimento}
 - Sede: ${sentenza.sede_nome || sentenza.sede_slug}
 - Numero: ${sentenza.numero_provvedimento}/${sentenza.anno_pubblicazione}
 - Esito: ${sentenza.esito || 'Non specificato'}
-- Fatto/Oggetto: ${sentenza.oggetto_ricorso}
+- Fatto/Oggetto: ${safeOggetto}
 
 Genera ${numQuestions} domande difficili a risposta multipla basate sui principi di diritto di questo caso.
 
