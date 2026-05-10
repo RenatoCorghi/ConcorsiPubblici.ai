@@ -132,5 +132,86 @@ export const CommunityController = {
                 cloud.likeCommunityPost(postId, post.likes);
             }
         }
+    },
+
+    toggleComments: function(postId) {
+        var section = document.getElementById('comments-section-' + postId);
+        if (!section) return;
+        
+        if (section.classList.contains('hidden')) {
+            section.classList.remove('hidden');
+            this.renderCommentsList(postId);
+            setTimeout(() => {
+                const input = document.getElementById('comment-input-' + postId);
+                if (input) input.focus();
+            }, 50);
+        } else {
+            section.classList.add('hidden');
+        }
+    },
+
+    renderCommentsList: function(postId) {
+        var post = DB_COMMUNITY.posts.find(p => p.id === postId);
+        var container = document.getElementById('comments-list-' + postId);
+        if (!post || !container) return;
+
+        if (!post.comments || post.comments.length === 0) {
+            container.innerHTML = '<div class="text-[11px] text-gray-500 text-center italic py-2">Nessuna risposta ancora. Sii il primo!</div>';
+            return;
+        }
+
+        container.innerHTML = post.comments.map(c => `
+            <div class="flex items-start gap-2">
+                <img src="${c.user_avatar || 'https://i.pravatar.cc/150?u=fallback'}" onerror="this.src='https://i.pravatar.cc/150?u=guest'" class="w-6 h-6 rounded-full object-cover border border-gray-700 shrink-0" />
+                <div class="bg-gray-800/60 rounded-xl rounded-tl-sm px-3 py-2 text-sm text-gray-200">
+                    <div class="flex items-center gap-2 mb-0.5">
+                        <span class="font-bold text-[11px] text-gray-300">${c.user_name || 'Concorsista'}</span>
+                        <span class="text-[9px] text-gray-500">${c.timestamp || 'Adesso'}</span>
+                    </div>
+                    <p class="text-xs">${c.content}</p>
+                </div>
+            </div>
+        `).join('');
+    },
+
+    submitComment: function(postId) {
+        var input = document.getElementById('comment-input-' + postId);
+        if (!input || !input.value.trim()) return;
+
+        var post = DB_COMMUNITY.posts.find(p => p.id === postId);
+        if (!post) return;
+
+        var text = input.value.trim();
+        if (text.length > 500) {
+            if (window.showToast) window.showToast("Risposta troppo lunga (max 500 caratteri).", "warning");
+            return;
+        }
+
+        if (!post.comments) post.comments = [];
+        
+        var newComment = {
+            id: 'c' + Date.now(),
+            post_id: postId,
+            user_id: AppState.userProfile?.id || (window.cloud && cloud.user ? cloud.user.id : 'u1'),
+            user_name: AppState.userProfile?.name || 'Utente',
+            user_avatar: AppState.userProfile?.avatar || 'https://i.pravatar.cc/150?u=guest',
+            content: text,
+            timestamp: 'Adesso'
+        };
+
+        post.comments.push(newComment);
+        input.value = '';
+        
+        var countSpan = document.getElementById('comments-count-' + postId);
+        if (countSpan) countSpan.innerText = post.comments.length;
+        
+        this.renderCommentsList(postId);
+        
+        var container = document.getElementById('comments-list-' + postId);
+        if (container) container.scrollTop = container.scrollHeight;
+
+        if (window.cloud && cloud.user) {
+            cloud.pushCommunityComment(newComment);
+        }
     }
 };
