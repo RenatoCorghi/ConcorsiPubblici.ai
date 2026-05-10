@@ -244,7 +244,7 @@ export const LezioneController = {
                 body: JSON.stringify({
                     feature: 'tutorChats',
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
-                    model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].CHAT,
+                    model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
                     materia: materia,
                     messages: [
@@ -362,7 +362,7 @@ export const LezioneController = {
                 body: JSON.stringify({
                     feature: 'tutorChats',
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
-                    model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].CHAT,
+                    model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
                     materia: materia,
                     messages: [
@@ -467,7 +467,7 @@ export const LezioneController = {
                 body: JSON.stringify({
                     feature: 'tutorChats',
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
-                    model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].CHAT,
+                    model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
                     materia: materia,
                     messages: [
@@ -570,7 +570,7 @@ export const LezioneController = {
                 body: JSON.stringify({
                     feature: 'tutorChats',
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
-                    model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].CHAT,
+                    model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
                     materia: AppState.lezioneMeta?.materia || null,
                     messages: messages,
@@ -659,7 +659,7 @@ export const LezioneController = {
                 body: JSON.stringify({
                     feature: 'tutorChats',
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
-                    model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].CHAT,
+                    model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
                     materia: AppState.lezioneMeta?.materia || null,
                     messages: messages,

@@ -19,14 +19,16 @@ export const APP_CONFIG = {
     // Mappa dei task ai modelli da utilizzare. Sostituisci i placeholder con i nomi tecnici reali.
     AI_MODELS: {
         google: {
-            CORR: 'gemini-3.1-pro-preview',    // Modello Top per ragionamento legale profondo
-            CHAT: 'gemini-3-flash-preview',    // Modello Veloce per Tutor CiceroAI e Orale
-            GEN: 'gemini-3-flash-preview' // Modello Leggero per creare tracce
+            CORR:   'gemini-3.1-pro-preview',  // Correzione temi profonda
+            LESSON: 'gemini-3.1-pro-preview',  // Lezione Socratica + Lectio Magistralis
+            CHAT:   'gemini-3-flash-preview',  // Tutor CiceroAI e Orale
+            GEN:    'gemini-3-flash-preview'   // Generazione Quiz e Tracce
         },
         anthropic: {
-            CORR: 'claude-opus-4-7',             // Modello top: costoso, ma eccellente per la correzione profonda
-            CHAT: 'claude-sonnet-4-6',            // Modello medio: Tutor CiceroAI, Orale, Lezione
-            GEN: 'claude-haiku-4-5-20251001'      // Modello veloce: Quiz AI e generazione tracce
+            CORR:   'claude-opus-4-7',              // 🏆 Top: Debrief e Correzione temi
+            LESSON: 'claude-opus-4-7',              // 🏆 Top: Lezione Socratica + Lectio Magistralis
+            CHAT:   'claude-sonnet-4-6',            // ⚡ Mid: Tutor CiceroAI e Orale
+            GEN:    'claude-haiku-4-5-20251001'     // 🚀 Fast: Quiz AI e generazione tracce
         }
     },
 
