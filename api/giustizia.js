@@ -110,12 +110,13 @@ export default async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(200).end();
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method Not Allowed' });
 
-    // Supabase client — per l'on-demand usa service_role key per scrivere
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.APP_SUPABASE_URL || 'https://wggjfuqsjqwptuprutza.supabase.co';
-    const supabaseReadKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+    // Supabase client — usiamo service_key come fallback perché SUPABASE_ANON_KEY non è sempre configurata
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://wggjfuqsjqwptuprutza.supabase.co';
+    const supabaseReadKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
     const supabaseWriteKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
     
     if (!supabaseReadKey) {
+        console.error('[Giustizia API] Nessuna chiave Supabase trovata. Variabili disponibili:', Object.keys(process.env).filter(k => k.includes('SUPA')));
         return res.status(500).json({ error: 'Configurazione Supabase mancante' });
     }
 
