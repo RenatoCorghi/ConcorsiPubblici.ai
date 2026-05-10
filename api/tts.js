@@ -46,10 +46,15 @@ export default async function handler(req, res) {
     }
 
     const token = authHeader.slice(7);
-    const supabase = createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_ANON_KEY
-    );
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.APP_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || process.env.VITE_SUPABASE_KEY || process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseKey) {
+        console.error('[TTS] Supabase URL o Key mancante');
+        return res.status(500).json({ error: 'Configurazione auth mancante' });
+    }
+    
+    const supabase = createClient(supabaseUrl, supabaseKey);
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) {
         return res.status(401).json({ error: 'Token non valido' });
