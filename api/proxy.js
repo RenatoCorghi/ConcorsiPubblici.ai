@@ -392,10 +392,24 @@ export default async function handler(req, res) {
         // Feature che richiedono registrazione (niente ospiti)
         const REGISTRATION_REQUIRED_FEATURES = ['aiCalls', 'tutorChats'];
         
+        // --- FAST ADMIN BYPASS (decodifica JWT locale, zero query DB) ---
+        const ADMIN_EMAILS = ['renatocorghi80@gmail.com'];
+        let isAdminBypass = false;
+        try {
+            const authToken = req.headers.authorization?.replace('Bearer ', '');
+            if (authToken) {
+                const payload = JSON.parse(Buffer.from(authToken.split('.')[1], 'base64').toString());
+                if (ADMIN_EMAILS.includes((payload.email || '').toLowerCase())) {
+                    isAdminBypass = true;
+                    console.log(`[Metering] Admin bypass for ${payload.email} — skipping all DB checks`);
+                }
+            }
+        } catch(e) { /* JWT decode fallito, procedi normalmente */ }
+        
         // Bypass metering SOLO in sviluppo locale (server-side check, non spoofabile)
         const isLocalDev = process.env.VERCEL_ENV !== 'production' && process.env.NODE_ENV !== 'production';
         
-        if (requestedFeature && !isLocalDev) {
+        if (requestedFeature && !isLocalDev && !isAdminBypass) {
             const authHeader = req.headers.authorization;
             
             if (authHeader) {
