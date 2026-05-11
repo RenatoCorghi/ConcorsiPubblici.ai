@@ -143,7 +143,7 @@ export function renderGiurisprudenza() {
                         </div>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        ${[{id:'all',label:'Tutte',icon:'layers'},{id:'ssuu_civili',label:'SS.UU. Civili',icon:'scale'},{id:'ssuu_penali',label:'SS.UU. Penali',icon:'gavel'},{id:'massimari',label:'Massimari',icon:'book-marked'},{id:'cds',label:'Consiglio di Stato',icon:'landmark'},{id:'tar',label:'TAR Lazio',icon:'file-text'}].map(c => 
+                        ${[{id:'all',label:'Tutte',icon:'layers'},{id:'ssuu_civili',label:'SS.UU. Civili',icon:'scale'},{id:'ssuu_penali',label:'SS.UU. Penali',icon:'gavel'},{id:'massimari',label:'Massimari',icon:'book-marked'},{id:'cds',label:'Consiglio di Stato',icon:'landmark'},{id:'tar',label:'TAR Lazio',icon:'file-text'},{id:'corte_conti',label:'Corte dei Conti',icon:'briefcase'}].map(c => 
                             `<button onclick="window._gaVipCategory('${c.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${searchState.vipCategory === c.id ? 'bg-emerald-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 border border-gray-700'}">
                                 <i data-lucide="${c.icon}" class="w-3.5 h-3.5"></i> ${c.label}
                             </button>`
@@ -560,7 +560,7 @@ async function loadVIPSchede() {
             const { data, error } = await window.supabaseClient
                 .from('rag_documents')
                 .select('id, titolo, tipo, materia, filename')
-                .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'massimario_cassazione'])
+                .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'massimario_cassazione', 'rivista_vip'])
                 .order('titolo', { ascending: true })
                 .range(offset, offset + limit - 1);
             if (error) throw error;
@@ -600,6 +600,7 @@ function renderVIPSchede() {
             'massimari': d => d.tipo === 'massimario_cassazione',
             'cds': d => d.tipo === 'sentenza_admin' && d.filename?.startsWith('cds_'),
             'tar': d => d.tipo === 'sentenza_admin' && d.filename?.startsWith('tar-'),
+            'corte_conti': d => d.tipo === 'rivista_vip'
         };
         if (catMap[searchState.vipCategory]) docs = docs.filter(catMap[searchState.vipCategory]);
     }
@@ -616,6 +617,7 @@ function renderVIPSchede() {
         if (d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') return { text: 'SS.UU. Civili', color: 'magis' };
         if (d.filename?.startsWith('cds_')) return { text: 'CdS', color: 'emerald' };
         if (d.filename?.startsWith('tar-')) return { text: 'TAR', color: 'blue' };
+        if (d.tipo === 'rivista_vip') return { text: 'Corte dei Conti', color: 'orange' };
         return { text: 'Altro', color: 'gray' };
     };
 
