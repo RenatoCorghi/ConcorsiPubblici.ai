@@ -118,21 +118,33 @@ export function renderHome() {
 
             ${pushBanner}
 
-            <!-- PWA INSTALL BANNER -->
-            ${window.deferredPrompt ? `
-                <div id="pwa-install-banner" class="mb-8 border border-green-500/30 bg-green-500/10 rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between fade-in shadow-xl">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
-                            <i data-lucide="download" class="w-5 h-5 text-green-400"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-white font-bold text-sm">Installa L'App</h3>
-                            <p class="text-green-400/80 text-xs text-balance">Aggiungi ConcorsiPubblici.ai alla tua Home o Desktop per accedere istantaneamente e usare la modalità offline.</p>
+            <!-- RAG EXPLAINER HERO -->
+            <div class="relative rounded-2xl overflow-hidden border border-indigo-500/30 shadow-xl shadow-indigo-500/10">
+                <!-- Animated gradient background -->
+                <div class="absolute inset-0 bg-gradient-to-br from-indigo-950/80 via-gray-900/90 to-magis-950/80"></div>
+                <div class="absolute -top-24 -right-24 w-72 h-72 bg-indigo-600/15 rounded-full blur-3xl animate-pulse"></div>
+                <div class="absolute -bottom-24 -left-24 w-72 h-72 bg-magis-600/15 rounded-full blur-3xl animate-pulse" style="animation-delay: 1.5s;"></div>
+                
+                <div class="relative z-10 p-6 md:p-8 flex flex-col md:flex-row gap-6 items-start">
+                    <!-- Icon -->
+                    <div class="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-magis-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/30" style="animation: float 3s ease-in-out infinite;">
+                        <i data-lucide="brain-circuit" class="w-9 h-9 md:w-11 md:h-11 text-white"></i>
+                    </div>
+                    
+                    <!-- Content -->
+                    <div class="flex-1 min-w-0">
+                        <h3 class="text-lg md:text-xl font-display font-bold text-white mb-3 leading-tight">Cosa rende ConcorsiPubblici.ai uno strumento di livello concorsuale?</h3>
+                        <div class="space-y-3 text-sm text-gray-300 leading-relaxed">
+                            <p>A differenza delle comuni AI che <strong class="text-indigo-300">"indovinano" le parole sulla base di probabilità statistiche</strong>, ConcorsiPubblici.ai utilizza un'architettura <strong class="text-white">RAG avanzata</strong>.</p>
+                            <p>Dottrina, massime e sentenze integrali vengono trasformate in <strong class="text-magis-300">rappresentazioni matematiche</strong>. Questo permette al sistema di individuare relazioni sostanziali tra principi, istituti e orientamenti giurisprudenziali, andando ben oltre la semplice ricerca per parole chiave.</p>
+                            <div class="flex items-start gap-3 mt-4 p-4 rounded-xl bg-white/5 border border-white/10">
+                                <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400 shrink-0 mt-0.5"></i>
+                                <p class="text-gray-200"><strong class="text-emerald-300">Il risultato?</strong> Un'intelligenza artificiale ancorata a un <strong class="text-white">corpus giuridico verificabile</strong>, progettata per ridurre drasticamente il rischio di allucinazioni e offrire analisi rigorose, precise e sistematicamente coerenti.</p>
+                            </div>
                         </div>
                     </div>
-                    <button onclick="app.installPWA()" class="w-full md:w-auto shrink-0 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-bold transition flex items-center gap-2 justify-center"><i data-lucide="monitor-smartphone" class="w-4 h-4"></i> Installa Ora</button>
                 </div>
-            ` : ''}
+            </div>
 
             <!-- ONBOARDING WIZARD OVERLAY -->
             ${!AppState.tutorialSeen ? `
@@ -363,6 +375,22 @@ export function renderHome() {
                     </div>
                 </div>
             </div>
+
+            <!-- PWA INSTALL BANNER (bottom) -->
+            ${window.deferredPrompt ? `
+                <div id="pwa-install-banner" class="mt-8 border border-green-500/30 bg-green-500/10 rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between fade-in">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center shrink-0">
+                            <i data-lucide="download" class="w-5 h-5 text-green-400"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-white font-bold text-sm">Installa L'App</h3>
+                            <p class="text-green-400/80 text-xs text-balance">Aggiungi ConcorsiPubblici.ai alla tua Home o Desktop per accedere istantaneamente e usare la modalità offline.</p>
+                        </div>
+                    </div>
+                    <button onclick="app.installPWA()" class="w-full md:w-auto shrink-0 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-bold transition flex items-center gap-2 justify-center"><i data-lucide="monitor-smartphone" class="w-4 h-4"></i> Installa Ora</button>
+                </div>
+            ` : ''}
 
             <!-- Footer con link legali -->
             <div class="pt-12 pb-6 border-t border-gray-900 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-600">

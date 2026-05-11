@@ -1,0 +1,3 @@
+<thinking>Il testo analizzato contiene esclusivamente informazioni di carattere editoriale e amministrativo relative alla rivista (indirizzo della redazione, contatti telefonici ed e-mail, dati relativi alla stampa e codici identificativi ISSN). Non sono presenti sentenze, massime, saggi dottrinali o alcun contenuto di rilievo giuridico-scientifico utile alla redazione di una scheda manualistica.</thinking>
+
+[NESSUN_CONTENUTO_UTILE]
