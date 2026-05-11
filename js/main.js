@@ -31,7 +31,7 @@ import { LezioneController } from './controllers/lezione.js';
 window.Lezione = LezioneController; // Esposto per il pulsante "Ascolta la Lezione"
 import { Metering } from './metering.js';
 import { QuizController } from './controllers/quiz.js';
-import { applyThemeColor } from './theme.js';
+import { applyThemeColor, initComfortMode, toggleComfortMode } from './theme.js';
 import { searchBandi, filterBandiCategoria, toggleBandiAperti, bandiPagina, toggleBandoDescrizione } from './views/bandi.js';
 
 // --- ERROR BOUNDARY GLOBALE ---
@@ -525,6 +525,9 @@ export const app = {
     bandiPagina: function(dir) { bandiPagina(dir); },
     toggleBandoDescrizione: function(idx) { toggleBandoDescrizione(idx); },
 
+    // --- Comfort Mode (Light Theme for Accessibility) ---
+    toggleComfortMode: function() { toggleComfortMode(); },
+
     async init() {
         console.log("App Booting...");
 
@@ -536,6 +539,7 @@ export const app = {
 
             Modals.init();
             lucide.createIcons();
+            initComfortMode(); // Restore light/dark preference before first paint
             initUserProfile();
             applyThemeColor(); // Applica i colori dinamici del concorso
             initTimerState();
@@ -594,6 +598,7 @@ window.escapeHtml = escapeHtml; // Usato in tutor._createMessageHTML
 window.showToast = showToast;   // Usato dal Service Worker update handler
 window.Modals = Modals;         // Usato nel cookie banner onclick
 window.applyThemeColor = applyThemeColor; // Usato in settings
+window.toggleComfortMode = toggleComfortMode; // Usato nel toggle button
 
 // --- INIZIALIZZAZIONE ---
 

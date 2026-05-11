@@ -14,6 +14,8 @@ const THEME_PALETTES = {
     'Diplomatica':        { 950: '#1e1b4b', 900: '#312e81', 800: '#3730a3', 600: '#4f46e5', 500: '#6366f1', 400: '#818cf8', 300: '#a5b4fc' },
 };
 
+const COMFORT_MODE_KEY = 'concorsi_comfort_mode';
+
 /**
  * Applica i colori dinamici del concorso al documento.
  * Cambia le variabili CSS --magis-XXX in base al profilo utente.
@@ -25,4 +27,43 @@ export function applyThemeColor() {
     Object.entries(palette).forEach(([shade, value]) => {
         document.documentElement.style.setProperty(`--magis-${shade}`, value);
     });
+}
+
+/**
+ * Restores the comfort mode state from localStorage on app boot.
+ * Should be called early in the init sequence.
+ */
+export function initComfortMode() {
+    const saved = localStorage.getItem(COMFORT_MODE_KEY);
+    if (saved === 'true') {
+        document.documentElement.classList.add('light-mode');
+        // Sync icons (they may not exist yet if called before DOM, but we try)
+        const sunIcon = document.getElementById('comfort-icon-sun');
+        const moonIcon = document.getElementById('comfort-icon-moon');
+        if (sunIcon) sunIcon.style.display = 'none';
+        if (moonIcon) moonIcon.style.display = 'block';
+    }
+}
+
+/**
+ * Toggles between dark (default) and light (comfort) mode.
+ * Persists the choice in localStorage.
+ */
+export function toggleComfortMode() {
+    const html = document.documentElement;
+    const isLight = html.classList.toggle('light-mode');
+    localStorage.setItem(COMFORT_MODE_KEY, isLight ? 'true' : 'false');
+    
+    // Update the icon in the toggle button
+    const sunIcon = document.getElementById('comfort-icon-sun');
+    const moonIcon = document.getElementById('comfort-icon-moon');
+    if (sunIcon && moonIcon) {
+        if (isLight) {
+            sunIcon.style.display = 'none';
+            moonIcon.style.display = 'block';
+        } else {
+            sunIcon.style.display = 'block';
+            moonIcon.style.display = 'none';
+        }
+    }
 }

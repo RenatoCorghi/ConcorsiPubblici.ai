@@ -951,3 +951,398 @@ body {
     0%, 100% { transform: translateY(0px); }
     50% { transform: translateY(-6px); }
 }
+
+/* ================================================================
+   COMFORT MODE (LIGHT THEME) — Optimized for Astigmatism
+   ================================================================
+   Activated by adding class "light-mode" to <html>.
+   Key principles:
+   - Background: warm off-white (#F8FAFC) — never pure white
+   - Text: dark slate (#1E293B) — never pure black
+   - Cards: white with soft shadows for depth
+   - Brand accents preserved — they pop even more on light bg
+   - Slightly heavier font-weight for better glyph definition
+   ================================================================ */
+
+/* --- Toggle Button Styles --- */
+.theme-toggle-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: #9ca3af;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+.theme-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #e5e7eb;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+.theme-toggle-btn .toggle-track {
+    width: 32px;
+    height: 18px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.15);
+    position: relative;
+    transition: background 0.3s ease;
+    flex-shrink: 0;
+}
+.theme-toggle-btn .toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #6b7280;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* Active state for the toggle in dark mode (when light-mode is on) */
+html.light-mode .theme-toggle-btn {
+    background: rgba(124, 58, 237, 0.1);
+    border-color: rgba(124, 58, 237, 0.3);
+    color: var(--magis-600);
+}
+html.light-mode .theme-toggle-btn .toggle-track {
+    background: var(--magis-500);
+}
+html.light-mode .theme-toggle-btn .toggle-thumb {
+    left: 16px;
+    background: white;
+    box-shadow: 0 1px 4px rgba(124, 58, 237, 0.3);
+}
+
+/* --- Core Overrides --- */
+html.light-mode body {
+    background-color: #F8FAFC !important;
+    color: #1E293B !important;
+    /* Remove the dark noise texture */
+    background-image: none !important;
+}
+
+/* Remove ambient dark glows */
+html.light-mode body::before {
+    background: radial-gradient(circle, rgba(124, 58, 237, 0.04) 0%, transparent 70%) !important;
+}
+html.light-mode body::after {
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.03) 0%, transparent 70%) !important;
+}
+
+/* --- Header & Navigation --- */
+html.light-mode header {
+    background: rgba(255, 255, 255, 0.85) !important;
+    border-bottom-color: #E2E8F0 !important;
+    backdrop-filter: blur(16px) saturate(130%) !important;
+}
+html.light-mode .nav-btn {
+    color: #475569 !important;
+}
+html.light-mode .nav-btn:hover:not(.nav-active) {
+    color: var(--magis-600) !important;
+    background: rgba(124, 58, 237, 0.06) !important;
+}
+html.light-mode .nav-btn.nav-active {
+    color: var(--magis-700) !important;
+}
+
+/* --- Mobile Bottom Nav --- */
+html.light-mode nav.fixed.bottom-0 {
+    background: rgba(255, 255, 255, 0.92) !important;
+    border-top-color: #E2E8F0 !important;
+}
+html.light-mode .mobile-nav-btn {
+    color: #94A3B8 !important;
+}
+html.light-mode .mobile-nav-btn.nav-active {
+    color: var(--magis-600) !important;
+}
+html.light-mode .mobile-nav-btn.nav-active i,
+html.light-mode .mobile-nav-btn.nav-active span {
+    color: var(--magis-600) !important;
+}
+
+/* --- Glass Panels & Cards --- */
+html.light-mode .glass-panel {
+    background: rgba(255, 255, 255, 0.8) !important;
+    border-color: #E2E8F0 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Generic dark bg overrides — Tailwind utility classes */
+html.light-mode .bg-gray-950 {
+    background-color: #F8FAFC !important;
+}
+html.light-mode .bg-gray-900 {
+    background-color: #FFFFFF !important;
+}
+html.light-mode .bg-gray-900\/80,
+html.light-mode .bg-gray-950\/80 {
+    background-color: rgba(255, 255, 255, 0.85) !important;
+}
+html.light-mode .bg-gray-950\/95 {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+}
+html.light-mode .bg-gray-950\/50 {
+    background-color: rgba(248, 250, 252, 0.5) !important;
+}
+html.light-mode .bg-gray-800 {
+    background-color: #F1F5F9 !important;
+}
+html.light-mode .bg-gray-800\/50 {
+    background-color: rgba(241, 245, 249, 0.5) !important;
+}
+
+/* --- Text Colors --- */
+html.light-mode .text-gray-100 {
+    color: #1E293B !important;
+}
+html.light-mode .text-gray-200 {
+    color: #334155 !important;
+}
+html.light-mode .text-gray-300 {
+    color: #475569 !important;
+}
+html.light-mode .text-gray-400 {
+    color: #64748B !important;
+}
+html.light-mode .text-gray-500 {
+    color: #94A3B8 !important;
+}
+html.light-mode .text-white {
+    color: #0F172A !important;
+}
+html.light-mode h1, 
+html.light-mode h2, 
+html.light-mode h3, 
+html.light-mode h4 {
+    color: #0F172A !important;
+}
+
+/* --- Borders --- */
+html.light-mode .border-gray-800 {
+    border-color: #E2E8F0 !important;
+}
+html.light-mode .border-gray-700 {
+    border-color: #CBD5E1 !important;
+}
+html.light-mode .border-gray-900 {
+    border-color: #E2E8F0 !important;
+}
+
+/* --- Dividers --- */
+html.light-mode .divider-gradient {
+    background: linear-gradient(90deg, transparent, #CBD5E1, transparent) !important;
+}
+html.light-mode hr {
+    border-color: #E2E8F0 !important;
+}
+
+/* --- Card Hover Effects --- */
+html.light-mode .card-hover:hover {
+    box-shadow: 0 10px 25px -10px rgba(0, 0, 0, 0.1), 0 0 15px -3px rgba(124, 58, 237, 0.08) !important;
+}
+
+/* --- Inputs --- */
+html.light-mode input[type="text"],
+html.light-mode input[type="email"],
+html.light-mode input[type="password"],
+html.light-mode textarea,
+html.light-mode select {
+    background-color: #F1F5F9 !important;
+    color: #1E293B !important;
+    border-color: #CBD5E1 !important;
+}
+html.light-mode input::placeholder,
+html.light-mode textarea::placeholder {
+    color: #94A3B8 !important;
+}
+html.light-mode input:focus,
+html.light-mode textarea:focus,
+html.light-mode select:focus {
+    background-color: #FFFFFF !important;
+    border-color: var(--magis-500) !important;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1) !important;
+}
+
+/* --- Skeleton Loading --- */
+html.light-mode .skeleton {
+    background: linear-gradient(90deg, #E2E8F0 0%, #F1F5F9 50%, #E2E8F0 100%) !important;
+    background-size: 200% 100%;
+}
+
+/* --- Scrollbar --- */
+html.light-mode ::-webkit-scrollbar-track {
+    background: #F1F5F9 !important;
+}
+html.light-mode ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #CBD5E1, #94A3B8) !important;
+}
+
+/* --- Selection --- */
+html.light-mode ::selection {
+    background: rgba(124, 58, 237, 0.2) !important;
+    color: #1E293B !important;
+}
+
+/* --- Prose / Glossario --- */
+html.light-mode .prose-dottrina {
+    color: #334155 !important;
+}
+html.light-mode .prose-dottrina h1 {
+    color: #0F172A !important;
+    border-bottom-color: rgba(124, 58, 237, 0.15) !important;
+}
+html.light-mode .prose-dottrina h2 {
+    color: #1E293B !important;
+    border-bottom-color: #E2E8F0 !important;
+}
+html.light-mode .prose-dottrina h3 {
+    color: #334155 !important;
+}
+html.light-mode .prose-dottrina strong {
+    color: #0F172A !important;
+}
+html.light-mode .prose-dottrina em {
+    color: var(--magis-700) !important;
+}
+html.light-mode .prose-dottrina blockquote {
+    background: rgba(124, 58, 237, 0.04) !important;
+    border-left-color: var(--magis-400) !important;
+    color: #475569 !important;
+}
+html.light-mode .prose-dottrina code {
+    background: rgba(124, 58, 237, 0.08) !important;
+    color: var(--magis-700) !important;
+}
+
+/* --- AI Tutor Chat --- */
+html.light-mode #tutor-chat-panel {
+    background: #FFFFFF !important;
+    border-color: #E2E8F0 !important;
+    box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.15) !important;
+}
+html.light-mode #tutor-chat-panel > div:first-child {
+    background: #F8FAFC !important;
+    border-bottom-color: #E2E8F0 !important;
+}
+html.light-mode #tutor-chat-messages {
+    background: #FAFBFC !important;
+}
+html.light-mode #tutor-chat-panel .bg-gray-950 {
+    background: #F8FAFC !important;
+}
+
+/* --- Modals --- */
+html.light-mode [id*="-modal"] > div,
+html.light-mode .modal-entry {
+    background-color: #FFFFFF !important;
+    border-color: #E2E8F0 !important;
+}
+
+/* --- Brand Gradient Text (keep readable) --- */
+html.light-mode .brand-gradient {
+    background: linear-gradient(135deg, var(--magis-700), var(--magis-600), #3B82F6) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+}
+
+/* --- Border Theme Glow (soften for light) --- */
+html.light-mode .border-theme-glow {
+    border-color: rgba(124, 58, 237, 0.2) !important;
+    box-shadow: 0 0 10px -3px rgba(124, 58, 237, 0.08) !important;
+}
+
+/* --- Badges --- */
+html.light-mode .badge-pro {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(99, 102, 241, 0.08)) !important;
+    border-color: rgba(124, 58, 237, 0.25) !important;
+    color: var(--magis-700) !important;
+    text-shadow: none !important;
+}
+
+/* --- FAB (keep vibrant) --- */
+html.light-mode .fab-glow {
+    box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3) !important;
+}
+
+/* --- Tooltip --- */
+html.light-mode .tooltip-wrap::after {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border-color: #E2E8F0 !important;
+    color: #334155 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* --- Lecture Player (keep dark for immersion) --- */
+/* Intentionally NOT overriding #lecture-player-overlay */
+
+/* --- Font Weight Boost for Astigmatism --- */
+html.light-mode body {
+    font-weight: 420 !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+}
+html.light-mode p,
+html.light-mode span,
+html.light-mode li {
+    font-weight: 420;
+}
+
+/* --- Dot Grid Pattern (soften) --- */
+html.light-mode .bg-dots {
+    background-image: radial-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px) !important;
+}
+
+/* --- Timer nav container --- */
+html.light-mode #nav-timer-container {
+    background: #F1F5F9 !important;
+    border-color: #E2E8F0 !important;
+}
+
+/* --- Gradient Border Cards (soften for light) --- */
+html.light-mode .card-gradient-border::before {
+    background: linear-gradient(
+        135deg,
+        rgba(124, 58, 237, 0.15),
+        rgba(59, 130, 246, 0.1),
+        rgba(124, 58, 237, 0.05),
+        rgba(59, 130, 246, 0.12)
+    ) !important;
+}
+
+/* --- Shimmer Premium (light version) --- */
+html.light-mode .shimmer-premium {
+    background: linear-gradient(
+        110deg,
+        rgba(0, 0, 0, 0.01) 0%,
+        rgba(124, 58, 237, 0.04) 40%,
+        rgba(0, 0, 0, 0.02) 50%,
+        rgba(59, 130, 246, 0.03) 60%,
+        rgba(0, 0, 0, 0.01) 100%
+    ) !important;
+}
+
+/* --- Stat Glow (adapt for light) --- */
+html.light-mode .stat-glow {
+    text-shadow: none !important;
+    color: var(--magis-700) !important;
+}
+
+/* Smooth transition when toggling modes */
+html {
+    transition: background-color 0.4s ease;
+}
+html.light-mode * {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}

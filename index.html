@@ -90,6 +90,12 @@
                     <div id="nav-timer-dot" class="w-2 h-2 rounded-full pulse-ani bg-magis-500"></div>
                     <span id="nav-timer-text" class="text-xs font-mono font-bold text-magis-400">00:00:00</span>
                 </div>
+                <button id="comfort-mode-toggle" onclick="app.toggleComfortMode()" class="theme-toggle-btn hidden lg:flex" title="Modalità Comfort — Tema chiaro per la vista">
+                    <i id="comfort-icon-sun" data-lucide="sun" class="w-3.5 h-3.5"></i>
+                    <i id="comfort-icon-moon" data-lucide="moon" class="w-3.5 h-3.5" style="display:none"></i>
+                    <span class="hidden xl:inline">Comfort</span>
+                    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                </button>
                 <button onclick="app.openAiModal()" class="hidden lg:flex w-8 h-8 items-center justify-center text-gray-500 hover:text-white transition rounded-lg hover:bg-gray-800" title="Impostazioni">
                     <i data-lucide="settings" class="w-4 h-4"></i>
                 </button>
