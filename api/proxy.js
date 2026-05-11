@@ -111,7 +111,8 @@ function normalizeMateria(inputMateria) {
 
 // --- FUNZIONE RAG (RETRIEVAL-AUGMENTED GENERATION) ---
 // Ritorna { contextText, sources } — contextText per il prompt, sources per il frontend
-// USA: match_rag_chunks RPC (con indice ivfflat, risposta < 200ms)
+// USA: match_documents_hybrid RPC (vector 70% + full-text 30%, con metadata filtering)
+// FALLBACK: match_rag_chunks (vector-only) se la hybrid RPC non è ancora deployata
 async function fetchRAGContext(userMessageText, materiaFilter = null) {
     const googleKey = process.env.GOOGLE_AI_KEY || process.env.GEMINI_API_KEY;
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
@@ -136,19 +137,76 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
         const vector = embedData.embedding?.values;
         if (!vector) return null;
 
-        // 2. DUAL SEARCH: ricerca standard + ricerca mirata per teoria/nomofilachia
-        const rpcUrl = `${process.env.SUPABASE_URL}/rest/v1/rpc/match_rag_chunks`;
-        const rpcUrlByTipo = `${process.env.SUPABASE_URL}/rest/v1/rpc/match_rag_chunks_by_tipo`;
+        // 2. HYBRID SEARCH: vettore + full-text + metadata filtering
+        const hybridUrl = `${process.env.SUPABASE_URL}/rest/v1/rpc/match_documents_hybrid`;
+        const legacyUrl = `${process.env.SUPABASE_URL}/rest/v1/rpc/match_rag_chunks`;
         const rpcHeaders = {
             'apikey': supabaseKey,
             'Authorization': `Bearer ${supabaseKey}`,
             'Content-Type': 'application/json'
         };
 
-        // Lancio cinque ricerche in parallelo: standard + 4 tipi dedicati
-        const [rpcRes, teoriaRes, nomoRes, ssuuRes, massimarioRes] = await Promise.all([
-            // Ricerca standard (tutto)
-            fetch(rpcUrl, {
+        // Due ricerche ibride parallele:
+        // A) Broad search — trova i migliori match globali (vector+keyword)
+        // B) Premium search — garantisce fonti autorevoli (SS.UU., Massimari, Riviste)
+        let matches = [];
+        let usedHybrid = false;
+
+        try {
+            const allResponses = await Promise.all([
+                // A) Broad: tutto il corpus, soglia 0.30, top 12
+                fetch(hybridUrl, {
+                    method: 'POST',
+                    headers: rpcHeaders,
+                    body: JSON.stringify({
+                        query_embedding: vector,
+                        query_text: userMessageText,
+                        match_count: 12,
+                        match_threshold: 0.30
+                    })
+                }),
+                // B) Premium: solo fonti di alta autorità, soglia bassa
+                ...['teoria_massimario', 'nomofilachia_ssuu', 'sentenza_ssuu', 'massimario_cassazione'].map(tipo =>
+                    fetch(hybridUrl, {
+                        method: 'POST',
+                        headers: rpcHeaders,
+                        body: JSON.stringify({
+                            query_embedding: vector,
+                            query_text: userMessageText,
+                            match_count: 2,
+                            match_threshold: 0.25,
+                            filter_tipo: tipo
+                        })
+                    })
+                )
+            ]);
+
+            const broadRes = allResponses[0];
+            const premiumResponses = allResponses.slice(1); // 4 risposte premium
+
+            if (!broadRes.ok) throw new Error(`Hybrid RPC error ${broadRes.status}`);
+            
+            const broadMatches = await broadRes.json();
+            const premiumResults = await Promise.all(
+                premiumResponses.filter(r => r && r.ok).map(r => r.json())
+            );
+            
+            // Unisci e de-duplica
+            const seen = new Set();
+            for (const m of [...broadMatches, ...premiumResults.flat()]) {
+                if (!seen.has(m.id)) {
+                    seen.add(m.id);
+                    m.similarity = m.similarity || 0;
+                    m.keyword_score = m.keyword_score || 0;
+                    matches.push(m);
+                }
+            }
+            usedHybrid = true;
+            console.log(`[RAG] 🔀 HYBRID: Broad=${broadMatches.length}, Premium=${premiumResults.flat().length}, Merged=${matches.length}`);
+        } catch (hybridErr) {
+            // FALLBACK: se la hybrid RPC non è deployata, usa la vecchia vector-only
+            console.warn(`[RAG] ⚠️ Hybrid RPC non disponibile (${hybridErr.message}), fallback a vector-only`);
+            const fallbackRes = await fetch(legacyUrl, {
                 method: 'POST',
                 headers: rpcHeaders,
                 body: JSON.stringify({
@@ -156,76 +214,15 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                     match_count: 10,
                     match_threshold: 0.55
                 })
-            }),
-            // Ricerca mirata: riviste VIP (Giur. Italiana, DannResp)
-            fetch(rpcUrlByTipo, {
-                method: 'POST',
-                headers: rpcHeaders,
-                body: JSON.stringify({
-                    query_embedding: vector,
-                    match_count: 3,
-                    match_threshold: 0.40,
-                    filter_tipo: 'teoria_massimario'
-                })
-            }),
-            // Ricerca mirata: nomofilachia (SS.UU. VIP integrale)
-            fetch(rpcUrlByTipo, {
-                method: 'POST',
-                headers: rpcHeaders,
-                body: JSON.stringify({
-                    query_embedding: vector,
-                    match_count: 2,
-                    match_threshold: 0.40,
-                    filter_tipo: 'nomofilachia_ssuu'
-                })
-            }),
-            // Ricerca mirata: SS.UU. Cassazione (schede strutturate)
-            fetch(rpcUrlByTipo, {
-                method: 'POST',
-                headers: rpcHeaders,
-                body: JSON.stringify({
-                    query_embedding: vector,
-                    match_count: 2,
-                    match_threshold: 0.40,
-                    filter_tipo: 'sentenza_ssuu'
-                })
-            }),
-            // Ricerca mirata: Massimari della Cassazione (Relazioni)
-            fetch(rpcUrlByTipo, {
-                method: 'POST',
-                headers: rpcHeaders,
-                body: JSON.stringify({
-                    query_embedding: vector,
-                    match_count: 2,
-                    match_threshold: 0.40,
-                    filter_tipo: 'massimario_cassazione'
-                })
-            })
-        ]);
-        
-        if (!rpcRes.ok) {
-            const errText = await rpcRes.text();
-            console.error(`[RAG] RPC match_rag_chunks errore ${rpcRes.status}: ${errText.substring(0, 200)}`);
-            return null;
-        }
-        
-        const standardMatches = await rpcRes.json();
-        const teoriaMatches = teoriaRes.ok ? await teoriaRes.json() : [];
-        const nomoMatches = nomoRes.ok ? await nomoRes.json() : [];
-        const ssuuMatches = ssuuRes.ok ? await ssuuRes.json() : [];
-        const massimarioMatches = massimarioRes.ok ? await massimarioRes.json() : [];
-        
-        // Unisci e de-duplica (per id)
-        const seen = new Set();
-        const matches = [];
-        for (const m of [...standardMatches, ...teoriaMatches, ...nomoMatches, ...ssuuMatches, ...massimarioMatches]) {
-            if (!seen.has(m.id)) {
-                seen.add(m.id);
-                matches.push(m);
+            });
+            if (!fallbackRes.ok) {
+                const errText = await fallbackRes.text();
+                console.error(`[RAG] RPC match_rag_chunks errore ${fallbackRes.status}: ${errText.substring(0, 200)}`);
+                return null;
             }
+            matches = await fallbackRes.json();
+            console.log(`[RAG] 🔍 VECTOR-ONLY (fallback): ${matches.length} risultati`);
         }
-        
-        console.log(`[RAG] Standard: ${standardMatches.length}, Riviste: ${teoriaMatches.length}, Nomo: ${nomoMatches.length}, SSUU: ${ssuuMatches.length}, Massimari: ${massimarioMatches.length}, Merged: ${matches.length}`);
         
         if (matches && matches.length > 0) {
             let contextText = "\n\n<RAG_CONTEXT>\n";
