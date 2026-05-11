@@ -1400,6 +1400,89 @@ html.light-mode .border-gray-700\/50 {
     border-color: rgba(226, 232, 240, 0.7) !important;
 }
 
+/* --- Glossario Smart: Card Categorie (light mode) ---
+   Le sezioni del glossario usano bg-magis-900/xx che sono viola scuro.
+   In light mode le convertiamo in card bianche con accent border viola,
+   coerenti con il resto della dashboard comfort. */
+html.light-mode .bg-magis-900\/40 {
+    background-color: rgba(255, 255, 255, 0.9) !important;
+}
+html.light-mode .bg-magis-900\/60 {
+    background-color: rgba(248, 247, 255, 0.95) !important;
+}
+html.light-mode .bg-magis-900\/20 {
+    background-color: rgba(255, 255, 255, 0.7) !important;
+}
+html.light-mode .border-magis-500\/50 {
+    border-color: rgba(124, 58, 237, 0.25) !important;
+}
+html.light-mode .border-magis-500\/30 {
+    border-color: rgba(124, 58, 237, 0.18) !important;
+}
+html.light-mode .border-magis-500\/20 {
+    border-color: rgba(124, 58, 237, 0.12) !important;
+}
+/* Intestazioni sezioni glossario: testo da viola chiarissimo a viola scuro */
+html.light-mode .text-magis-200 {
+    color: #4C1D95 !important;
+}
+html.light-mode .text-magis-100 {
+    color: #1E1B4B !important;
+}
+/* Badge conteggio elementi (es. "137") */
+html.light-mode .bg-magis-800 {
+    background-color: rgba(124, 58, 237, 0.12) !important;
+    color: var(--magis-700) !important;
+}
+/* Hover sulle card categorie in light mode */
+html.light-mode .hover\:bg-magis-800:hover {
+    background-color: rgba(124, 58, 237, 0.08) !important;
+}
+/* Item singoli del glossario in light mode */
+html.light-mode .glossario-item:hover {
+    background-color: rgba(124, 58, 237, 0.06) !important;
+    border-color: rgba(124, 58, 237, 0.15) !important;
+}
+/* Sezione SRS / Spaced Repetition box */
+html.light-mode .bg-magis-500\/5 {
+    background-color: rgba(124, 58, 237, 0.04) !important;
+}
+/* Skeleton loader bg in light mode */
+html.light-mode .bg-gray-900\/40 {
+    background-color: rgba(255, 255, 255, 0.8) !important;
+}
+html.light-mode .bg-gray-900\/50 {
+    background-color: rgba(248, 250, 252, 0.9) !important;
+}
+/* Pulsing animate in light mode */
+html.light-mode .bg-gray-800.rounded {
+    background-color: #E2E8F0 !important;
+}
+/* Glossario SRS buttons — tono morbido in light */
+html.light-mode .bg-red-900\/20 {
+    background-color: rgba(254, 242, 242, 0.8) !important;
+}
+html.light-mode .border-red-800\/50 {
+    border-color: rgba(252, 165, 165, 0.5) !important;
+}
+html.light-mode .bg-yellow-900\/20 {
+    background-color: rgba(254, 252, 232, 0.8) !important;
+}
+html.light-mode .border-yellow-800\/50 {
+    border-color: rgba(253, 224, 71, 0.5) !important;
+}
+html.light-mode .bg-green-900\/20 {
+    background-color: rgba(240, 253, 244, 0.8) !important;
+}
+html.light-mode .border-green-800\/50 {
+    border-color: rgba(134, 239, 172, 0.5) !important;
+}
+/* Right panel detail border in light mode */
+html.light-mode .border-dashed.border-gray-800 {
+    border-color: #CBD5E1 !important;
+    background-color: rgba(241, 245, 249, 0.5) !important;
+}
+
 /* Smooth transition when toggling modes */
 html {
     transition: background-color 0.4s ease;
