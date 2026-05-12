@@ -17,9 +17,14 @@ import { Metering } from '../metering.js';
  * @param {'debrief'|'lezione'} type - Tipo di contenuto trial
  * @param {Function} onContinue - Callback se l'utente clicca "Vedi la Demo"
  */
-function _showTrialModal(type, onContinue) {
+function _showTrialModal(type, onContinue, onGeneratePenale) {
     // Rimuovi eventuali modali precedenti
     document.getElementById('trial-modal-overlay')?.remove();
+
+    // Determina se l'utente è registrato (Free) o ospite
+    const isRegistered = window.supabaseClient && !Metering.isGuest();
+    // Controlla se ha già usato il credito Lectio Penale gratuito
+    const hasUsedFreePenale = localStorage.getItem('concorsi_free_penale_used') === 'true';
 
     const configs = {
         debrief: {
@@ -30,9 +35,15 @@ function _showTrialModal(type, onContinue) {
         },
         lezione: {
             icon: '📖',
-            title: 'Lectio Magistralis di Prova',
-            desc: 'Stai per assistere a una <strong>Lectio Magistralis di esempio</strong> sull\'<em>Autotutela Amministrativa</em> in 5 moduli. Le Lectio personalizzate su qualsiasi argomento sono disponibili con i piani a pagamento.',
-            features: ['5 moduli di approfondimento sistematico', 'Taglio nomofilattico da concorso', 'Giurisprudenza aggiornata integrata', 'Ascolto audio con slide sincronizzate']
+            title: isRegistered ? 'Lectio Magistralis — Piano Gratuito' : 'Lectio Magistralis di Prova',
+            desc: isRegistered 
+                ? (hasUsedFreePenale 
+                    ? 'Hai già utilizzato la tua <strong>anteprima gratuita di Diritto Penale</strong>. Puoi rivedere la <strong>demo sull\'Autotutela Amministrativa</strong>, oppure sbloccare tutte le materie con un piano a pagamento.'
+                    : 'Come utente registrato hai accesso a:<br>✅ La <strong>Lectio demo</strong> sull\'Autotutela Amministrativa (5 moduli)<br>✅ <strong>1 Modulo di anteprima</strong> su un argomento a tua scelta di <strong class="text-amber-400">Diritto Penale</strong>')
+                : 'Stai per assistere a una <strong>Lectio Magistralis di esempio</strong> sull\'<em>Autotutela Amministrativa</em> in 5 moduli. <strong class="text-amber-400">Registrati gratis</strong> per generare anche un modulo di anteprima di Diritto Penale!',
+            features: isRegistered && !hasUsedFreePenale
+                ? ['Demo: Autotutela Amministrativa (5 moduli completi)', '🎁 BONUS: 1 Modulo AI di Diritto Penale a tua scelta', 'Taglio nomofilattico da concorso', 'Ascolto audio con slide sincronizzate']
+                : ['5 moduli di approfondimento sistematico', 'Taglio nomofilattico da concorso', 'Giurisprudenza aggiornata integrata', 'Ascolto audio con slide sincronizzate']
         }
     };
     const c = configs[type] || configs.debrief;
@@ -42,6 +53,21 @@ function _showTrialModal(type, onContinue) {
     overlay.className = 'fixed inset-0 z-[9998] flex items-center justify-center p-4';
     overlay.style.background = 'rgba(0,0,0,0.75)';
     overlay.style.backdropFilter = 'blur(8px)';
+
+    // Bottone extra per generare Lectio Penale (solo registrati free con credito disponibile)
+    const penaleButtonHTML = (type === 'lezione' && isRegistered && !hasUsedFreePenale && typeof onGeneratePenale === 'function')
+        ? `<button id="trial-modal-penale" class="w-full py-3.5 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white rounded-xl font-bold text-base shadow-lg shadow-red-500/20 transition hover:scale-[1.02] flex items-center justify-center gap-2">
+                ⚖️ Genera il Modulo 1 di Diritto Penale
+           </button>`
+        : '';
+
+    // Se non è registrato e siamo sulla lezione, mostra CTA di registrazione
+    const registrationCTA = (type === 'lezione' && !isRegistered)
+        ? `<button onclick="this.closest('#trial-modal-overlay').remove(); document.getElementById('onboarding-modal')?.classList.remove('hidden')" class="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-500 hover:to-emerald-600 text-white rounded-xl font-semibold text-sm transition hover:scale-[1.02] flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                Registrati Gratis — Sblocca 1 Modulo di Penale
+           </button>`
+        : '';
 
     overlay.innerHTML = `
         <div class="bg-gray-900 border border-gray-700/50 rounded-3xl max-w-md w-full p-8 modal-entry shadow-2xl relative">
@@ -54,7 +80,7 @@ function _showTrialModal(type, onContinue) {
             </div>
 
             <div class="bg-gray-800/50 rounded-xl p-4 mb-6 border border-gray-700/30">
-                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Cosa vedrai:</p>
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Cosa include il piano gratuito:</p>
                 <ul class="space-y-2">
                     ${c.features.map(f => `
                         <li class="flex items-start gap-2 text-sm text-gray-300">
@@ -66,12 +92,14 @@ function _showTrialModal(type, onContinue) {
             </div>
 
             <div class="flex flex-col gap-3">
-                <button id="trial-modal-continue" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-xl font-bold text-base shadow-lg shadow-amber-500/20 transition hover:scale-[1.02]">
-                    ${c.icon} Guarda la Demo Gratuita
+                ${penaleButtonHTML}
+                <button id="trial-modal-continue" class="w-full py-3.5 ${penaleButtonHTML ? 'bg-gray-800 hover:bg-gray-700 border border-gray-600' : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500'} text-white rounded-xl font-bold text-base shadow-lg transition hover:scale-[1.02]">
+                    ${c.icon} ${penaleButtonHTML ? 'Guarda la Demo (Autotutela)' : 'Guarda la Demo Gratuita'}
                 </button>
+                ${registrationCTA}
                 <button onclick="this.closest('#trial-modal-overlay').remove(); if(typeof navigateToRoute==='function') navigateToRoute('pricing')" class="w-full py-3 bg-gradient-to-r from-magis-700 to-magis-600 hover:from-magis-600 hover:to-magis-500 text-white rounded-xl font-semibold text-sm transition hover:scale-[1.02] flex items-center justify-center gap-2">
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                    Sblocca Tutto — Vedi i Piani
+                    Sblocca Tutte le Materie — Vedi i Piani
                 </button>
             </div>
         </div>
@@ -84,6 +112,15 @@ function _showTrialModal(type, onContinue) {
         overlay.remove();
         if (typeof onContinue === 'function') onContinue();
     });
+
+    // Bind del bottone "Genera Lectio Penale" (se presente)
+    const penaleBtn = document.getElementById('trial-modal-penale');
+    if (penaleBtn && typeof onGeneratePenale === 'function') {
+        penaleBtn.addEventListener('click', () => {
+            overlay.remove();
+            onGeneratePenale();
+        });
+    }
 }
 // Esponi globalmente per uso cross-controller
 window._showTrialModal = _showTrialModal;

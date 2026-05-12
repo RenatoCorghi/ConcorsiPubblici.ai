@@ -71,10 +71,21 @@ async function scrape() {
     };
 
     // Funzione per scaricare il PDF all'interno del browser e passarlo a Node
-    const downloadPdfInBrowser = async (pdfUrl) => {
+    const downloadPdfInBrowser = async (viewerUrl) => {
         return await page.evaluate(async (url) => {
             try {
-                const res = await window.fetch(url);
+                // 1. Scarica la pagina del viewer
+                const viewerRes = await window.fetch(url);
+                const viewerHtml = await viewerRes.text();
+                
+                // 2. Estrai il vero URL del PDF (DEFAULT_URL)
+                const realPdfMatch = viewerHtml.match(/var DEFAULT_URL = '(.*?)';/);
+                if (!realPdfMatch) return null;
+                
+                const realPdfUrl = realPdfMatch[1];
+                
+                // 3. Scarica il vero PDF
+                const res = await window.fetch(realPdfUrl);
                 const arrayBuffer = await res.arrayBuffer();
                 
                 let binary = '';
@@ -86,7 +97,7 @@ async function scrape() {
             } catch (e) {
                 return null;
             }
-        }, pdfUrl);
+        }, viewerUrl);
     };
 
     // 1. Trova l'ultimo Artid
@@ -116,9 +127,10 @@ async function scrape() {
     let currentArtid = maxArtid;
     console.log(`Partenza da Artid: ${currentArtid}`);
     
-    const BATCH_SIZE = 5;
+    const BATCH_SIZE = 1;
     const TARGET_MIN_YEAR = 2021;
     let stopScanning = false;
+    let downloadCounter = 0;
 
     while (!stopScanning && currentArtid > 30000) {
         let promises = [];
@@ -149,6 +161,14 @@ async function scrape() {
                     if (base64Data) {
                         fs.writeFileSync(filepath, Buffer.from(base64Data, 'base64'));
                         console.log(`[OK] Salvato ${filename}`);
+                        
+                        downloadCounter++;
+                        if (downloadCounter % 3 === 0) {
+                            console.log('   ⏳ Pausa di raffreddamento prolungata (5 minuti) per evitare blocchi IP...');
+                            await delay(300000); // 5 minuti
+                        } else {
+                            await delay(45000); // 45 secondi tra un download e l'altro
+                        }
                     } else {
                         console.log(`[ERRORE] Download fallito per ${filename}`);
                     }
@@ -161,8 +181,9 @@ async function scrape() {
             process.stdout.write(`\rScansione Artid: ${currentArtid}... `);
         }
         
-        // Breve pausa per non sovraccaricare il sito
-        await delay(300);
+        // Rallentamento aggressivo per evitare blocchi
+        const randomDelay = Math.floor(Math.random() * 5000) + 5000; // 5-10 secondi
+        await delay(randomDelay);
     }
     
     console.log('\n--- Scraping Federalismi Completato ---');

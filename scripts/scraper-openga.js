@@ -325,7 +325,7 @@ async function main() {
     if (importToSupabase) {
         log('🗄️', '');
         log('🗄️', 'Fase 4: Import in Supabase...');
-        await importAllToSupabase(dataDir, stats);
+        await importAllToSupabase(dataDir, sedeFilter, annoFilter);
     }
     
     console.log();
@@ -337,7 +337,7 @@ async function main() {
 // SUPABASE IMPORT  
 // ═══════════════════════════════════════════
 
-async function importAllToSupabase(dataDir) {
+async function importAllToSupabase(dataDir, sedeFilter, annoFilter) {
     // Importa Supabase client
     let createClient;
     try {
@@ -378,6 +378,10 @@ async function importAllToSupabase(dataDir) {
         
         const [, sedeSlug, tipo, anno] = match;
         
+        // Applica filtri se presenti
+        if (sedeFilter && !sedeSlug.includes(sedeFilter)) continue;
+        if (annoFilter && anno !== annoFilter) continue;
+        
         log('🗄️', `  Importo: ${file}...`);
         
         try {
@@ -399,11 +403,11 @@ async function importAllToSupabase(dataDir) {
                 numero_ricorso: record.NUMERO_RICORSO || null,
                 anno_pubblicazione: record.ANNO_PUBBLICAZIONE || parseInt(anno),
                 mese_pubblicazione: record.MESE_PUBBLICAZIONE || null,
-                data_pubblicazione: record.DATA_PUBBLICAZIONE || null,
+                data_pubblicazione: record.DATA_PUBBLICAZIONE ? new Date(record.DATA_PUBBLICAZIONE).toISOString() : null,
                 tipo_udienza: record.TIPO_UDIENZA || null,
                 esito: record.ESITO_PROVVEDIMENTO || null,
                 flg_definisce: record.FLG_DEFINISCE || null,
-                data_deposito_ricorso: record.DATA_DEPOSITO_RICORSO || null,
+                data_deposito_ricorso: record.DATA_DEPOSITO_RICORSO ? new Date(record.DATA_DEPOSITO_RICORSO).toISOString() : null,
                 oggetto_ricorso: record.OGGETTO_RICORSO || null,
                 tipo_ricorso: record.TIPO_RICORSO || null,
                 num_membri_collegio: record.NUM_MEMBRI_COLLEGIO || null,

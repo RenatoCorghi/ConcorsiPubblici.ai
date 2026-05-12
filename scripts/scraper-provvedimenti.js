@@ -329,8 +329,6 @@ async function main() {
         .select('id, tipo_provvedimento, sede_slug, sede_nome, numero_provvedimento, numero_ricorso, anno_pubblicazione, data_pubblicazione, sezione_nome')
         .is('testo_completo', null)   // Solo quelli senza testo
         .not('numero_ricorso', 'is', null)  // Serve il NRG per costruire l'URL
-        .order('anno_pubblicazione', { ascending: true })
-        .order('data_pubblicazione', { ascending: true })
         .limit(batchLimit);
 
     if (sedeFilter) query = query.eq('sede_slug', sedeFilter);

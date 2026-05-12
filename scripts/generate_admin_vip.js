@@ -95,32 +95,31 @@ async function main() {
     console.log(`💎 Avvio Generazione Schede VIP Diritto Amministrativo (Modello: ${MODEL_NAME})...`);
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
-    const targetSedi = ['cds', 'tar-lazio-roma'];
+    const args = process.argv.slice(2);
+    const annoFilter = args.find(a => a.startsWith('--anno='))?.split('=')[1];
+    const targetSedi = ['tar-lazio-roma', 'cds'];
 
     for (const sede of targetSedi) {
         console.log(`\n📂 Recupero sentenze per la sede: ${sede}`);
         
-        // Calcolo totale per progress
-        const { count, error: countErr } = await supabase
-            .from('provvedimenti_ga')
-            .select('*', { count: 'exact', head: true })
-            .eq('sede_slug', sede)
-            .not('testo_completo', 'is', null);
-            
-        let totalCount = count || 0;
-        console.log(`   Totale record con testo completo: ${totalCount}`);
+        // Rimossa query di count esatto che causava timeout su tabelle grandi
+        let totalCount = "N/A";
+        console.log(`   Recupero record con testo completo${annoFilter ? ' per anno ' + annoFilter : ''}...`);
 
         let offset = 0;
         let hasMore = true;
         let processedCount = 0;
 
         while (hasMore) {
-            const { data, error } = await supabase
+            let queryData = supabase
                 .from('provvedimenti_ga')
                 .select('id, numero_provvedimento, anno_pubblicazione, oggetto_ricorso, testo_completo')
                 .eq('sede_slug', sede)
                 .not('testo_completo', 'is', null)
+                .limit(100)
                 .range(offset, offset + 99);
+
+            const { data, error } = await queryData;
 
             if (error) {
                 console.error("❌ Errore fetch DB:", error.message);
@@ -128,6 +127,9 @@ async function main() {
             }
 
             if (data.length === 0) {
+                if (offset === 0) {
+                    console.log(`   ⚠️  Nessun record trovato per la sede ${sede}${annoFilter ? ' nell\'anno ' + annoFilter : ''}.`);
+                }
                 hasMore = false;
                 break;
             }
