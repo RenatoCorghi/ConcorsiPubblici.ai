@@ -8,6 +8,7 @@
 
 import { AppState } from '../state.js';
 import { escapeHtml } from '../utils.js';
+import { Metering } from '../metering.js';
 
 /**
  * Renderizza la vista briefing.
@@ -229,6 +230,34 @@ function renderBriefingContent(briefing) {
         });
     }
 
+    // Se l'utente è Free, tronchiamo qui e mostriamo il paywall
+    if (Metering._getTier() === 'Free') {
+        sections.push({
+            icon: 'lock',
+            title: 'Contenuto Premium Bloccato',
+            color: 'text-amber-400',
+            bgColor: 'bg-amber-500/10 border-amber-500/20',
+            content: "🔒 **Anteprima Gratuita Terminata.**\n\nIl resto del Debriefing Strategico (Schema di svolgimento, Riferimenti giurisprudenziali, Insidie da evitare, Time Management e Arsenale Lessicale) è riservato agli utenti Premium. Sblocca l'accesso per visualizzare l'analisi completa.",
+            type: 'paywall'
+        });
+        
+        return `
+            <div class="space-y-6">
+                ${sections.map((section, idx) => `
+                    <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6 fade-in hover:border-gray-700 transition" style="animation-delay: ${idx * 0.08}s">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-9 h-9 rounded-xl ${section.bgColor} border flex items-center justify-center">
+                                <i data-lucide="${section.icon}" class="w-4 h-4 ${section.color}"></i>
+                            </div>
+                            <h3 class="font-bold text-white text-base">${section.title}</h3>
+                        </div>
+                        ${renderSectionContent(section)}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
     sections.push({
         icon: 'map',
         title: 'Schema di Svolgimento Consigliato',
@@ -249,16 +278,38 @@ function renderBriefingContent(briefing) {
 
     sections.push({
         icon: 'alert-triangle',
-        title: 'Insidie e Trappole da Evitare',
+        title: 'Insidie e Red Flags',
         color: 'text-red-400',
         bgColor: 'bg-red-500/10 border-red-500/20',
         content: briefing.insidie || [],
         type: 'warnings'
     });
 
+    if (briefing.time_management) {
+        sections.push({
+            icon: 'clock',
+            title: 'Time Management & Monoscrittura',
+            color: 'text-cyan-400',
+            bgColor: 'bg-cyan-500/10 border-cyan-500/20',
+            content: briefing.time_management,
+            type: 'paragraph'
+        });
+    }
+
+    if (briefing.arsenale_lessicale && briefing.arsenale_lessicale.length > 0) {
+        sections.push({
+            icon: 'swords',
+            title: 'Arsenale Lessicale',
+            color: 'text-purple-400',
+            bgColor: 'bg-purple-500/10 border-purple-500/20',
+            content: briefing.arsenale_lessicale,
+            type: 'tags'
+        });
+    }
+
     sections.push({
         icon: 'lightbulb',
-        title: 'Consiglio Strategico Finale',
+        title: 'Forma, Stile e Lessico Concorsuale',
         color: 'text-yellow-400',
         bgColor: 'bg-yellow-500/10 border-yellow-500/20',
         content: briefing.consiglio || '',
@@ -358,6 +409,17 @@ function renderSectionContent(section) {
                     <i data-lucide="quote" class="w-5 h-5 text-yellow-500/30 absolute -left-3 -top-1 bg-gray-900"></i>
                     <p class="text-gray-300 text-sm leading-relaxed italic">${escapeHtml(section.content)}</p>
                     <p class="text-yellow-500/50 text-xs mt-2 font-bold">— CiceroAI, Tutor AI</p>
+                </div>
+            `;
+        case 'paywall':
+            return `
+                <div class="prose prose-sm prose-invert max-w-none text-gray-300 leading-relaxed whitespace-pre-wrap mb-4">
+                    ${escapeHtml(section.content)}
+                </div>
+                <div class="flex justify-center mt-4">
+                    <button onclick="app.navigate('pricing')" class="px-6 py-3 bg-gradient-to-r from-magis-700 to-magis-600 hover:from-magis-600 hover:to-magis-500 text-white rounded-xl font-bold flex items-center gap-2 transition hover:scale-105">
+                        <i data-lucide="unlock" class="w-5 h-5"></i> Sblocca il Briefing Completo
+                    </button>
                 </div>
             `;
         default:

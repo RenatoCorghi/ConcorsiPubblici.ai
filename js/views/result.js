@@ -145,7 +145,7 @@ function renderResultCorrezione(res) {
                 </div>
                 
                 <div class="bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
-                    <h3 class="text-blue-400 font-bold mb-3 flex items-center gap-2 text-sm uppercase tracking-wider"><i data-lucide="layers" class="w-4 h-4"></i> 2. Inquadramento Sistematico</h3>
+                    <h3 class="text-blue-400 font-bold mb-3 flex items-center gap-2 text-sm uppercase tracking-wider"><i data-lucide="layers" class="w-4 h-4"></i> 2. Inquadramento Sistematico e Bilanciamento</h3>
                     <p class="text-gray-300 text-sm leading-relaxed">${escapeHtml(res.feedback_inquadramento || '')}</p>
                 </div>
                 

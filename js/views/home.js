@@ -9,7 +9,7 @@ export function renderHome() {
     var today = new Date();
     // Algoritmo deterministico della settimana: prendiamo l'id basato su settimana
     var weekNum = Math.ceil(today.getDate() / 7);
-    var tracciaSettimana = DB_TRACCE[weekNum % DB_TRACCE.length];
+    var tracciaSettimana = DB_TRACCE.length > 0 ? DB_TRACCE[weekNum % DB_TRACCE.length] : null;
     
     // Se c'è una simulazione in corso
     var resumeCard = '';
@@ -208,6 +208,7 @@ export function renderHome() {
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6 stagger-in">
                 <!-- Traccia della settimana -->
+                ${tracciaSettimana ? `
                 <div class="col-span-1 md:col-span-2 card-gradient-border rounded-2xl p-6 glass-panel relative overflow-hidden bg-glow-theme">
                     <div class="absolute top-0 right-0 p-3 opacity-20"><i data-lucide="award" class="w-32 h-32"></i></div>
                     <div class="relative z-10">
@@ -226,6 +227,16 @@ export function renderHome() {
                         </div>
                     </div>
                 </div>
+                ` : `
+                <div class="col-span-1 md:col-span-2 card-gradient-border rounded-2xl p-6 glass-panel relative overflow-hidden">
+                    <div class="relative z-10 flex items-center justify-center h-40">
+                        <div class="text-center">
+                            <div class="w-8 h-8 rounded-full border-2 border-magis-500 border-t-transparent animate-spin mx-auto mb-3"></div>
+                            <p class="text-gray-400 text-sm">Caricamento tracce...</p>
+                        </div>
+                    </div>
+                </div>
+                `}
 
                 ${resumeCard}
 

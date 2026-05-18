@@ -19,7 +19,7 @@ const TIER_LIMITS = {
     Free: {
         aiCalls: 0,          // Correzioni AI: bloccate per Free
         oralSessions: 0,     // Sessioni orale AI: bloccate
-        tutorChats: 0,       // Lezioni AI: bloccate per Free
+        tutorChats: 999,     // Lezioni AI: limitato a 2 moduli via codice
         aiTraces: 0,         // Tracce generate dall'AI: bloccate
         pdfExports: 0,       // Export PDF: bloccato
         aiQuiz: 999,         // Quiz: gestito settimanalmente (10/settimana)
@@ -71,9 +71,9 @@ const WEEKLY_STORAGE_KEY = 'concorsi_weekly_metering';
 // Gestiscono i limiti reali per Starter (one-shot) e Pro (settimanali)
 const WEEKLY_CATEGORY_LIMITS = {
     Free: {
-        briefing: 0,       // Bloccato (solo anteprima)
-        lezione: 0,        // Bloccato (solo anteprima)
-        lectio: 0,         // Bloccato (solo anteprima)
+        briefing: 3,       // 3 debrief a settimana (troncati)
+        lezione: 3,        // 3 lezioni a settimana (troncate a 2 interazioni)
+        lectio: 3,         // 3 lectio a settimana (troncate a 2 moduli)
         correzione: 0,     // Bloccato
         quiz: 10           // 10 quiz totali a settimana
     },

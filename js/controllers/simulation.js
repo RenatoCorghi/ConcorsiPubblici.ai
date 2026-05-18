@@ -12,118 +12,7 @@ import { startTimerLoop, stopTimerLoop, saveTimerState } from '../timer.js';
 import { Gamification } from '../gamification.js';
 import { Metering } from '../metering.js';
 
-/**
- * Mostra un popup trial che spiega all'utente Free cosa sta per vedere.
- * @param {'debrief'|'lezione'} type - Tipo di contenuto trial
- * @param {Function} onContinue - Callback se l'utente clicca "Vedi la Demo"
- */
-function _showTrialModal(type, onContinue, onGeneratePenale) {
-    // Rimuovi eventuali modali precedenti
-    document.getElementById('trial-modal-overlay')?.remove();
-
-    // Determina se l'utente è registrato (Free) o ospite
-    const isRegistered = window.supabaseClient && !Metering.isGuest();
-    // Controlla se ha già usato il credito Lectio Penale gratuito
-    const hasUsedFreePenale = localStorage.getItem('concorsi_free_penale_used') === 'true';
-
-    const configs = {
-        debrief: {
-            icon: '📋',
-            title: 'Debrief Pre-Tema di Prova',
-            desc: 'Stai per visualizzare un <strong>Debrief di esempio</strong> sulla <em>Caparra Confirmatoria</em>. I Debrief personalizzati su qualsiasi traccia sono disponibili con i piani a pagamento.',
-            features: ['Decodifica profonda della traccia', 'Schema di svolgimento in 8 punti', 'Giurisprudenza chiave con massime', 'Insidie da evitare + consiglio strategico']
-        },
-        lezione: {
-            icon: '📖',
-            title: isRegistered ? 'Lectio Magistralis — Piano Gratuito' : 'Lectio Magistralis di Prova',
-            desc: isRegistered 
-                ? (hasUsedFreePenale 
-                    ? 'Hai già utilizzato la tua <strong>anteprima gratuita di Diritto Penale</strong>. Puoi rivedere la <strong>demo sull\'Autotutela Amministrativa</strong>, oppure sbloccare tutte le materie con un piano a pagamento.'
-                    : 'Come utente registrato hai accesso a:<br>✅ La <strong>Lectio demo</strong> sull\'Autotutela Amministrativa (5 moduli)<br>✅ <strong>1 Modulo di anteprima</strong> su un argomento a tua scelta di <strong class="text-amber-400">Diritto Penale</strong>')
-                : 'Stai per assistere a una <strong>Lectio Magistralis di esempio</strong> sull\'<em>Autotutela Amministrativa</em> in 5 moduli. <strong class="text-amber-400">Registrati gratis</strong> per generare anche un modulo di anteprima di Diritto Penale!',
-            features: isRegistered && !hasUsedFreePenale
-                ? ['Demo: Autotutela Amministrativa (5 moduli completi)', '🎁 BONUS: 1 Modulo AI di Diritto Penale a tua scelta', 'Taglio nomofilattico da concorso', 'Ascolto audio con slide sincronizzate']
-                : ['5 moduli di approfondimento sistematico', 'Taglio nomofilattico da concorso', 'Giurisprudenza aggiornata integrata', 'Ascolto audio con slide sincronizzate']
-        }
-    };
-    const c = configs[type] || configs.debrief;
-
-    const overlay = document.createElement('div');
-    overlay.id = 'trial-modal-overlay';
-    overlay.className = 'fixed inset-0 z-[9998] flex items-center justify-center p-4';
-    overlay.style.background = 'rgba(0,0,0,0.75)';
-    overlay.style.backdropFilter = 'blur(8px)';
-
-    // Bottone extra per generare Lectio Penale (solo registrati free con credito disponibile)
-    const penaleButtonHTML = (type === 'lezione' && isRegistered && !hasUsedFreePenale && typeof onGeneratePenale === 'function')
-        ? `<button id="trial-modal-penale" class="w-full py-3.5 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white rounded-xl font-bold text-base shadow-lg shadow-red-500/20 transition hover:scale-[1.02] flex items-center justify-center gap-2">
-                ⚖️ Genera il Modulo 1 di Diritto Penale
-           </button>`
-        : '';
-
-    // Se non è registrato e siamo sulla lezione, mostra CTA di registrazione
-    const registrationCTA = (type === 'lezione' && !isRegistered)
-        ? `<button onclick="this.closest('#trial-modal-overlay').remove(); document.getElementById('onboarding-modal')?.classList.remove('hidden')" class="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-500 hover:to-emerald-600 text-white rounded-xl font-semibold text-sm transition hover:scale-[1.02] flex items-center justify-center gap-2">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-                Registrati Gratis — Sblocca 1 Modulo di Penale
-           </button>`
-        : '';
-
-    overlay.innerHTML = `
-        <div class="bg-gray-900 border border-gray-700/50 rounded-3xl max-w-md w-full p-8 modal-entry shadow-2xl relative">
-            <button onclick="this.closest('#trial-modal-overlay').remove()" class="absolute top-4 right-4 text-gray-500 hover:text-white transition text-xl">✕</button>
-            
-            <div class="text-center mb-6">
-                <span class="text-5xl mb-3 block">${c.icon}</span>
-                <h3 class="text-xl font-display font-bold text-white mb-2">${c.title}</h3>
-                <p class="text-gray-400 text-sm leading-relaxed">${c.desc}</p>
-            </div>
-
-            <div class="bg-gray-800/50 rounded-xl p-4 mb-6 border border-gray-700/30">
-                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Cosa include il piano gratuito:</p>
-                <ul class="space-y-2">
-                    ${c.features.map(f => `
-                        <li class="flex items-start gap-2 text-sm text-gray-300">
-                            <span class="text-green-400 mt-0.5">✓</span>
-                            <span>${f}</span>
-                        </li>
-                    `).join('')}
-                </ul>
-            </div>
-
-            <div class="flex flex-col gap-3">
-                ${penaleButtonHTML}
-                <button id="trial-modal-continue" class="w-full py-3.5 ${penaleButtonHTML ? 'bg-gray-800 hover:bg-gray-700 border border-gray-600' : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500'} text-white rounded-xl font-bold text-base shadow-lg transition hover:scale-[1.02]">
-                    ${c.icon} ${penaleButtonHTML ? 'Guarda la Demo (Autotutela)' : 'Guarda la Demo Gratuita'}
-                </button>
-                ${registrationCTA}
-                <button onclick="this.closest('#trial-modal-overlay').remove(); if(typeof navigateToRoute==='function') navigateToRoute('pricing')" class="w-full py-3 bg-gradient-to-r from-magis-700 to-magis-600 hover:from-magis-600 hover:to-magis-500 text-white rounded-xl font-semibold text-sm transition hover:scale-[1.02] flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                    Sblocca Tutte le Materie — Vedi i Piani
-                </button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(overlay);
-
-    // Bind del bottone "Guarda la Demo"
-    document.getElementById('trial-modal-continue').addEventListener('click', () => {
-        overlay.remove();
-        if (typeof onContinue === 'function') onContinue();
-    });
-
-    // Bind del bottone "Genera Lectio Penale" (se presente)
-    const penaleBtn = document.getElementById('trial-modal-penale');
-    if (penaleBtn && typeof onGeneratePenale === 'function') {
-        penaleBtn.addEventListener('click', () => {
-            overlay.remove();
-            onGeneratePenale();
-        });
-    }
-}
-// Esponi globalmente per uso cross-controller
-window._showTrialModal = _showTrialModal;
+// _showTrialModal removed in favor of dynamic free tier limits
 
 
 export const SimulationController = {
@@ -146,19 +35,8 @@ export const SimulationController = {
             return;
         }
 
-        // --- TRIAL GATE (Free Tier) ---
-        const tier = Metering._getTier();
-        if (tier === 'Free') {
-            _showTrialModal('debrief', () => {
-                import('../trial_content.js').then(({ TRIAL_CONTENT }) => {
-                    AppState.currentSimulationTask = TRIAL_CONTENT.briefing.traccia;
-                    AppState.currentBriefing = TRIAL_CONTENT.briefing.result;
-                    navigateToRoute('briefing');
-                    if (typeof renderView === 'function') renderView();
-                });
-            });
-            return;
-        }
+        // Eliminiamo il trial pre-confezionato: andiamo diretti al briefing
+        // Il troncamento dei dati per il Free Tier avviene nella view del briefing.
 
         // --- GATE 2: Limite settimanale Debrief ---
         if (!Metering.canUseWeekly('briefing', '_global')) {
@@ -491,23 +369,156 @@ export const SimulationController = {
     exportPDF: function() {
         // Paywall gate: export PDF
         if (!Metering.canUse('pdfExports')) return Metering.showPaywall('pdfExports');
-        Metering.consume('pdfExports');
-        var element = document.getElementById('result-tab-content');
-        if (!element || typeof html2pdf === 'undefined') {
-            showToast("Errore di inizializzazione PDF.", "error");
+        
+        if (typeof html2pdf === 'undefined') {
+            showToast("Libreria PDF non caricata. Ricarica la pagina.", "error");
             return;
         }
         
+        var res = AppState.currentResult || (AppState.history.length > 0 ? AppState.history[AppState.history.length-1] : null);
+        if (!res) {
+            showToast("Nessun risultato da esportare.", "error");
+            return;
+        }
+
+        Metering.consume('pdfExports');
         showToast("Generazione PDF in corso...", "info");
+
+        // Build a clean, print-friendly HTML document
+        var metriche = res.metriche || { correttezza: 60, struttura: 60, terminologia: 60, pertinenza: 60 };
+        
+        var matitaBluHtml = '';
+        if (res.matita_blu && res.matita_blu.length > 0) {
+            matitaBluHtml = `
+                <div style="margin-top: 20px; padding: 16px; border-left: 4px solid #dc2626; background: #fef2f2; border-radius: 8px;">
+                    <h3 style="color: #dc2626; font-size: 14px; font-weight: bold; margin: 0 0 12px 0;">✏️ La Matita Blu (Errori Dirimenti)</h3>
+                    <ul style="margin: 0; padding-left: 20px; color: #991b1b; font-size: 12px; line-height: 1.6;">
+                        ${res.matita_blu.map(function(l) { return '<li style="margin-bottom: 8px;">' + l.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</li>'; }).join('')}
+                    </ul>
+                </div>`;
+        }
+
+        var schemaHtml = '';
+        if (res.schema_ideale && res.schema_ideale.length > 0) {
+            schemaHtml = `
+                <div style="margin-top: 24px; padding: 16px; background: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd;">
+                    <h3 style="color: #0369a1; font-size: 14px; font-weight: bold; margin: 0 0 12px 0;">📋 Schema Ideale di Svolgimento</h3>
+                    ${res.schema_ideale.map(function(s) { 
+                        return '<div style="margin-bottom: 12px;"><strong style="color: #1e3a5f; font-size: 13px;">' + (s.titolo || '').replace(/</g, '&lt;') + '</strong><p style="color: #475569; font-size: 12px; margin: 4px 0 0 0; line-height: 1.5;">' + (s.desc || '').replace(/</g, '&lt;') + '</p></div>'; 
+                    }).join('')}
+                </div>`;
+        }
+
+        var confrontoHtml = '';
+        if (res.confronto && res.confronto.length > 0) {
+            confrontoHtml = `
+                <div style="margin-top: 24px; padding: 16px; background: #fffbeb; border-radius: 8px; border: 1px solid #fde68a;">
+                    <h3 style="color: #92400e; font-size: 14px; font-weight: bold; margin: 0 0 12px 0;">🔄 Confronto: Errori e Correzioni</h3>
+                    ${res.confronto.map(function(c) {
+                        return '<div style="margin-bottom: 16px; padding: 12px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">' +
+                            '<p style="color: #dc2626; font-size: 12px; margin: 0 0 6px 0;"><strong>❌ Errore:</strong> ' + (c.errore_candidato || '').replace(/</g, '&lt;') + '</p>' +
+                            '<p style="color: #059669; font-size: 12px; margin: 0;"><strong>✅ Correzione:</strong> ' + (c.correzione_ideale || '').replace(/</g, '&lt;') + '</p></div>';
+                    }).join('')}
+                </div>`;
+        }
+
+        var pdfContent = `
+            <div style="font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; padding: 24px; max-width: 700px; margin: 0 auto; background: white;">
+                <!-- Header -->
+                <div style="text-align: center; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 24px;">
+                    <h1 style="font-size: 22px; color: #1e1b4b; margin: 0 0 4px 0;">ConcorsiPubblici.ai</h1>
+                    <p style="font-size: 12px; color: #6b7280; margin: 0;">Verbale di Correzione — ${res.materia || 'Generale'}</p>
+                    <p style="font-size: 11px; color: #9ca3af; margin: 4px 0 0 0;">Data: ${new Date(res.date).toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                </div>
+
+                <!-- Voto -->
+                <div style="text-align: center; padding: 20px; margin-bottom: 24px; background: ${res.voto >= 12 ? '#f0fdf4' : '#fef2f2'}; border: 2px solid ${res.voto >= 12 ? '#86efac' : '#fca5a5'}; border-radius: 12px;">
+                    <div style="font-size: 48px; font-weight: bold; color: ${res.voto >= 15 ? '#059669' : res.voto >= 12 ? '#d97706' : '#dc2626'};">${res.voto}/20</div>
+                    <div style="font-size: 14px; font-weight: bold; color: ${res.voto >= 12 ? '#166534' : '#991b1b'}; text-transform: uppercase; letter-spacing: 2px; margin-top: 4px;">${res.giudizio_idoneita || (res.voto >= 12 ? 'IDONEO' : 'NON IDONEO')}</div>
+                </div>
+
+                <!-- Metriche -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 24px;">
+                    <div style="padding: 10px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+                        <span style="font-size: 11px; color: #64748b;">Correttezza Giuridica</span>
+                        <div style="font-size: 16px; font-weight: bold; color: #1e293b;">${metriche.correttezza}%</div>
+                    </div>
+                    <div style="padding: 10px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+                        <span style="font-size: 11px; color: #64748b;">Struttura Sistematica</span>
+                        <div style="font-size: 16px; font-weight: bold; color: #1e293b;">${metriche.struttura}%</div>
+                    </div>
+                    <div style="padding: 10px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+                        <span style="font-size: 11px; color: #64748b;">Terminologia</span>
+                        <div style="font-size: 16px; font-weight: bold; color: #1e293b;">${metriche.terminologia}%</div>
+                    </div>
+                    <div style="padding: 10px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+                        <span style="font-size: 11px; color: #64748b;">Pertinenza</span>
+                        <div style="font-size: 16px; font-weight: bold; color: #1e293b;">${metriche.pertinenza}%</div>
+                    </div>
+                </div>
+
+                ${matitaBluHtml}
+
+                <!-- Giudizi -->
+                <div style="margin-top: 24px;">
+                    <div style="padding: 16px; margin-bottom: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #6366f1;">
+                        <h3 style="font-size: 13px; font-weight: bold; color: #4338ca; margin: 0 0 8px 0;">1. Centratura della Traccia e Forma</h3>
+                        <p style="font-size: 12px; color: #334155; line-height: 1.6; margin: 0;">${(res.feedback_centratura || 'N/A').replace(/</g, '&lt;')}</p>
+                    </div>
+                    <div style="padding: 16px; margin-bottom: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                        <h3 style="font-size: 13px; font-weight: bold; color: #1d4ed8; margin: 0 0 8px 0;">2. Inquadramento Sistematico e Bilanciamento</h3>
+                        <p style="font-size: 12px; color: #334155; line-height: 1.6; margin: 0;">${(res.feedback_inquadramento || 'N/A').replace(/</g, '&lt;')}</p>
+                    </div>
+                    <div style="padding: 16px; margin-bottom: 12px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #8b5cf6;">
+                        <h3 style="font-size: 13px; font-weight: bold; color: #6d28d9; margin: 0 0 8px 0;">3. Gerarchia Argomentativa e Nomofilachia</h3>
+                        <p style="font-size: 12px; color: #334155; line-height: 1.6; margin: 0;">${(res.feedback_gerarchia || 'N/A').replace(/</g, '&lt;')}</p>
+                    </div>
+                </div>
+
+                ${schemaHtml}
+                ${confrontoHtml}
+
+                <!-- Consiglio del Presidente -->
+                ${res.consiglio_presidente ? `
+                <div style="margin-top: 24px; padding: 16px; background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 8px;">
+                    <h3 style="font-size: 13px; font-weight: bold; color: #92400e; margin: 0 0 8px 0;">💡 Il Consiglio del Presidente</h3>
+                    <p style="font-size: 12px; color: #78350f; line-height: 1.6; margin: 0; font-style: italic;">"${res.consiglio_presidente.replace(/</g, '&lt;')}"</p>
+                </div>
+                ` : ''}
+
+                <!-- Footer -->
+                <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; text-align: center;">
+                    <p style="font-size: 10px; color: #9ca3af; margin: 0;">Generato da ConcorsiPubblici.ai — Simulatore AI per Concorsi Pubblici</p>
+                    <p style="font-size: 10px; color: #d1d5db; margin: 4px 0 0 0;">Questo documento è stato prodotto da un'intelligenza artificiale e non ha valore ufficiale.</p>
+                </div>
+            </div>
+        `;
+
+        // Create a temporary container
+        var tempDiv = document.createElement('div');
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        tempDiv.style.top = '0';
+        tempDiv.style.background = 'white';
+        tempDiv.innerHTML = pdfContent;
+        document.body.appendChild(tempDiv);
+
         var opt = {
-            margin: 10,
-            filename: 'concorsi_ai_valutazione_' + Date.now() + '.pdf',
+            margin: [10, 10, 10, 10],
+            filename: 'ConcorsiAI_Valutazione_' + (res.materia || 'Generale') + '_' + new Date(res.date).toLocaleDateString('it-IT').replace(/\//g, '-') + '.pdf',
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, backgroundColor: '#030712' },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         };
-        html2pdf().set(opt).from(element).save().then(function() {
-            showToast("Download completato!", "success");
+
+        html2pdf().set(opt).from(tempDiv.firstChild).save().then(function() {
+            document.body.removeChild(tempDiv);
+            showToast("PDF scaricato con successo!", "success");
+        }).catch(function(err) {
+            console.error("PDF generation error:", err);
+            document.body.removeChild(tempDiv);
+            showToast("Errore nella generazione del PDF.", "error");
         });
     },
 

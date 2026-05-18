@@ -189,13 +189,7 @@ export const LezioneController = {
      * Avvio automatico della lezione quando si arriva dalla traccia.
      */
     _startAutoFromTraccia: async function(argomento, materia) {
-        // --- TRIAL GATE (Free Tier) ---
-        const tier = Metering._getTier();
-        if (tier === 'Free') {
-            const self = this;
-            window._showTrialModal('lezione', () => self._startTrialLectio(), () => self._startFreePenaleLectio());
-            return;
-        }
+        // Eliminiamo _showTrialModal. Limiti applicati al numero di interazioni per il tier Free.
 
         // --- GATE: Limite settimanale (Lezione Socratica) ---
         if (!Metering.canUseWeekly('lezione', '_global')) {
@@ -284,13 +278,7 @@ export const LezioneController = {
         // --- GATE: Ospiti devono registrarsi ---
         if (!Metering.requireRegistration('Lezione Magistrale')) return;
 
-        // --- TRIAL GATE (Free Tier) — bypass input validation ---
-        const tier = Metering._getTier();
-        if (tier === 'Free') {
-            const self = this;
-            window._showTrialModal('lezione', () => self._startTrialLectio(), () => self._startFreePenaleLectio());
-            return;
-        }
+        // Eliminiamo _showTrialModal. Limiti applicati al numero di interazioni per il tier Free.
 
         var argomento = document.getElementById('lezione-argomento')?.value?.trim();
         var materia = document.getElementById('lezione-materia')?.value;
@@ -404,13 +392,7 @@ export const LezioneController = {
         // --- GATE: Ospiti devono registrarsi ---
         if (!Metering.requireRegistration('Lectio Magistralis')) return;
 
-        // --- TRIAL GATE (Free Tier) — bypass input validation ---
-        const tier = Metering._getTier();
-        if (tier === 'Free') {
-            const self = this;
-            window._showTrialModal('lezione', () => self._startTrialLectio(), () => self._startFreePenaleLectio());
-            return;
-        }
+        // Eliminiamo _showTrialModal. Limiti applicati al numero di interazioni per il tier Free.
 
         var argomento = document.getElementById('lezione-argomento')?.value?.trim();
         var materia = document.getElementById('lezione-materia')?.value;
@@ -514,6 +496,25 @@ export const LezioneController = {
      * Rileva il tag [CONTINUA — MODULO X: ...] e chiede automaticamente il modulo successivo.
      */
     _continueNextModule: async function(lastReply) {
+        // Controllo per tier Free: blocca la Lectio dopo il modulo 2
+        var tier = Metering._getTier();
+        if (tier === 'Free' && this.currentModule >= 2) {
+            this.autoGenerating = false;
+            console.log('[Lectio] ✅ Bloccata al Modulo 2 per utente Free.');
+            this._addMessage('ai', `🔒 **Anteprima Gratuita Terminata.**\n\nHai assistito ai primi 2 moduli di questa Lectio Magistralis. Per ascoltare i successivi moduli (Le tensioni giurisprudenziali, La verifica dogmatica e Il punto di caduta nomofilattico) sblocca tutte le materie con un piano Premium.`);
+            this._showListenButton();
+            // Mostra pulsante per abbonarsi
+            var container = document.getElementById('lezione-messages');
+            if (container) {
+                container.innerHTML += `<div class="flex justify-center mt-4 mb-6 fade-in">
+                    <button onclick="app.navigate('pricing')" class="px-6 py-3 bg-gradient-to-r from-magis-700 to-magis-600 hover:from-magis-600 hover:to-magis-500 text-white rounded-xl font-bold flex items-center gap-2 transition hover:scale-105">
+                        <i data-lucide="unlock" class="w-5 h-5"></i> Sblocca la Lezione Completa
+                    </button>
+                </div>`;
+            }
+            return;
+        }
+
         // Cerca il tag di continuazione
         var continuaMatch = lastReply.match(/\[CONTINUA\s*[—–-]\s*MODULO\s*(\d+)\s*:\s*(.+?)\]/i);
         if (!continuaMatch || !this.autoGenerating) {
@@ -627,6 +628,28 @@ export const LezioneController = {
         if (isAdvance && this.currentModule < 5) {
             this.currentModule++;
             this._updateProgressBar(this.currentModule);
+        }
+
+        // Controllo interazioni per Lezione Socratica (Free Tier)
+        var tier = Metering._getTier();
+        if (tier === 'Free' && !this.isLectio) {
+            // Conta quante volte l'utente ha scritto (cioè le interazioni nella chat)
+            var userMsgCount = AppState.lezioneChat.filter(m => m.role === 'user').length;
+            // Ne ha già fatti 3 (1 iniziale + 2 followup), quindi blocchiamo e mostriamo il paywall in-chat
+            if (userMsgCount >= 3) {
+                this._addMessage('user', text);
+                this._addMessage('ai', `🔒 **Anteprima Gratuita Terminata.**\n\nHai completato le 2 interazioni socratiche incluse nel tuo piano gratuito. Per proseguire il dialogo con il Maestro e arrivare al cuore nomofilattico della questione, sblocca l'accesso Premium.`);
+                var container = document.getElementById('lezione-messages');
+                if (container) {
+                    container.innerHTML += `<div class="flex justify-center mt-4 mb-6 fade-in">
+                        <button onclick="app.navigate('pricing')" class="px-6 py-3 bg-gradient-to-r from-magis-700 to-magis-600 hover:from-magis-600 hover:to-magis-500 text-white rounded-xl font-bold flex items-center gap-2 transition hover:scale-105">
+                            <i data-lucide="unlock" class="w-5 h-5"></i> Sblocca Lezioni Illimitate
+                        </button>
+                    </div>`;
+                    container.scrollTop = container.scrollHeight;
+                }
+                return;
+            }
         }
 
         this._addMessage('user', text);
@@ -1052,295 +1075,5 @@ export const LezioneController = {
         utterance.onend = () => { this.isSpeaking = false; };
 
         this.synth.speak(utterance);
-    },
-
-    // ==========================================
-    // FREE PENALE LECTIO (Registrati Free — 1 credito)
-    // ==========================================
-
-    _startFreePenaleLectio: async function() {
-        // Verifica credito disponibile
-        if (localStorage.getItem('concorsi_free_penale_used') === 'true') {
-            if (window.showToast) showToast('Hai già utilizzato la tua Lectio gratuita di Diritto Penale. Passa a un piano a pagamento per generare altre Lectio!', 'warning');
-            return;
-        }
-
-        // Naviga alla pagina lezione se non ci siamo già
-        const { navigateToRoute } = await import('../router.js');
-        navigateToRoute('lezione');
-
-        // Aspetta che il DOM sia pronto
-        await new Promise(r => setTimeout(r, 300));
-
-        // Mostra un mini-form per l'argomento (solo Penale)
-        document.getElementById('trial-modal-overlay')?.remove();
-        
-        const overlay = document.createElement('div');
-        overlay.id = 'penale-arg-overlay';
-        overlay.className = 'fixed inset-0 z-[9998] flex items-center justify-center p-4';
-        overlay.style.background = 'rgba(0,0,0,0.75)';
-        overlay.style.backdropFilter = 'blur(8px)';
-
-        overlay.innerHTML = `
-        <div class="bg-gray-900 border border-gray-700/50 rounded-3xl max-w-md w-full p-8 modal-entry shadow-2xl relative">
-            <button onclick="this.closest('#penale-arg-overlay').remove()" class="absolute top-4 right-4 text-gray-500 hover:text-white transition text-xl">✕</button>
-            
-            <div class="text-center mb-6">
-                <span class="text-5xl mb-3 block">⚖️</span>
-                <h3 class="text-xl font-display font-bold text-white mb-2">Anteprima Lectio — Diritto Penale</h3>
-                <p class="text-gray-400 text-sm leading-relaxed">Scegli l'argomento per la tua <strong class="text-red-400">anteprima gratuita</strong> di Diritto Penale. Il Maestro genererà il <strong class="text-amber-400">Modulo 1</strong> (L'Aporia Sistematica) della Lectio Magistralis. I restanti 4 moduli sono disponibili con i piani premium.</p>
-            </div>
-
-            <div class="mb-4">
-                <label class="block text-sm text-gray-400 mb-2">Materia</label>
-                <div class="w-full bg-gray-800 border border-red-500/30 text-red-400 rounded-xl px-4 py-3 font-bold flex items-center gap-2">
-                    <span>⚖️</span> Diritto Penale
-                </div>
-            </div>
-
-            <div class="mb-6">
-                <label class="block text-sm text-gray-400 mb-2">Istituto o argomento specifico</label>
-                <input id="penale-free-argomento" type="text" 
-                    placeholder="Es: Il concorso di persone nel reato, La legittima difesa, Il dolo eventuale..."
-                    class="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-500 focus:border-transparent transition placeholder-gray-500">
-            </div>
-
-            <div class="bg-amber-900/20 border border-amber-500/20 rounded-xl p-3 mb-6">
-                <p class="text-xs text-amber-300 flex items-start gap-2">
-                    <span class="text-amber-400 mt-0.5">💡</span>
-                    <span>Con il piano gratuito generi <strong>1 modulo su 5</strong>. Passa a Starter o Pro per sbloccare la Lectio completa su tutte le materie!</span>
-                </p>
-            </div>
-
-            <button id="penale-free-start" class="w-full py-3.5 bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white rounded-xl font-bold text-base shadow-lg shadow-red-500/20 transition hover:scale-[1.02] flex items-center justify-center gap-2">
-                ⚖️ Genera il Modulo 1
-            </button>
-        </div>`;
-
-        document.body.appendChild(overlay);
-
-        // Bind
-        const self = this;
-        document.getElementById('penale-free-start').addEventListener('click', async () => {
-            const argInput = document.getElementById('penale-free-argomento');
-            const argomento = argInput?.value?.trim();
-            if (!argomento) {
-                argInput?.classList.add('ring-2', 'ring-red-500');
-                setTimeout(() => argInput?.classList.remove('ring-2', 'ring-red-500'), 2000);
-                return;
-            }
-
-            overlay.remove();
-
-            // Marca il credito come usato SUBITO (impedisce doppio uso)
-            localStorage.setItem('concorsi_free_penale_used', 'true');
-
-            // Avvia la Lectio Magistralis — solo Modulo 1
-            const materia = 'Diritto Penale';
-
-            AppState.lezioneChat = [];
-            AppState.lezioneMeta = { argomento, materia, livello: 'avanzato', isLectio: true, isFreePenale: true };
-            self.currentModule = 1;
-            self.isLectio = true;
-            self.autoGenerating = false; // NON auto-continuare
-
-            document.getElementById('lezione-setup')?.classList.add('hidden');
-            document.getElementById('lezione-chat-area')?.classList.remove('hidden');
-            var inputArea = document.querySelector('#lezione-input-form')?.parentElement;
-            if (inputArea) inputArea.style.display = 'none';
-            self._updateProgressBar(1);
-
-            self._addMessage('user', `📖 Lectio Magistralis (Anteprima Gratuita): **${argomento}** (${materia})`);
-            self._addMessage('ai', `⏳ **Preparazione del Modulo 1 in corso...**\n\n_Il Maestro sta costruendo l'inquadramento sistematico di **${argomento}** per il Diritto Penale._\n\n🕐 **Tempo stimato: 30–60 secondi.** Non chiudere questa pagina.`);
-            self._showTyping();
-
-            var userPrompt = `Argomento della Lectio Magistralis: "${argomento}" (Materia: ${materia}). Genera ora il MODULO 1.`;
-
-            try {
-                var systemPrompt = LECTIO_MAGISTRALIS_PROMPT;
-                var concorso = AppState.userProfile?.concorso || 'Magistratura';
-                if (CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]) {
-                    systemPrompt += `\nNOTA: L'uditorio si prepara per il concorso in ${concorso}. ${CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]}`;
-                }
-
-                var response = await fetch('/api/proxy', {
-                    method: 'POST',
-                    headers: await _getAuthHeaders(),
-                    body: JSON.stringify({
-                        feature: 'tutorChats',
-                        provider: APP_CONFIG.ACTIVE_AI_STACK,
-                        model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
-                        useRAG: true,
-                        materia: materia,
-                        messages: [
-                            { role: 'system', content: systemPrompt },
-                            { role: 'user', content: userPrompt }
-                        ],
-                        temperature: 0.5,
-                        max_tokens: 8000
-                    })
-                });
-
-                self._hideTyping();
-
-                if (!response.ok) {
-                    var errBody = '';
-                    try { errBody = await response.text(); } catch(_e) {}
-                    console.error('[Lectio Free Penale] Proxy error:', response.status, errBody);
-                    self._addMessage('ai', `Errore dal server (${response.status}). Riprova più tardi.`);
-                    // Ripristina il credito in caso di errore
-                    localStorage.removeItem('concorsi_free_penale_used');
-                    return;
-                }
-
-                var data = await response.json();
-                var reply = data.choices[0].message.content.trim();
-
-                self._addMessage('ai', reply);
-                self.currentModule = 1;
-                self._updateProgressBar(1);
-
-                // === PAYWALL: Mostra card upgrade dopo Modulo 1 ===
-                self._showFreePenalePaywall(argomento);
-
-            } catch (err) {
-                self._hideTyping();
-                self._addMessage('ai', 'Errore di connessione.');
-                // Ripristina il credito in caso di errore
-                localStorage.removeItem('concorsi_free_penale_used');
-                console.error('[Lectio Free Penale] Errore:', err);
-            }
-        });
-    },
-
-    /**
-     * Mostra il paywall in-chat dopo il Modulo 1 gratuito della Lectio Penale.
-     */
-    _showFreePenalePaywall: function(argomento) {
-        var container = document.getElementById('lezione-messages');
-        if (!container) return;
-
-        container.innerHTML += `
-        <div class="my-6 fade-in">
-            <div class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border-2 border-amber-500/40 rounded-2xl p-6 shadow-xl shadow-amber-500/10 relative overflow-hidden">
-                <!-- Decorative blur -->
-                <div class="absolute -top-10 -right-10 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl"></div>
-                <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-magis-500/10 rounded-full blur-3xl"></div>
-                
-                <div class="relative z-10">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
-                            <span class="text-2xl">🔒</span>
-                        </div>
-                        <div>
-                            <h3 class="text-lg font-display font-bold text-white">Modulo 1 completato!</h3>
-                            <p class="text-amber-400 text-xs font-bold">4 moduli rimanenti bloccati</p>
-                        </div>
-                    </div>
-
-                    <p class="text-gray-300 text-sm leading-relaxed mb-4">
-                        Hai appena letto l'<strong>Aporia Sistematica</strong> su <em>${escapeHtml(argomento)}</em>. 
-                        La Lectio completa include altri <strong>4 moduli</strong> di approfondimento:
-                    </p>
-
-                    <div class="grid grid-cols-1 gap-2 mb-5">
-                        <div class="flex items-center gap-2 text-sm">
-                            <span class="w-6 h-6 rounded-lg bg-green-500/20 text-green-400 flex items-center justify-center text-xs font-bold">✓</span>
-                            <span class="text-gray-400">Modulo 1 — L'Aporia Sistematica</span>
-                            <span class="ml-auto text-green-400 text-xs font-bold">COMPLETATO</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-sm opacity-60">
-                            <span class="w-6 h-6 rounded-lg bg-gray-700 text-gray-500 flex items-center justify-center text-xs">🔒</span>
-                            <span class="text-gray-500">Modulo 2 — Architettura Dogmatica e Diacronica</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-sm opacity-60">
-                            <span class="w-6 h-6 rounded-lg bg-gray-700 text-gray-500 flex items-center justify-center text-xs">🔒</span>
-                            <span class="text-gray-500">Modulo 3 — Tensioni Giurisprudenziali</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-sm opacity-60">
-                            <span class="w-6 h-6 rounded-lg bg-gray-700 text-gray-500 flex items-center justify-center text-xs">🔒</span>
-                            <span class="text-gray-500">Modulo 4 — Punto di Caduta Nomofilattico</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-sm opacity-60">
-                            <span class="w-6 h-6 rounded-lg bg-gray-700 text-gray-500 flex items-center justify-center text-xs">🔒</span>
-                            <span class="text-gray-500">Modulo 5 — Corollari Applicativi e Visione di Sistema</span>
-                        </div>
-                    </div>
-
-                    <div class="flex flex-col gap-2.5">
-                        <button onclick="if(window.app) window.app.navigate('pricing')" 
-                            class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-xl font-bold text-base shadow-lg shadow-amber-500/20 transition hover:scale-[1.02] flex items-center justify-center gap-2">
-                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                            Sblocca la Lectio Completa — Vedi i Piani
-                        </button>
-                        <p class="text-center text-xs text-gray-500">
-                            A partire da <strong class="text-gray-400">€7.99/settimana</strong> · Lectio illimitate su tutte le materie
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-
-        container.scrollTop = container.scrollHeight;
-
-        // Mostra l'input area per eventuali domande sul Modulo 1
-        var inputArea = document.querySelector('#lezione-input-form')?.parentElement;
-        if (inputArea) inputArea.style.display = '';
-    },
-
-    // ==========================================
-    // TRIAL LECTIO (Free Tier)
-    // ==========================================
-    
-    _startTrialLectio: async function() {
-        try {
-            const { TRIAL_CONTENT } = await import('../trial_content.js');
-            const trial = TRIAL_CONTENT.lectio;
-            
-            AppState.lezioneChat = [];
-            AppState.lezioneMeta = { argomento: trial.argomento, materia: trial.materia, livello: 'avanzato', isLectio: true, isTrial: true };
-            this.currentModule = 1;
-            this.isLectio = true;
-            this.autoGenerating = true;
-
-            document.getElementById('lezione-setup')?.classList.add('hidden');
-            document.getElementById('lezione-chat-area')?.classList.remove('hidden');
-            var inputArea = document.querySelector('#lezione-input-form')?.parentElement;
-            if (inputArea) inputArea.style.display = 'none';
-            this._updateProgressBar(1);
-
-            this._addMessage('user', '📖 Lectio Magistralis (Versione di Prova): **' + trial.argomento + '**');
-            this._showTyping();
-            
-            // Simula generazione del primo modulo
-            setTimeout(() => {
-                this._hideTyping();
-                this._addMessage('ai', trial.moduli[0]);
-                this._continueTrialLectio(1, trial.moduli);
-            }, 1500);
-        } catch (e) {
-            console.error("Trial content non trovato", e);
-        }
-    },
-
-    _continueTrialLectio: function(currentIndex, moduli) {
-        if (currentIndex >= moduli.length) {
-            this.autoGenerating = false;
-            // Mostra pulsante Ascolta al termine del trial
-            this._showListenButton();
-            return;
-        }
-        
-        setTimeout(() => {
-            this._addMessage('user', 'Continua la lezione.');
-            this._showTyping();
-            setTimeout(() => {
-                this._hideTyping();
-                this._addMessage('ai', moduli[currentIndex]);
-                this.currentModule = currentIndex + 1;
-                this._updateProgressBar(this.currentModule);
-                this._continueTrialLectio(currentIndex + 1, moduli);
-            }, 3000); // simula tempo di generazione AI
-        }, 2000); // pausa di lettura prima del prossimo
     }
 };

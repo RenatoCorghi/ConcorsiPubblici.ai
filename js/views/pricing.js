@@ -61,7 +61,7 @@ export function renderPricing() {
                         </li>
                         <li class="flex items-center gap-2.5">
                             <i data-lucide="eye" class="w-4 h-4 text-amber-500/70 shrink-0"></i>
-                            <span class="text-gray-400">Anteprima Lezione & Debrief</span>
+                            <span class="text-gray-400">Anteprima AI Lezione & Debrief</span>
                         </li>
                         <li class="flex items-center gap-2.5 opacity-40">
                             <i data-lucide="x" class="w-4 h-4 text-gray-600 shrink-0"></i>
