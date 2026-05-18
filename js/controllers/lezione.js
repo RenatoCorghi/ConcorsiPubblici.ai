@@ -6,7 +6,7 @@ import { AppState } from '../state.js';
 import { apiService, CICERO_EXPERT_SYSTEM } from '../api.js';
 import { APP_CONFIG } from '../config.js';
 import { Metering } from '../metering.js';
-import { escapeHtml } from '../utils.js';
+import { escapeHtml, showToast } from '../utils.js';
 
 // Helper per ottenere headers con token auth
 async function _getAuthHeaders() {
@@ -191,9 +191,10 @@ export const LezioneController = {
     _startAutoFromTraccia: async function(argomento, materia) {
         // Eliminiamo _showTrialModal. Limiti applicati al numero di interazioni per il tier Free.
 
-        // --- GATE: Limite settimanale (Lezione Socratica) ---
-        if (!Metering.canUseWeekly('lezione', '_global')) {
-            Metering.showWeeklyPaywall('lezione', '_global');
+        // --- GATE: Free lifetime (una sola volta) ---
+        if (Metering.hasUsedFreeLifetime('lezione')) {
+            showToast('🔒 Hai già usato la tua anteprima gratuita della Lezione Socratica. Passa al piano Premium!', 'warning');
+            setTimeout(() => { if (window.app) window.app.navigate('pricing'); }, 500);
             return;
         }
 
@@ -260,7 +261,7 @@ export const LezioneController = {
             var reply = data.choices[0].message.content.trim();
 
             Metering.consume('tutorChats');
-            Metering.consumeWeekly('lezione', '_global');
+            Metering.consumeFreeLifetime('lezione'); // Segna la socratica come usata per sempre
             this._addMessage('ai', reply);
             this._speakIfEnabled(reply);
 
@@ -296,9 +297,10 @@ export const LezioneController = {
             return;
         }
 
-        // --- GATE: Limite settimanale (Lezione Socratica) ---
-        if (!Metering.canUseWeekly('lezione', '_global')) {
-            Metering.showWeeklyPaywall('lezione', '_global');
+        // --- GATE: Free lifetime (una sola volta) ---
+        if (Metering.hasUsedFreeLifetime('lezione')) {
+            showToast('🔒 Hai già usato la tua anteprima gratuita della Lezione Socratica. Passa al piano Premium!', 'warning');
+            setTimeout(() => { if (window.app) window.app.navigate('pricing'); }, 500);
             return;
         }
 
@@ -373,7 +375,7 @@ export const LezioneController = {
             var reply = data.choices[0].message.content.trim();
 
             Metering.consume('tutorChats');
-            Metering.consumeWeekly('lezione', '_global');
+            Metering.consumeFreeLifetime('lezione'); // Segna la socratica come usata per sempre
             this._addMessage('ai', reply);
             this._speakIfEnabled(reply);
 
@@ -403,15 +405,16 @@ export const LezioneController = {
             return;
         }
 
-        // Paywall mensile
-        if (!Metering.canUse('tutorChats')) {
-            Metering.showPaywall('tutorChats');
+        // --- GATE: Free lifetime (una sola volta) ---
+        if (Metering.hasUsedFreeLifetime('lectio')) {
+            showToast('🔒 Hai già usato la tua anteprima gratuita della Lectio Magistralis. Passa al piano Premium!', 'warning');
+            setTimeout(() => { if (window.app) window.app.navigate('pricing'); }, 500);
             return;
         }
 
-        // --- GATE: Limite settimanale (Lectio Magistralis) ---
-        if (!Metering.canUseWeekly('lectio', '_global')) {
-            Metering.showWeeklyPaywall('lectio', '_global');
+        // Paywall mensile
+        if (!Metering.canUse('tutorChats')) {
+            Metering.showPaywall('tutorChats');
             return;
         }
 
@@ -476,6 +479,7 @@ export const LezioneController = {
             var reply = data.choices[0].message.content.trim();
 
             Metering.consume('tutorChats');
+            Metering.consumeFreeLifetime('lectio'); // Segna la lectio come usata per sempre
             this._addMessage('ai', reply);
             this.currentModule = 1;
             this._updateProgressBar(1);
@@ -501,7 +505,8 @@ export const LezioneController = {
         if (tier === 'Free' && this.currentModule >= 2) {
             this.autoGenerating = false;
             console.log('[Lectio] ✅ Bloccata al Modulo 2 per utente Free.');
-            this._addMessage('ai', `🔒 **Anteprima Gratuita Terminata.**\n\nHai assistito ai primi 2 moduli di questa Lectio Magistralis. Per ascoltare i successivi moduli (Le tensioni giurisprudenziali, La verifica dogmatica e Il punto di caduta nomofilattico) sblocca tutte le materie con un piano Premium.`);
+            var paywallMsg = Metering.showFreePaywall('lectio');
+            this._addMessage('ai', paywallMsg);
             this._showListenButton();
             // Mostra pulsante per abbonarsi
             var container = document.getElementById('lezione-messages');
@@ -631,14 +636,18 @@ export const LezioneController = {
         }
 
         // Controllo interazioni per Lezione Socratica (Free Tier)
+        // L'utente Free ha diritto a 2 turni di dialogo (2 domande + 2 risposte AI)
         var tier = Metering._getTier();
         if (tier === 'Free' && !this.isLectio) {
-            // Conta quante volte l'utente ha scritto (cioè le interazioni nella chat)
+            // Conta quante volte l'utente ha scritto (escludendo il prompt iniziale generato dal sistema)
             var userMsgCount = AppState.lezioneChat.filter(m => m.role === 'user').length;
-            // Ne ha già fatti 3 (1 iniziale + 2 followup), quindi blocchiamo e mostriamo il paywall in-chat
+            // Il primo messaggio user è il prompt iniziale ("Vorrei una lezione su...").
+            // Quindi l'utente può mandare 2 messaggi manuali aggiuntivi (turni 2 e 3).
+            // Al 3° messaggio manuale (indice 3 nel conteggio totale) blocchiamo.
             if (userMsgCount >= 3) {
                 this._addMessage('user', text);
-                this._addMessage('ai', `🔒 **Anteprima Gratuita Terminata.**\n\nHai completato le 2 interazioni socratiche incluse nel tuo piano gratuito. Per proseguire il dialogo con il Maestro e arrivare al cuore nomofilattico della questione, sblocca l'accesso Premium.`);
+                var paywallMsg = Metering.showFreePaywall('lezione');
+                this._addMessage('ai', paywallMsg);
                 var container = document.getElementById('lezione-messages');
                 if (container) {
                     container.innerHTML += `<div class="flex justify-center mt-4 mb-6 fade-in">

@@ -232,12 +232,13 @@ function renderBriefingContent(briefing) {
 
     // Se l'utente è Free, tronchiamo qui e mostriamo il paywall
     if (Metering._getTier() === 'Free') {
+        const paywallMsg = Metering.showFreePaywall('briefing');
         sections.push({
             icon: 'lock',
             title: 'Contenuto Premium Bloccato',
             color: 'text-amber-400',
             bgColor: 'bg-amber-500/10 border-amber-500/20',
-            content: "🔒 **Anteprima Gratuita Terminata.**\n\nIl resto del Debriefing Strategico (Schema di svolgimento, Riferimenti giurisprudenziali, Insidie da evitare, Time Management e Arsenale Lessicale) è riservato agli utenti Premium. Sblocca l'accesso per visualizzare l'analisi completa.",
+            content: paywallMsg,
             type: 'paywall'
         });
         

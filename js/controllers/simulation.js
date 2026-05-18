@@ -38,9 +38,10 @@ export const SimulationController = {
         // Eliminiamo il trial pre-confezionato: andiamo diretti al briefing
         // Il troncamento dei dati per il Free Tier avviene nella view del briefing.
 
-        // --- GATE 2: Limite settimanale Debrief ---
-        if (!Metering.canUseWeekly('briefing', '_global')) {
-            Metering.showWeeklyPaywall('briefing', '_global');
+        // --- GATE 2: Free lifetime (una sola volta) ---
+        if (Metering.hasUsedFreeLifetime('briefing')) {
+            showToast('🔒 Hai già usato la tua anteprima gratuita del Debrief Strategico. Passa al piano Premium!', 'warning');
+            setTimeout(() => { if (window.app) window.app.navigate('pricing'); }, 500);
             return;
         }
 
@@ -57,8 +58,8 @@ export const SimulationController = {
             );
             if (result.success) {
                 AppState.currentBriefing = result;
-                // Consuma il credito settimanale solo se il briefing è stato generato con successo
-                Metering.consumeWeekly('briefing', '_global');
+                // Consuma il credito lifetime solo se il briefing è stato generato con successo
+                Metering.consumeFreeLifetime('briefing');
             } else {
                 AppState.currentBriefing = { error: result.error || 'Errore sconosciuto' };
             }

@@ -66,6 +66,7 @@ const FEATURE_LABELS = {
 
 const STORAGE_KEY = 'concorsi_metering';
 const WEEKLY_STORAGE_KEY = 'concorsi_weekly_metering';
+const FREE_LIFETIME_KEY = 'concorsi_free_lifetime';
 
 // --- WEEKLY LIMITS ---
 // Gestiscono i limiti reali per Starter (one-shot) e Pro (settimanali)
@@ -237,6 +238,62 @@ export const Metering = {
         }
     },
 
+
+    // --- FREE LIFETIME METERING ---
+    // Contatori permanenti "una sola volta" per utenti Free.
+    // Non si resettano MAI (nessun reset settimanale o mensile).
+
+    /**
+     * Ottieni lo store lifetime per Free tier.
+     */
+    _getFreeLifetimeStore() {
+        try {
+            const store = JSON.parse(localStorage.getItem(FREE_LIFETIME_KEY));
+            if (store && typeof store === 'object') return store;
+        } catch (_) {}
+        return {};
+    },
+
+    _saveFreeLifetimeStore(store) {
+        localStorage.setItem(FREE_LIFETIME_KEY, JSON.stringify(store));
+    },
+
+    /**
+     * Controlla se l'utente Free ha GIÀ usato la sua unica prova lifetime.
+     * @param {'lectio'|'lezione'|'briefing'} feature
+     * @returns {boolean} true se ha GIÀ consumato il trial (bloccato), false se può ancora usare
+     */
+    hasUsedFreeLifetime(feature) {
+        const tier = this._getTier();
+        if (tier !== 'Free') return false; // Solo i Free hanno questo limite
+        const store = this._getFreeLifetimeStore();
+        return !!(store[feature]);
+    },
+
+    /**
+     * Segna una feature come "consumata per sempre" nel lifetime store.
+     * @param {'lectio'|'lezione'|'briefing'} feature
+     */
+    consumeFreeLifetime(feature) {
+        const tier = this._getTier();
+        if (tier !== 'Free') return;
+        const store = this._getFreeLifetimeStore();
+        store[feature] = Date.now();
+        this._saveFreeLifetimeStore(store);
+    },
+
+    /**
+     * Mostra un paywall in-chat per utenti Free con spiegazione dettagliata.
+     * @param {'lectio'|'lezione'|'briefing'} feature
+     */
+    showFreePaywall(feature) {
+        const messages = {
+            lectio: '🔒 **Hai completato la tua Anteprima Gratuita della Lectio Magistralis.**\n\nI primi 2 moduli ti hanno mostrato l\'Aporia Sistematica e l\'Architettura Dogmatica. Con il piano Premium puoi sbloccare i **3 moduli rimanenti**:\n\n• **Modulo 3** — Le Tensioni Giurisprudenziali\n• **Modulo 4** — Il Punto di Caduta Nomofilattico\n• **Modulo 5** — Corollari Applicativi e Visione di Sistema\n\nOgni lezione è alimentata dal nostro database con migliaia di sentenze reali.',
+            lezione: '🔒 **Hai completato la tua Anteprima Gratuita della Lezione Socratica.**\n\nHai ricevuto 2 risposte approfondite e posto 2 domande al Maestro. Con il piano Premium puoi:\n\n• **Proseguire il dialogo** senza limiti su qualsiasi argomento\n• **Accedere ai Moduli 3-5** con l\'analisi dei contrasti giurisprudenziali\n• **Ottenere il Gancio Socratico** — la domanda finale che testa la tenuta dogmatica\n\nSblocca l\'esperienza completa per dominare ogni istituto.',
+            briefing: '🔒 **Hai completato la tua Anteprima Gratuita del Debrief Strategico.**\n\nHai ricevuto la Decodifica Profonda della Traccia. Con il piano Premium sblocchi anche:\n\n• **Schema di Svolgimento** — la mappa logica per strutturare il tema\n• **Riferimenti Giurisprudenziali** — sentenze e regulae iuris da citare\n• **Insidie e Red Flags** — i trabocchetti che fanno crollare il voto\n• **Time Management** e **Arsenale Lessicale**\n\nIl Commissario AI ti prepara come un vero Magistrato.'
+        };
+        return messages[feature] || '🔒 Funzionalità riservata al piano Premium.';
+    },
 
 
     /**
