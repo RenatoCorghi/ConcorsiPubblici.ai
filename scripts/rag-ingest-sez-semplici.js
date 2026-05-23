@@ -173,7 +173,10 @@ function chunkContent(content) {
                         }
                     }
                     chunks.push(section.substring(pos, cutPoint));
-                    pos = Math.max(cutPoint - CHUNK_OVERLAP, pos + 1);
+                    // Se siamo arrivati alla fine della sezione, esci
+                    if (cutPoint >= section.length) break;
+                    // Avanza di almeno CHUNK_OVERLAP per evitare micro-crawl da 1 char
+                    pos = cutPoint - CHUNK_OVERLAP;
                 }
                 currentChunk = '';
             } else {
