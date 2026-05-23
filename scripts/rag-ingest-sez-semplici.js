@@ -62,23 +62,45 @@ function generateUUID(name) {
 
 /**
  * Estrae metadati dal nome del file.
- * Formato: snciv{ANNO}{SEZ}{NUM}{TIPO}.md
- * Es: snciv2025101327S.md → anno=2025, sezione=1, sentenza
+ * Formati supportati:
+ *   snciv{ANNO}{SEZ_2CIFRE}{NUM}{TIPO}.md  — Civile (sezione numerica)
+ *   snciv{ANNO}L{NUM}{TIPO}.md             — Civile Sez. Lavoro
+ *   snpen{ANNO}{SEZ_2CIFRE}{NUM}{TIPO}.md  — Penale (sezione numerica)
+ *   snpen{ANNO}L{NUM}{TIPO}.md             — Penale Sez. Lavoro
+ * Es: snciv2025101327S.md → ramo=civile, anno=2025, sezione=10, n.1327
+ *     snpen2021012149S.md → ramo=penale, anno=2021, sezione=01, n.2149
+ *     snciv2021L13643S.md → ramo=civile, anno=2021, sezione=L(avoro), n.13643
  */
 function parseFilename(filename) {
-    const match = filename.match(/snciv(\d{4})(\d)(\d+)([SO])\.md/i);
-    if (!match) return null;
-    return {
-        anno: parseInt(match[1]),
-        sezione: parseInt(match[2]),
-        numero: match[3],
-        isSentenza: match[4].toUpperCase() === 'S'
-    };
+    // Pattern 1: sezione con lettera (es. L = Lavoro)
+    const matchLetter = filename.match(/^sn(civ|pen)(\d{4})([A-Za-z])(\d+)([SO])\.md$/i);
+    if (matchLetter) {
+        return {
+            ramo: matchLetter[1].toLowerCase() === 'civ' ? 'civile' : 'penale',
+            anno: parseInt(matchLetter[2]),
+            sezione: matchLetter[3].toUpperCase(), // 'L' per Lavoro
+            numero: matchLetter[4],
+            isSentenza: matchLetter[5].toUpperCase() === 'S'
+        };
+    }
+    // Pattern 2: sezione numerica (2+ cifre per sezione, poi il numero)
+    const matchNumeric = filename.match(/^sn(civ|pen)(\d{4})(\d{2})(\d+)([SO])\.md$/i);
+    if (matchNumeric) {
+        return {
+            ramo: matchNumeric[1].toLowerCase() === 'civ' ? 'civile' : 'penale',
+            anno: parseInt(matchNumeric[2]),
+            sezione: matchNumeric[3],              // '01', '02', '10', etc.
+            numero: matchNumeric[4],
+            isSentenza: matchNumeric[5].toUpperCase() === 'S'
+        };
+    }
+    return null;
 }
 
 /**
  * Estrae il titolo dall'header markdown del file.
- * Es: "# [Cass. Civ., Sez. Semplice, , n. 1327]" → "Cass. Civ., Sez. 1, n. 1327/2025"
+ * Es: "# [Cass. Civ., Sez. Semplice, , n. 1327]" → "Cass. Civ., Sez. Semplice, n. 1327 (2025)"
+ *     snpen → "Cass. Pen., Sez. 01, n. 2149 (2021)"
  */
 function extractTitle(content, meta) {
     const headerMatch = content.match(/^#\s*\[(.+?)\]/m);
@@ -90,7 +112,8 @@ function extractTitle(content, meta) {
         }
         return title;
     }
-    return `Cass. Civ., Sez. ${meta.sezione}, n. ${meta.numero}/${meta.anno}`;
+    const ramoLabel = meta.ramo === 'penale' ? 'Pen.' : 'Civ.';
+    return `Cass. ${ramoLabel}, Sez. ${meta.sezione}, n. ${meta.numero}/${meta.anno}`;
 }
 
 /**
@@ -399,7 +422,7 @@ async function main() {
             docRows.push({
                 id: item.docUuid,
                 titolo: item.titolo,
-                materia: null, // Non classificato per materia
+                materia: item.meta.ramo === 'penale' ? 'Diritto Penale' : null,
                 tipo: TIPO_DB,
                 autore: 'Corte di Cassazione',
                 filename: item.filename,
@@ -414,7 +437,7 @@ async function main() {
                 document_id: item.docUuid,
                 content: allChunks[c],
                 chunk_index: chunkIdx,
-                materia: null,
+                materia: batchData[itemIdx].meta.ramo === 'penale' ? 'Diritto Penale' : null,
                 tipo: TIPO_DB,
                 tier: 2,
                 anno: item.meta.anno,
@@ -433,16 +456,29 @@ async function main() {
             continue;
         }
 
-        const { error: chunksErr } = await supabase
-            .from('rag_chunks')
-            .insert(chunkRows);
+        // Inserimento chunks in micro-batch (5 alla volta) per evitare timeout FTS trigger
+        const CHUNK_INSERT_BATCH = 5;
+        let chunkInsertFailed = false;
+        for (let cb = 0; cb < chunkRows.length; cb += CHUNK_INSERT_BATCH) {
+            const chunkSubBatch = chunkRows.slice(cb, cb + CHUNK_INSERT_BATCH);
+            const { error: chunksErr } = await supabase
+                .from('rag_chunks')
+                .insert(chunkSubBatch);
 
-        if (chunksErr) {
-            console.error(`\n❌ Errore DB chunks:`, chunksErr.message);
+            if (chunksErr) {
+                console.error(`\n❌ Errore DB chunks (sub-batch ${cb}):`, chunksErr.message);
+                chunkInsertFailed = true;
+                break;
+            }
+        }
+
+        if (chunkInsertFailed) {
             failCount += batchData.length;
             // Rollback documenti orfani
             const idsToDelete = docRows.map(r => r.id);
             await supabase.from('rag_documents').delete().in('id', idsToDelete);
+            // Pulisci eventuali chunks parziali
+            await supabase.from('rag_chunks').delete().in('document_id', idsToDelete);
             continue;
         }
 
