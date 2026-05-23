@@ -712,7 +712,7 @@ export const LezioneController = {
             messages.push({
                 role: 'user',
                 content: `Prosegui con il **MODULO ${nextModNum}: ${nextModTitle}**. Mantieni lo stesso registro e la stessa profondità. 
-⚠️ IMPORTANTE: Genera SOLO questo modulo. Prima di iniziare, pensa passo-passo in un blocco invisibile <thought>...</thought> ed elenca i numeri esatti di sentenza che hai estratto dal RAG. Non citare MAI numeri non presenti nel RAG. Calibra rigidamente la lunghezza affinché NON superi le 1000 parole per prevenire troncamenti accidentali dell'API. Arriva sempre al termine logico del discorso del modulo e concludi inserendo il relativo tag [CONTINUA] (o chiudi in modo definitivo senza tag se è il Modulo 7).`
+⚠️ IMPORTANTE: Genera ESCLUSIVAMENTE il testo del nuovo Modulo. TI È SEVERAMENTE VIETATO copiare, ripetere o stampare nuovamente il testo dei moduli precedenti. Scrivi SOLO il contenuto inedito del modulo ${nextModNum}. Prima di iniziare, pensa passo-passo in un blocco invisibile <thought>...</thought> ed elenca i numeri esatti di sentenza che hai estratto dal RAG. Non citare MAI numeri non presenti nel RAG. Calibra rigidamente la lunghezza affinché NON superi le 1000 parole per prevenire troncamenti accidentali dell'API. Arriva sempre al termine logico del discorso del modulo e concludi inserendo il relativo tag [CONTINUA] (o chiudi in modo definitivo senza tag se è il Modulo 7).`
             });
 
             var response = await fetch('/api/proxy', {
