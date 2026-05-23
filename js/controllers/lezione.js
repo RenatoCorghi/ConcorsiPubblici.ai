@@ -8,6 +8,8 @@ import { APP_CONFIG } from '../config.js';
 import { Metering } from '../metering.js';
 import { escapeHtml, showToast } from '../utils.js';
 
+const TOTAL_MODULES = 7;
+
 // Helper per ottenere headers con token auth
 async function _getAuthHeaders() {
     const headers = { 'Content-Type': 'application/json' };
@@ -57,7 +59,7 @@ Devi strutturare il tuo ragionamento seguendo SEMPRE questa scansione modulare. 
 [MODULO 3: LE TENSIONI GIURISPRUDENZIALI] - Analizza il dato pretorio (CdS, Cassazione, TAR) trattando le evoluzioni come "fuga interpretativa" o "ritorno all'ordine dogmatico".
 [MODULO 4: LA VERIFICA DOGMATICA] - Poni al candidato il tuo "Gancio Socratico".
 (IMPORTANTE: Dopo aver generato fino al Modulo 4, fermati e attendi SEMPRE la risposta dello studente. Solo nel tuo turno di risposta successivo attiverai il modulo finale:)
-[MODULO 5: DEBRIEFING] - Analizza la risposta dello studente. Smonta i suoi eventuali errori logici, correggi implacabilmente il suo linguaggio, e fissa la sintesi del principio di diritto risolutore.\r
+[MODULO 7: LE MATITE BLU E LA VISIONE DI SISTEMA] - Analizza la risposta dello studente. Smonta i suoi eventuali errori logici, correggi implacabilmente il suo linguaggio, e fissa la sintesi del principio di diritto risolutore.\r
 \r
 📋 SFRUTTAMENTO SCHEDE VIP: Se il RAG restituisce documenti strutturati in 7-8 sezioni (Fatto, Contrasto, Massima, Ratio, Obiter, Spendibilità, Tags, Rete Sistematica), utilizza la Sezione 2 (Contrasto Giurisprudenziale) come base per il Gancio Socratico nel Modulo 4: "La Cassazione ha accolto la Tesi B. Tu saresti stato d'accordo? Argomenta la Tesi A scartata come se fossi il suo difensore." Usa la Sezione 6 (Matite Blu) per smontare gli errori dogmatici dello studente nel Modulo 5. Usa la Sezione 8 (Rete Sistematica), se presente, per collegare la lezione ad altri istituti affini.`;
 
@@ -294,7 +296,7 @@ export const LezioneController = {
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: userPrompt }
                     ],
-                    temperature: 0.5,
+                    temperature: 0.2,
                     max_tokens: 4000
                 })
             });
@@ -310,7 +312,7 @@ export const LezioneController = {
 
             Metering.consume('tutorChats');
             Metering.consumeFreeLifetime('lezione'); // Segna la socratica come usata per sempre
-            this._addMessage('ai', reply);
+            this._addMessage('ai', this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
             this._speakIfEnabled(reply);
 
         } catch (err) {
@@ -403,7 +405,7 @@ export const LezioneController = {
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: userPrompt }
                     ],
-                    temperature: 0.5,
+                    temperature: 0.2,
                     max_tokens: 4000
                 })
             });
@@ -420,7 +422,7 @@ export const LezioneController = {
 
             Metering.consume('tutorChats');
             Metering.consumeFreeLifetime('lezione'); // Segna la socratica come usata per sempre
-            this._addMessage('ai', reply);
+            this._addMessage('ai', this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
             this._speakIfEnabled(reply);
 
         } catch (err) {
@@ -504,7 +506,7 @@ export const LezioneController = {
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: userPrompt }
                     ],
-                    temperature: 0.5,
+                    temperature: 0.2,
                     max_tokens: 8000
                 })
             });
@@ -525,7 +527,7 @@ export const LezioneController = {
 
             Metering.consume('tutorChats');
             Metering.consumeFreeLifetime('lectio'); // Segna la lectio come usata per sempre
-            this._addMessage('ai', reply);
+            this._addMessage('ai', this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
             this.currentModule = 1;
             this._updateProgressBar(1);
 
@@ -567,21 +569,23 @@ export const LezioneController = {
         if (continuaMatch) {
             nextModNum = parseInt(continuaMatch[1]);
             nextModTitle = continuaMatch[2].trim();
-        } else if (this.currentModule < 5) {
+        } else if (this.currentModule < TOTAL_MODULES) {
             // FALLBACK ROBUSTO: Se il tag manca o la risposta è stata troncata a causa del limite di token,
             // autodetectiamo il modulo successivo per continuare in autonomia senza bloccarsi.
             nextModNum = this.currentModule + 1;
             const fallbackTitles = {
-                2: "L'ARCHITETTURA DOGMATICA E DIACRONICA",
-                3: "LE TENSIONI E LE FUGHE GIURISPRUDENZIALI",
-                4: "IL PUNTO DI CADUTA NOMOFILATTICO",
-                5: "COROLLARI APPLICATIVI E VISIONE DI SISTEMA"
+                2: "LE FONDAMENTA NORMATIVE E LA RATIO LEGIS",
+                3: "L'EVOLUZIONE DIACRONICA E LE RIFORME",
+                4: "LE TENSIONI E LE FUGHE GIURISPRUDENZIALI",
+                5: "IL PUNTO DI CADUTA NOMOFILATTICO",
+                6: "COROLLARI APPLICATIVI E PROFILI PROCESSUALI",
+                7: "LE MATITE BLU E LA VISIONE DI SISTEMA"
             };
             nextModTitle = fallbackTitles[nextModNum] || "Modulo successivo";
             console.warn(`[Lectio] ⚠️ Tag [CONTINUA] mancante o troncato a Modulo ${this.currentModule}. Fallback automatico.`);
         } else {
             // Lectio completata (Modulo 5 o nessun tag alla fine)
-            this._updateProgressBar(5);
+            this._updateProgressBar(TOTAL_MODULES);
             console.log('[Lectio] ✅ Completata! Tutti i moduli generati.');
             this._showListenButton();
             // Mostra input per domande post-lectio
@@ -679,7 +683,7 @@ export const LezioneController = {
             messages.push({
                 role: 'user',
                 content: `Prosegui con il **MODULO ${nextModNum}: ${nextModTitle}**. Mantieni lo stesso registro e la stessa profondità. 
-⚠️ IMPORTANTE: Genera SOLO questo modulo. Calibra rigidamente la lunghezza affinché NON superi le 1000 parole per prevenire troncamenti accidentali dell'API. Arriva sempre al termine logico del discorso del modulo e concludi inserendo il relativo tag [CONTINUA] (o chiudi in modo definitivo senza tag se è il Modulo 5).`
+⚠️ IMPORTANTE: Genera SOLO questo modulo. Prima di iniziare, pensa passo-passo in un blocco invisibile <thought>...</thought> ed elenca i numeri esatti di sentenza che hai estratto dal RAG. Non citare MAI numeri non presenti nel RAG. Calibra rigidamente la lunghezza affinché NON superi le 1000 parole per prevenire troncamenti accidentali dell'API. Arriva sempre al termine logico del discorso del modulo e concludi inserendo il relativo tag [CONTINUA] (o chiudi in modo definitivo senza tag se è il Modulo 7).`
             });
 
             var response = await fetch('/api/proxy', {
@@ -693,7 +697,7 @@ export const LezioneController = {
                     materia: AppState.lezioneMeta?.materia || null,
                     ragQuery: this._getExpandedRAGQuery(AppState.lezioneMeta?.argomento, nextModNum),
                     messages: messages,
-                    temperature: 0.5,
+                    temperature: 0.2,
                     max_tokens: 8000
                 })
             });
@@ -712,7 +716,7 @@ export const LezioneController = {
             var reply = data.choices[0].message.content.trim();
 
             Metering.consume('tutorChats');
-            this._addMessage('ai', reply);
+            this._addMessage('ai', this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
 
             // Analizza la risposta per mostrare il pulsante del modulo successivo o chiudere
             this._handleLectioResponse(reply);
@@ -741,7 +745,7 @@ export const LezioneController = {
 
         // Detect se sta chiedendo di avanzare
         var isAdvance = /avanti|prosegu|prossimo modulo|continua|vai avanti|next/i.test(text);
-        if (isAdvance && this.currentModule < 5) {
+        if (isAdvance && this.currentModule < TOTAL_MODULES) {
             this.currentModule++;
             this._updateProgressBar(this.currentModule);
         }
@@ -807,7 +811,7 @@ export const LezioneController = {
                     materia: AppState.lezioneMeta?.materia || null,
                     ragQuery: this._getExpandedRAGQuery(AppState.lezioneMeta?.argomento, this.currentModule || 1),
                     messages: messages,
-                    temperature: 0.5,
+                    temperature: 0.2,
                     max_tokens: 4000
                 })
             });
@@ -823,7 +827,7 @@ export const LezioneController = {
             var reply = data.choices[0].message.content.trim();
 
             Metering.consume('tutorChats');
-            this._addMessage('ai', reply);
+            this._addMessage('ai', this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
             this._speakIfEnabled(reply);
 
             // Auto-detect quale modulo sta trattando dalla risposta
@@ -1217,11 +1221,33 @@ export const LezioneController = {
         if (el) el.remove();
     },
 
+    _checkHallucinations: function(text, ragSources) {
+        if (!ragSources || ragSources.length === 0) return text;
+        const sentenceRegex = /(?:Cass\.?|Cons\.? Stato|TAR|Consiglio di Stato|Cassazione).*?(?:n\.?|num\.?)\s*([0-9]+)\/(20[0-9]{2})/gi;
+        let match;
+        let warnings = [];
+        const ragContent = JSON.stringify(ragSources);
+        
+        while ((match = sentenceRegex.exec(text)) !== null) {
+            const num = match[1];
+            const year = match[2];
+            // Check if this number/year combo exists anywhere in the RAG sources
+            if (!ragContent.includes(num + '/' + year) && !ragContent.includes('n. ' + num)) {
+                warnings.push(match[0]);
+            }
+        }
+        
+        if (warnings.length > 0) {
+            return text + '\n\n<div class="mt-4 p-3 bg-red-900/40 border border-red-500/50 rounded-xl text-red-200 text-sm">⚠️ **Scudo Anti-Allucinazione:** L\'intelligenza artificiale ha citato questi estremi giurisprudenziali che non trovano riscontro diretto nel database: <i>' + warnings.join(', ') + '</i>. Verifica con attenzione.</div>';
+        }
+        return text;
+    },
+
     _updateProgressBar: function(mod) {
         var label = document.getElementById('lezione-modulo-label');
-        if (label) label.textContent = `Modulo ${mod} di 5`;
+        if (label) label.textContent = `Modulo ${mod} di ${TOTAL_MODULES}`;
 
-        for (var i = 1; i <= 5; i++) {
+        for (var i = 1; i <= TOTAL_MODULES; i++) {
             var bar = document.querySelector(`#mod-bar-${i} > div`);
             if (!bar) continue;
             if (i < mod) {
@@ -1236,7 +1262,11 @@ export const LezioneController = {
 
     _autoDetectModule: function(text) {
         var lower = text.toLowerCase();
-        if (lower.includes('modulo 5') || lower.includes('matite blu') || lower.includes('consigli per il tema')) {
+        if (lower.includes('modulo 7') || lower.includes('matite blu') || lower.includes('consigli per il tema')) {
+            this.currentModule = 7;
+        } else if (lower.includes('modulo 6')) {
+            this.currentModule = 6;
+        } else if (lower.includes('modulo 5')) {
             this.currentModule = 5;
         } else if (lower.includes('modulo 4') || lower.includes('casi limite') || lower.includes('intersezioni')) {
             this.currentModule = 4;
@@ -1282,58 +1312,69 @@ export const LezioneController = {
 
         // Suffix generici legati all'architettura didattica dei moduli
         const baseSuffixes = {
-            1: "inquadramento sistematico dogmatico principi fondamentali ratio",
-            2: "evoluzione diacronica storica riforme novelle legislative quadro normativo",
-            3: "contrasto giurisprudenziale tesi contrapposte orientamenti pretori ermeneutica",
-            4: "casi speciali eccezioni questioni problematiche casi limite",
-            5: "profili processuali tutele giurisdizione eccezioni spendibilità concorsuale"
+            1: "inquadramento sistematico dogmatico principi fondamentali ratio aporia",
+            2: "fondamenta normative ratio legis quadro legislativo fonti",
+            3: "evoluzione diacronica storica riforme novelle legislative",
+            4: "contrasto giurisprudenziale tesi contrapposte orientamenti pretori ermeneutica",
+            5: "punto di caduta nomofilattico Sezioni Unite Adunanza Plenaria",
+            6: "corollari applicativi profili processuali tutele giurisdizione spendibilità concorsuale",
+            7: "matite blu visione di sistema sintesi critica errori dogmatici consigli tema"
         };
 
-        // Arricchimenti specifici per materia per massimizzare l'attinenza nel database vettoriale
         let enrichment = "";
         if (isAmministrativo) {
             const adminEnhancements = {
                 1: "principi costituzionali imparzialità buon andamento legalità",
                 2: "novella legislativa PNRR semplificazione termini provvedimento 21-nonies",
-                3: "Adunanza Plenaria Consiglio di Stato orientamento nomofilattico risarcimento danno",
-                4: "autotutela SCIA silenzio assenso beni culturali paesaggistici edilizia",
-                5: "giurisdizione amministrativa TAR Consiglio di Stato ricorso annullamento decadenza"
+                3: "riforme procedimento amministrativo legge 241 codice processo amministrativo",
+                4: "Adunanza Plenaria Consiglio di Stato orientamento nomofilattico risarcimento danno",
+                5: "autotutela SCIA silenzio assenso beni culturali paesaggistici edilizia",
+                6: "giurisdizione amministrativa TAR Consiglio di Stato ricorso annullamento decadenza",
+                7: "sintesi principio di diritto visione sistematica errori ricorrenti consigli concorso"
             };
             enrichment = adminEnhancements[modNum] || "";
         } else if (isPenale) {
             const penalEnhancements = {
                 1: "principio di legalità tassatività offensività riserva di legge delitto",
                 2: "successione di leggi nel tempo favor rei riforme giurisprudenza diacronica",
-                3: "Sezioni Unite Cassazione Penale contrasto interpretativo concorso",
-                4: "cause di giustificazione scriminanti cause di esclusione colpevolezza casi limite",
-                5: "profili sanzionatori punibilità procedibilità risvolti applicativi concorsuali"
+                3: "riforma Cartabia giustizia riparativa codice procedura penale novelle",
+                4: "Sezioni Unite Cassazione Penale contrasto interpretativo concorso",
+                5: "cause di giustificazione scriminanti cause di esclusione colpevolezza casi limite",
+                6: "profili sanzionatori punibilità procedibilità risvolti applicativi concorsuali",
+                7: "sintesi principio di diritto errori dogmatici struttura tema penale concorso"
             };
             enrichment = penalEnhancements[modNum] || "";
         } else if (isCivile) {
             const civilEnhancements = {
                 1: "principio di autonomia contrattuale buona fede diligenza correttezza negozio",
-                2: "evoluzione storica tutela del contraente debole codice civile",
-                3: "Sezioni Unite Cassazione Civile contrasto giurisprudenziale nomofilachia",
-                4: "clausole vessatorie eccezioni di inadempimento nullità speciali nullità di protezione",
-                5: "profili rimediali risarcimento risoluzione onere della prova prescrizione"
+                2: "evoluzione storica tutela del contraente debole codice civile fonti normative",
+                3: "riforme codice civile novelle legislative codice della crisi d'impresa",
+                4: "Sezioni Unite Cassazione Civile contrasto giurisprudenziale nomofilachia",
+                5: "clausole vessatorie eccezioni di inadempimento nullità speciali nullità di protezione",
+                6: "profili rimediali risarcimento risoluzione onere della prova prescrizione",
+                7: "sintesi principio di diritto errori dogmatici struttura tema civile concorso"
             };
             enrichment = civilEnhancements[modNum] || "";
         } else if (isCostituzionale) {
             const costEnhancements = {
                 1: "valori costituzionali diritti fondamentali bilanciamento riserva di legge",
-                2: "riforme costituzionali revisione costituzionale leggi costituzionali",
-                3: "Corte Costituzionale sentenze di accoglimento rigetto interpretative",
-                4: "conflitti di attribuzione eccezioni casi limite ammissibilità",
-                5: "giudizio in via incidentale diretta risvolti processuali"
+                2: "riforme costituzionali revisione costituzionale leggi costituzionali fonti",
+                3: "evoluzione giurisprudenza costituzionale diritti sociali nuove generazioni",
+                4: "Corte Costituzionale sentenze di accoglimento rigetto interpretative",
+                5: "conflitti di attribuzione eccezioni casi limite ammissibilità",
+                6: "giudizio in via incidentale diretta risvolti processuali",
+                7: "sintesi principio costituzionale errori dogmatici struttura tema concorso"
             };
             enrichment = costEnhancements[modNum] || "";
         } else if (isTributario) {
             const tribEnhancements = {
                 1: "capacità contributiva riserva di legge art 53 cost principio di legalità",
-                2: "novelle tributarie riforma fiscale decreti legislativi statuto contribuente",
-                3: "Corte di Cassazione Sezioni Unite CGT CGIL contrasto elusione abuso del diritto",
-                4: "agevolazioni esenzioni casi particolari accertamento con adesione",
-                5: "processo tributario ricorso mediazione onere della prova sanzioni"
+                2: "novelle tributarie riforma fiscale decreti legislativi statuto contribuente fonti",
+                3: "riforme processo tributario CGT riforma della giustizia tributaria",
+                4: "Corte di Cassazione Sezioni Unite CGT contrasto elusione abuso del diritto",
+                5: "agevolazioni esenzioni casi particolari accertamento con adesione",
+                6: "processo tributario ricorso mediazione onere della prova sanzioni",
+                7: "sintesi principio tributario errori dogmatici struttura tema concorso"
             };
             enrichment = tribEnhancements[modNum] || "";
         }

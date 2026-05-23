@@ -1,0 +1,27 @@
+=========================================================
+ REPORT INTEGRITÀ SCHEDE VIP — RAG AUDIT
+ Eseguito il: 2026-05-22T23:32:52.855Z
+ Tempo impiegato: 2.17 secondi
+=========================================================
+
+📊 Statistiche generali:
+ - Schede VIP totali analizzate: 11185
+ - Schede conformi con successo:  11181
+ - Schede con anomalie riscontrate: 4
+
+=========================================================
+ ELENCO DELLE ANOMALIE DETTAGLIATE
+=========================================================
+
+[1] File: corte_conti_vip_schede\corteconti_rivista_01_07_2021fascicolo_n_4_2021_rivista\corteconti_rivista_01_07_2021fascicolo_n_4_2021_rivista_pages_136_to_150.md
+    ⚠️  Anno sospetto/futuro rilevato nel contenuto: "2027"
+---------------------------------------------------------
+[2] File: corte_conti_vip_schede\corteconti_rivista_02_02_2024fascicolo_n_6_2023_rivista\corteconti_rivista_02_02_2024fascicolo_n_6_2023_rivista_pages_76_to_90.md
+    ⚠️  Anno sospetto/futuro rilevato nel contenuto: "2030"
+---------------------------------------------------------
+[3] File: massimario_vip\civile\Relazione n. 35 del 21032007 - 1390. Nella giurisprudenza pi.md
+    ⚠️  Anno sospetto/futuro rilevato nel contenuto: "2050"
+---------------------------------------------------------
+[4] File: massimario_vip\civile\Relazione n. 92 del 07112025 - 2.8. Conseguenze sulle spese di lite.md
+    ⚠️  Anno sospetto/futuro rilevato nel contenuto: "2040"
+---------------------------------------------------------

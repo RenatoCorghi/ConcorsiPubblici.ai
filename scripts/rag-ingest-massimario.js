@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
+import { validateSheet } from './lint_vip_sheets.mjs';
 
 // ==========================================
 // CONFIGURAZIONE
@@ -93,6 +94,15 @@ async function main() {
 
             console.log(`[${i+1}/${files.length}] 🧠 Elaborazione: ${file}`);
             const textContent = fs.readFileSync(fullPath, 'utf8');
+
+            try {
+                // Valida tramite il linter prima dell'ingestione
+                validateSheet(fullPath, textContent);
+            } catch (err) {
+                console.error(`  ⚠️  [LINTER BLOCKED] Scheda non valida: ${file}`);
+                console.error(`      Motivo: ${err.message}`);
+                continue;
+            }
 
             // Generiamo l'embedding
             const vector = await getEmbedding(textContent);

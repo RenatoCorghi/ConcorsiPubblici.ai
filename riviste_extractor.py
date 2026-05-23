@@ -3,12 +3,17 @@ import sys
 import json
 import os
 
+# Forza UTF-8 per l'output su Windows
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
 def extract_columns(pdf_path, output_json):
     try:
         doc = fitz.open(pdf_path)
         pages_text = []
         
-        print(f"🧐 Analisi colonne per: {os.path.basename(pdf_path)}")
+        # Uso caratteri standard per evitare UnicodeEncodeError su console vecchie
+        print(f"--- Analisi colonne per: {os.path.basename(pdf_path)} ---")
         
         for page_num in range(len(doc)):
             page = doc[page_num]
@@ -22,12 +27,7 @@ def extract_columns(pdf_path, output_json):
             right_col = []
             
             for b in blocks:
-                # b[0], b[1], b[2], b[3] sono x0, y0, x1, y1
-                # b[4] è il testo
                 x0 = b[0]
-                
-                # Se il blocco inizia nella metà sinistra, va in left_col
-                # Usiamo un piccolo margine per i titoli che potrebbero centrare la pagina
                 if x0 < middle - 10:
                     left_col.append(b)
                 else:
@@ -37,7 +37,7 @@ def extract_columns(pdf_path, output_json):
             left_col.sort(key=lambda b: b[1])
             right_col.sort(key=lambda b: b[1])
             
-            # Uniamo il testo: prima tutta la colonna sinistra, poi tutta la destra
+            # Uniamo il testo
             page_text = ""
             for b in left_col:
                 page_text += b[4] + "\n"
@@ -49,9 +49,9 @@ def extract_columns(pdf_path, output_json):
         with open(output_json, 'w', encoding='utf-8') as f:
             json.dump(pages_text, f, ensure_ascii=False, indent=2)
         
-        print(f"✅ Estrazione completata in {output_json}")
+        print(f"OK: Estrazione completata in {output_json}")
     except Exception as e:
-        print(f"❌ Errore durante l'estrazione: {str(e)}")
+        print(f"ERR: Errore durante l'estrazione: {str(e)}")
         sys.exit(1)
 
 if __name__ == "__main__":

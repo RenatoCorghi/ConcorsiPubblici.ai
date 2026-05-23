@@ -291,7 +291,7 @@ async function main() {
     const limitArg = args.find(a => a.startsWith('--limit='))?.split('=')[1];
     const batchLimit = limitArg ? parseInt(limitArg) : 500; // Default: 500 per run
     const dryRun = args.includes('--dry-run');
-    const onlySentenze = args.includes('--only-sentenze');
+    const onlySentenze = !args.includes('--all-types'); // Default: solo sentenze, a meno di flag esplicito
     const plenariaOnly = args.includes('--plenaria-only');
 
     log('🏛️', '═══════════════════════════════════════════════');

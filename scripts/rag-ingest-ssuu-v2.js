@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
+import { validateSheet } from './lint_vip_sheets.mjs';
 
 const envFile = fs.readFileSync(path.resolve('.env'), 'utf8');
 const env = {};
@@ -132,16 +133,31 @@ async function main() {
         const batchFiles = toProcess.slice(i, i + BATCH_SIZE);
         console.log(`🔄 Processamento batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(toProcess.length/BATCH_SIZE)} (${batchFiles.length} file)...`);
         
-        // Lettura file
-        const batchData = batchFiles.map(fullPath => {
-            const fileName = path.basename(fullPath);
-            const materia = fileName.startsWith('snciv') ? 'Diritto Civile' : (fileName.startsWith('snpen') ? 'Diritto Penale' : 'Generale');
-            const textContent = fs.readFileSync(fullPath, 'utf8');
-            const firstLine = textContent.split('\n')[0];
-            const titolo = firstLine.startsWith('# ') ? firstLine.replace('# ', '').replace('[', '').replace(']', '').trim() : fileName.replace('.md', '');
-            
-            return { fullPath, fileName, materia, textContent, titolo };
-        });
+        // Lettura e validazione dei file nel batch
+        const batchData = [];
+        for (const fullPath of batchFiles) {
+            try {
+                const fileName = path.basename(fullPath);
+                const materia = fileName.startsWith('snciv') ? 'Diritto Civile' : (fileName.startsWith('snpen') ? 'Diritto Penale' : 'Generale');
+                const textContent = fs.readFileSync(fullPath, 'utf8');
+                
+                // Esegue il linter per intercettare allucinazioni o difetti di struttura
+                validateSheet(fullPath, textContent);
+                
+                const firstLine = textContent.split('\n')[0];
+                const titolo = firstLine.startsWith('# ') ? firstLine.replace('# ', '').replace('[', '').replace(']', '').trim() : fileName.replace('.md', '');
+                
+                batchData.push({ fullPath, fileName, materia, textContent, titolo });
+            } catch (err) {
+                console.error(`\n❌ [LINTER BLOCKED] File "${path.basename(fullPath)}" scartato prima dell'ingestione: ${err.message}\n`);
+                failed++;
+            }
+        }
+
+        if (batchData.length === 0) {
+            console.log("    ⏩ Tutti i file del batch sono stati scartati dal linter. Salto la vettorializzazione.");
+            continue;
+        }
 
         const textsToEmbed = batchData.map(d => d.textContent);
         const vectors = await getBatchEmbeddings(textsToEmbed);

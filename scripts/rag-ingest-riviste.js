@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
+import { validateSheet } from './lint_vip_sheets.mjs';
 
 const envFile = fs.readFileSync(path.resolve('.env'), 'utf8');
 const env = {};
@@ -149,14 +150,26 @@ async function main() {
         const totalBatches = Math.ceil(toProcess.length / BATCH_SIZE);
         console.log(`🔄 Batch ${batchNum}/${totalBatches} [${i + 1}-${Math.min(i + BATCH_SIZE, toProcess.length)}/${toProcess.length}]...`);
 
-        const batchData = batchFiles.map(({ fascicolo, fullPath, fileName }) => {
-            const textContent = fs.readFileSync(fullPath, 'utf8');
-            // Salta i blocchi <thinking> e prendi solo la scheda pulita
-            const cleanContent = textContent.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim();
-            const { editore, anno } = parseFascicoloMeta(fascicolo, fileName);
-            const titolo = `[${editore} - ${fascicolo}] ${fileName.replace('.md', '')}`;
-            return { fileName, fascicolo, textContent: cleanContent, titolo, editore, anno };
-        });
+        const batchData = [];
+        for (const { fascicolo, fullPath, fileName } of batchFiles) {
+            try {
+                const textContent = fs.readFileSync(fullPath, 'utf8');
+                
+                // Valida tramite il linter prima dell'ingestione
+                validateSheet(fullPath, textContent);
+                
+                // Salta i blocchi <thinking> e prendi solo la scheda pulita
+                const cleanContent = textContent.replace(/<thinking>[\s\S]*?<\/thinking>/g, '').trim();
+                const { editore, anno } = parseFascicoloMeta(fascicolo, fileName);
+                const titolo = `[${editore} - ${fascicolo}] ${fileName.replace('.md', '')}`;
+                
+                batchData.push({ fileName, fascicolo, textContent: cleanContent, titolo, editore, anno, fullPath });
+            } catch (err) {
+                console.error(`  ⚠️  [LINTER BLOCKED] Scheda non valida: ${fileName}`);
+                console.error(`      Motivo: ${err.message}`);
+                failed++;
+            }
+        }
 
         const textsToEmbed = batchData.map(d => d.textContent);
         const vectors = await getBatchEmbeddings(textsToEmbed);

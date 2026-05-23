@@ -102,17 +102,17 @@ export function renderLezione() {
             <div id="lezione-progress" class="bg-gray-900/80 border border-gray-800 rounded-2xl p-4 mb-4">
                 <div class="flex items-center justify-between mb-2">
                     <span class="text-xs text-gray-400 font-bold uppercase tracking-wider">Avanzamento Lezione</span>
-                    <span id="lezione-modulo-label" class="text-xs text-amber-400 font-bold">Modulo 1 di 5</span>
+                    <span id="lezione-modulo-label" class="text-xs text-amber-400 font-bold">Modulo 1 di 7</span>
                 </div>
-                <div class="flex gap-1.5">
-                    <div id="mod-bar-1" class="h-1.5 rounded-full flex-1 bg-amber-500/30 transition-all duration-500"><div class="h-full rounded-full bg-amber-500 transition-all duration-500" style="width:0%"></div></div>
-                    <div id="mod-bar-2" class="h-1.5 rounded-full flex-1 bg-amber-500/30 transition-all duration-500"><div class="h-full rounded-full bg-amber-500 transition-all duration-500" style="width:0%"></div></div>
-                    <div id="mod-bar-3" class="h-1.5 rounded-full flex-1 bg-amber-500/30 transition-all duration-500"><div class="h-full rounded-full bg-amber-500 transition-all duration-500" style="width:0%"></div></div>
-                    <div id="mod-bar-4" class="h-1.5 rounded-full flex-1 bg-amber-500/30 transition-all duration-500"><div class="h-full rounded-full bg-amber-500 transition-all duration-500" style="width:0%"></div></div>
-                    <div id="mod-bar-5" class="h-1.5 rounded-full flex-1 bg-amber-500/30 transition-all duration-500"><div class="h-full rounded-full bg-amber-500 transition-all duration-500" style="width:0%"></div></div>
+                <div class="flex gap-1">
+                    ${Array.from({ length: 7 }, (_, i) => `
+                        <div id="mod-bar-${i + 1}" class="h-1.5 rounded-full flex-1 bg-amber-500/30 transition-all duration-500">
+                            <div class="h-full rounded-full bg-amber-500 transition-all duration-500" style="width:0%"></div>
+                        </div>
+                    `).join('')}
                 </div>
-                <div class="flex justify-between mt-1.5 text-[10px] text-gray-500">
-                    <span>Fondamenta</span><span>Anatomia</span><span>Contrasti</span><span>Casi Limite</span><span>Matite Blu</span>
+                <div class="flex justify-between mt-1.5 text-[9px] md:text-[10px] text-gray-500 gap-1 overflow-x-auto whitespace-nowrap">
+                    <span>Aporia</span><span>Basi</span><span>Storia</span><span>Contrasti</span><span>Nomofilachia</span><span>Gancio/Processo</span><span>Matite Blu</span>
                 </div>
             </div>
 

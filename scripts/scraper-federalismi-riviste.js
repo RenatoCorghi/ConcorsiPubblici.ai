@@ -164,10 +164,10 @@ async function scrape() {
                         
                         downloadCounter++;
                         if (downloadCounter % 3 === 0) {
-                            console.log('   ⏳ Pausa di raffreddamento prolungata (5 minuti) per evitare blocchi IP...');
-                            await delay(300000); // 5 minuti
+                            console.log('   ⏳ Pausa di raffreddamento prolungata (15 minuti) per evitare blocchi IP...');
+                            await delay(900000); // 15 minuti
                         } else {
-                            await delay(45000); // 45 secondi tra un download e l'altro
+                            await delay(120000); // 2 minuti tra un download e l'altro
                         }
                     } else {
                         console.log(`[ERRORE] Download fallito per ${filename}`);
@@ -181,8 +181,8 @@ async function scrape() {
             process.stdout.write(`\rScansione Artid: ${currentArtid}... `);
         }
         
-        // Rallentamento aggressivo per evitare blocchi
-        const randomDelay = Math.floor(Math.random() * 5000) + 5000; // 5-10 secondi
+        // Rallentamento molto aggressivo per evitare blocchi
+        const randomDelay = Math.floor(Math.random() * 20000) + 20000; // 20-40 secondi
         await delay(randomDelay);
     }
     

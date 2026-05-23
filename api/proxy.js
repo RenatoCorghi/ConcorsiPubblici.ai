@@ -162,7 +162,7 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                         query_embedding: vector,
                         query_text: userMessageText,
                         match_count: 12,
-                        match_threshold: 0.30
+                        match_threshold: 0.60 // Alzato per ridurre allucinazioni
                     })
                 }),
                 // B) Premium: solo fonti di alta autorità, soglia bassa
@@ -174,7 +174,7 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                             query_embedding: vector,
                             query_text: userMessageText,
                             match_count: 2,
-                            match_threshold: 0.25,
+                            match_threshold: 0.76, // Alzato per premium
                             filter_tipo: tipo
                         })
                     })
@@ -243,6 +243,7 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
             });
             
             // Riordina per score boostato e prendi i top 8
+            matches = matches.filter(m => m.boostedScore > 0.72);
             matches.sort((a, b) => b.boostedScore - a.boostedScore);
             const topMatches = matches.slice(0, 8);
 
