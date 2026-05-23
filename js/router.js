@@ -162,6 +162,15 @@ function _injectRouteContent(main) {
             setTimeout(function() {
                 var container = document.getElementById('lezione-messages');
                 if (container) container.scrollTop = container.scrollHeight;
+
+                // RIPRISTINA L'INDICATORE DI GENERAZIONE O IL TASTO CONTINUA
+                if (window.Lezione) {
+                    if (window.Lezione.isGenerating) {
+                        window.Lezione.restoreActiveIndicator();
+                    } else {
+                        window.Lezione.restoreContinueButton();
+                    }
+                }
             }, 50);
             break;
         case 'pricing':

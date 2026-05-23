@@ -523,14 +523,8 @@ export const LezioneController = {
             this._addMessage('ai', paywallMsg);
             this._showListenButton();
             
-            var container = document.getElementById('lezione-messages');
-            if (container) {
-                container.innerHTML += `<div class="flex justify-center mt-4 mb-6 fade-in">
-                    <button onclick="app.navigate('pricing')" class="px-6 py-3 bg-gradient-to-r from-magis-700 to-magis-600 hover:from-magis-600 hover:to-magis-500 text-white rounded-xl font-bold flex items-center gap-2 transition hover:scale-105">
-                        <i data-lucide="unlock" class="w-5 h-5"></i> Sblocca la Lezione Completa
-                    </button>
-                </div>`;
-            }
+            this.isBlockedByPaywall = true;
+            this.showPaywallBlock();
             return;
         }
 
@@ -563,18 +557,58 @@ export const LezioneController = {
             // Mostra input per domande post-lectio
             var inputArea = document.querySelector('#lezione-input-form')?.parentElement;
             if (inputArea) inputArea.style.display = '';
+            
+            // Cancella i dati di continuazione
+            this.nextModuleNum = null;
+            this.nextModuleTitle = null;
+            this.isBlockedByPaywall = false;
             return;
         }
 
-        // Mostra il pulsante per far progredire il modulo manualmente
+        // SALVA LO STATO DELLA CONTINUAZIONE
+        this.nextModuleNum = nextModNum;
+        this.nextModuleTitle = nextModTitle;
+        this.isBlockedByPaywall = false;
+
+        this.showContinueButton();
+    },
+
+    showContinueButton: function() {
+        if (!this.nextModuleNum || !this.nextModuleTitle) return;
+        
+        // Rimuove blocchi di avanzamento precedenti per evitare disordine visivo
+        document.querySelectorAll('.lp-continue-block').forEach(el => el.remove());
+
         var container = document.getElementById('lezione-messages');
         if (container) {
             container.innerHTML += `
             <div class="flex justify-center my-6 fade-in lp-continue-block">
-                <button onclick="window.Lezione?.generateLectioModule(${nextModNum}, '${nextModTitle.replace(/'/g, "\\'")}')" 
+                <button onclick="window.Lezione?.generateLectioModule(${this.nextModuleNum}, '${this.nextModuleTitle.replace(/'/g, "\\'")}')" 
                     class="px-6 py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/20 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all transform hover:scale-[1.03] cursor-pointer">
                     <svg class="w-4 h-4 animate-bounce-horizontal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                    Eroga Modulo ${nextModNum}: ${nextModTitle}
+                    Eroga Modulo ${this.nextModuleNum}: ${this.nextModuleTitle}
+                </button>
+            </div>`;
+            container.scrollTop = container.scrollHeight;
+            lucide.createIcons();
+        }
+    },
+
+    restoreContinueButton: function() {
+        if (this.isBlockedByPaywall) {
+            this.showPaywallBlock();
+        } else if (this.isLectio && this.nextModuleNum && this.nextModuleTitle) {
+            this.showContinueButton();
+        }
+    },
+
+    showPaywallBlock: function() {
+        document.querySelectorAll('.lp-paywall-block').forEach(el => el.remove());
+        var container = document.getElementById('lezione-messages');
+        if (container) {
+            container.innerHTML += `<div class="flex justify-center mt-4 mb-6 fade-in lp-paywall-block">
+                <button onclick="app.navigate('pricing')" class="px-6 py-3 bg-gradient-to-r from-magis-700 to-magis-600 hover:from-magis-600 hover:to-magis-500 text-white rounded-xl font-bold flex items-center gap-2 transition hover:scale-105">
+                    <i data-lucide="unlock" class="w-5 h-5"></i> Sblocca la Lezione Completa
                 </button>
             </div>`;
             container.scrollTop = container.scrollHeight;
@@ -832,6 +866,13 @@ export const LezioneController = {
         this.autoGenerating = false;
         this.stopSpeaking();
 
+        this.nextModuleNum = null;
+        this.nextModuleTitle = null;
+        this.isBlockedByPaywall = false;
+        this.isGenerating = false;
+        this.generationStartTime = null;
+        this.generatingLabel = null;
+
         document.getElementById('lezione-setup')?.classList.remove('hidden');
         document.getElementById('lezione-chat-area')?.classList.add('hidden');
         var msgs = document.getElementById('lezione-messages');
@@ -1032,14 +1073,23 @@ export const LezioneController = {
         }
     },
 
-    _showTyping: function(customLabel) {
+    _showTyping: function(customLabel, isRestoring) {
         var container = document.getElementById('lezione-messages');
         if (!container) return;
         
-        this._hideTyping();
+        // Remove typing element without resetting our states if restoring
+        var el = document.getElementById('lezione-typing');
+        if (el) el.remove();
+        this._stopTypingProgress();
 
         var title = customLabel || (this.isLectio ? `Stesura Modulo ${this.currentModule} in corso...` : "Il Maestro sta elaborando...");
         
+        if (!isRestoring) {
+            this.isGenerating = true;
+            this.generationStartTime = Date.now();
+            this.generatingLabel = title;
+        }
+
         container.innerHTML += `
         <div id="lezione-typing" class="flex gap-3 max-w-[95%] fade-in">
             <div class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center bg-gradient-to-tr from-amber-600 to-orange-500 mt-1 shadow-lg shadow-amber-500/20">
@@ -1061,7 +1111,7 @@ export const LezioneController = {
                 </div>
                 
                 <div class="mt-2 text-[10px] text-gray-500 flex justify-between">
-                    <span>Tempo stimato: 30-45s per modulo</span>
+                    <span>Tempo stimato: circa 1 minuto per modulo</span>
                     <span>Non chiudere la pagina</span>
                 </div>
             </div>
@@ -1073,6 +1123,12 @@ export const LezioneController = {
         this._startTypingProgress();
     },
 
+    restoreActiveIndicator: function() {
+        if (this.isGenerating && this.generatingLabel) {
+            this._showTyping(this.generatingLabel, true);
+        }
+    },
+
     _startTypingProgress: function() {
         this._stopTypingProgress();
         
@@ -1081,8 +1137,8 @@ export const LezioneController = {
         var statusEl = document.getElementById('lezione-typing-status');
         if (!bar || !pctEl || !statusEl) return;
 
-        var start = Date.now();
-        var duration = 40000; // 40 secondi per raggiungere il 95%
+        var start = this.generationStartTime || Date.now();
+        var duration = 60000; // 60 secondi (circa 1 minuto) per raggiungere il 95%
         
         var statuses = [
             { pct: 0, text: "Consultazione del database giurisprudenziale (RAG)..." },
@@ -1123,6 +1179,9 @@ export const LezioneController = {
 
     _hideTyping: function() {
         this._stopTypingProgress();
+        this.isGenerating = false;
+        this.generationStartTime = null;
+        this.generatingLabel = null;
         var el = document.getElementById('lezione-typing');
         if (el) el.remove();
     },
