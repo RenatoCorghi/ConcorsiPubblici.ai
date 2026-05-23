@@ -158,6 +158,11 @@ function _injectRouteContent(main) {
             break;
         case 'lezione':
             main.innerHTML = renderLezione();
+            // Scroll automatico in basso per riprendere la conversazione da dove si era interrotta
+            setTimeout(function() {
+                var container = document.getElementById('lezione-messages');
+                if (container) container.scrollTop = container.scrollHeight;
+            }, 50);
             break;
         case 'pricing':
             main.innerHTML = renderPricing();

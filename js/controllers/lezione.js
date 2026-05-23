@@ -54,7 +54,9 @@ Devi strutturare il tuo ragionamento seguendo SEMPRE questa scansione modulare. 
 [MODULO 3: LE TENSIONI GIURISPRUDENZIALI] - Analizza il dato pretorio (CdS, Cassazione, TAR) trattando le evoluzioni come "fuga interpretativa" o "ritorno all'ordine dogmatico".
 [MODULO 4: LA VERIFICA DOGMATICA] - Poni al candidato il tuo "Gancio Socratico".
 (IMPORTANTE: Dopo aver generato fino al Modulo 4, fermati e attendi SEMPRE la risposta dello studente. Solo nel tuo turno di risposta successivo attiverai il modulo finale:)
-[MODULO 5: DEBRIEFING] - Analizza la risposta dello studente. Smonta i suoi eventuali errori logici, correggi implacabilmente il suo linguaggio, e fissa la sintesi del principio di diritto risolutore.`;
+[MODULO 5: DEBRIEFING] - Analizza la risposta dello studente. Smonta i suoi eventuali errori logici, correggi implacabilmente il suo linguaggio, e fissa la sintesi del principio di diritto risolutore.\r
+\r
+📋 SFRUTTAMENTO SCHEDE VIP: Se il RAG restituisce documenti strutturati in 7-8 sezioni (Fatto, Contrasto, Massima, Ratio, Obiter, Spendibilità, Tags, Rete Sistematica), utilizza la Sezione 2 (Contrasto Giurisprudenziale) come base per il Gancio Socratico nel Modulo 4: "La Cassazione ha accolto la Tesi B. Tu saresti stato d'accordo? Argomenta la Tesi A scartata come se fossi il suo difensore." Usa la Sezione 6 (Matite Blu) per smontare gli errori dogmatici dello studente nel Modulo 5. Usa la Sezione 8 (Rete Sistematica), se presente, per collegare la lezione ad altri istituti affini.`;
 
 // ─── Lectio Magistralis Prompt (Monologica, senza interazione) ──
 const LECTIO_MAGISTRALIS_PROMPT = `Sei un insigne Maestro del Diritto — la tua voce è quella di un Presidente di Sezione del Consiglio di Stato che tiene una Lectio Magistralis per un uditorio di candidati ai concorsi di vertice (Magistratura, Avvocatura, Consigliere di Stato). Il tuo compito è erogare una trattazione monumentale, esaustiva e ininterrotta sull'argomento richiesto.
@@ -75,6 +77,12 @@ CLAUSOLA DI FALLBACK: Se il <RAG_CONTEXT> risulta vuoto o insufficiente su un so
 SCUDO ANTI-SYCOPHANCY: Se l'utente menziona nella sua domanda numeri di sentenza o estremi giurisprudenziali per sostenere una tesi, NON validarli passivamente. Verifica con inflessibilità se quel riferimento esatto è presente nel <RAG_CONTEXT> e associato a quel tema. Se è errato, estraneo o non verificabile, correggilo nel tuo prologo con spietato rigore accademico: "Prima di procedere, devo operare una precisazione doverosa...".
 
 PRECISIONE DIACRONICA: Il diritto è stratificazione. Non operare mai "compressioni cronologiche". Distingui con precisione le diverse novelle legislative, applicando rigorosamente il principio tempus regit actum. Quando un istituto è stato modificato più volte, ricostruisci l'evoluzione fase per fase.
+
+═══════════════════════════════════════════════
+📐 CONTROLLO LUNGHEZZA E PREVENZIONE TRONCAMENTI (TASSATIVO)
+═══════════════════════════════════════════════
+Ciascun modulo deve essere eccezionalmente denso, profondo ed esaustivo, ma calibrato per non superare le 1200 parole (circa 1500-1800 token) al fine di evitare troncamenti accidentali dovuti ai limiti fisici di output dell'API.
+Sintetizza i passaggi non essenziali, elimina le ripetizioni retoriche e gestisci lo spazio per arrivare sempre al termine logico del modulo corrente, scrivendo IMMANCABILMENTE il tag di continuazione [CONTINUA] come ultima riga prima di fermarti.
 
 ═══════════════════════════════════════════════
 🧠 IL METODO (STILE E REGISTRO)
@@ -110,7 +118,18 @@ Per espandere il discorso in modo UTILE:
 — Casistica concreta che illustri i problemi applicativi
 — Cross-references con moduli precedenti ("Come abbiamo visto trattando l'inquadramento sistematico...")
 
-ANCORAGGIO OPERATIVO: Ogni sviluppo dogmatico deve periodicamente ricongiungersi al terreno concreto. Non permettere mai che il discorso si arresti nella pura astrazione sistematica: dopo ogni passaggio teorico, chiediti "e in pratica, questo cosa comporta?" — e rispondi in termini di conseguenze processuali (riparto, legittimazione, termini, onere della prova), problemi applicativi reali, casi limite e ricadute sulla tutela effettiva del privato. Il candidato ai concorsi deve saper tradurre ogni principio in un atto difensivo, in una sentenza, in una strategia processuale.
+ANCORAGGIO OPERATIVO: Ogni sviluppo dogmatico deve periodicamente ricongiungersi al terreno concreto. Non permettere mai che il discorso si arresti nella pura astrazione sistematica: dopo ogni passaggio teorico, chiediti "e in pratica, questo cosa comporta?" — e rispondi in termini di conseguenze processuali (riparto, legittimazione, termini, onere della prova), problemi applicativi reali, casi limite e ricadute sulla tutela effettiva del privato. Il candidato ai concorsi deve saper tradurre ogni principio in un atto difensivo, in una sentenza, in una strategia processuale.\r
+\r
+═══════════════════════════════════════════════\r
+📋 SFRUTTAMENTO DELLE SCHEDE VIP STRUTTURATE\r
+═══════════════════════════════════════════════\r
+\r
+Alcuni documenti nel RAG sono "Schede VIP" — dossier giurisprudenziali ad alta densità strutturati in 7-8 sezioni. Quando li trovi nel contesto, SFRUTTALI come segue:\r
+— Sezione 2 (Contrasto Giurisprudenziale): È il tuo materiale dialettico primario per il Modulo 3. Esponi la tesi scartata con pari dignità argomentativa prima di smontarla con la ratio decidendi. Usa la tecnica della "dimostrazione per assurdo" sulla tesi minoritaria.\r
+— Sezione 4 (Ratio Decidendi): Estraila e sviscerala nel Modulo 4 come "il nucleo vincolante" — il ragionamento logico-giuridico che l'uditorio deve interiorizzare.\r
+— Sezione 5 (Obiter Dicta): Usali nel Modulo 5 come spunti prospettici per la visione di sistema — aperture a scenari futuri o frizioni sistematiche ancora irrisolte.\r
+— Sezione 6 (Spendibilità / Matite Blu): Incorpora gli errori dogmatici segnalati come ammonimenti all'uditorio ("Attenzione: chi qualifica questo istituto come X incorre in un errore fatale...").\r
+— Sezione 8 (Rete Sistematica): Se presente, usa i cross-link per costruire catene argomentative tra pronunce diverse, mostrando l'evoluzione dell'orientamento nel tempo — questo è il vero valore aggiunto della tua Lectio.
 
 ═══════════════════════════════════════════════
 🏛 STRUTTURA DELLA LECTIO (5 MACRO-MODULI)
@@ -214,8 +233,7 @@ export const LezioneController = {
         var userPrompt = `ATTENZIONE: Questa lezione è propedeutica allo svolgimento di un tema d'esame. La traccia che lo studente dovrà svolgere dopo la lezione è la seguente:\n\n"${argomento}"\n\nMateria: ${materia}.\n\nLo studente si è dichiarato di livello avanzato. Calibra la lezione con focus specifico sui profili problematici di QUESTA traccia. Nel Modulo 5, dai consigli specifici su come impostare QUESTO tema, non consigli generici.`;
 
         this._addMessage('user', `📝 Vorrei una lezione preparatoria alla traccia:\n*"${argomento.substring(0, 200)}..."*`);
-        this._addMessage('ai', `⏳ **Preparazione della lezione sulla traccia in corso...**\n\n_Sto analizzando la traccia d'esame, cercando i profili giuridici chiave e costruendo un percorso didattico mirato._\n\n🕐 **Tempo stimato: 30–60 secondi.** Non chiudere questa pagina.`);
-        this._showTyping();
+        this._showTyping("Analisi della traccia d'esame e preparazione del percorso...");
 
         var ragContext = await this._fetchRAGContext(argomento, materia);
 
@@ -242,6 +260,7 @@ export const LezioneController = {
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
                     materia: materia,
+                    ragQuery: argomento,
                     messages: [
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: userPrompt }
@@ -324,12 +343,7 @@ export const LezioneController = {
 
         // Aggiungi messaggio utente alla chat
         this._addMessage('user', `Vorrei una lezione su: **${argomento}** (${materia})`);
-
-        // Avviso tempo di attesa
-        this._addMessage('ai', `⏳ **Sto preparando la tua lezione personalizzata...**\n\n_Un'analisi approfondita richiede il suo tempo — sto consultando il database giurisprudenziale e costruendo un percorso didattico su misura per te._\n\n🕐 **Tempo stimato: 30–60 secondi.** Non chiudere questa pagina.`);
-
-        // Mostra indicatore
-        this._showTyping();
+        this._showTyping("Preparazione della lezione su misura...");
 
         // Cerca nel RAG
         var ragContext = await this._fetchRAGContext(argomento, materia);
@@ -355,6 +369,7 @@ export const LezioneController = {
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
                     materia: materia,
+                    ragQuery: argomento,
                     messages: [
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: userPrompt }
@@ -434,8 +449,7 @@ export const LezioneController = {
 
         // Messaggio iniziale
         this._addMessage('user', `📖 Lectio Magistralis su: **${argomento}** (${materia})`);
-        this._addMessage('ai', `⏳ **Preparazione della Lectio Magistralis in corso...**\n\n_Il Maestro sta strutturando 5 moduli di lezione con analisi dogmatica e giurisprudenziale approfondita._\n\n🕐 **Tempo stimato: 30–60 secondi.** Non chiudere questa pagina.`);
-        this._showTyping();
+        this._showTyping("Inizializzazione della Lectio Magistralis...");
 
         var userPrompt = `Argomento della Lectio Magistralis: "${argomento}" (Materia: ${materia}). Genera ora il MODULO 1.`;
 
@@ -455,6 +469,7 @@ export const LezioneController = {
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
                     materia: materia,
+                    ragQuery: argomento,
                     messages: [
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: userPrompt }
@@ -484,8 +499,8 @@ export const LezioneController = {
             this.currentModule = 1;
             this._updateProgressBar(1);
 
-            // Auto-continuazione: cerca il tag [CONTINUA]
-            await this._continueNextModule(reply);
+            // Analizza la risposta per mostrare il pulsante per il modulo successivo o completare!
+            this._handleLectioResponse(reply);
 
         } catch (err) {
             this._hideTyping();
@@ -496,19 +511,18 @@ export const LezioneController = {
     },
 
     /**
-     * Auto-continuazione della Lectio Magistralis.
-     * Rileva il tag [CONTINUA — MODULO X: ...] e chiede automaticamente il modulo successivo.
+     * Gestisce la risposta del modulo Lectio Magistralis.
+     * Analizza la continuazione e renderizza un pulsante di avanzamento manuale.
      */
-    _continueNextModule: async function(lastReply) {
+    _handleLectioResponse: function(reply) {
         // Controllo per tier Free: blocca la Lectio dopo il modulo 2
         var tier = Metering._getTier();
         if (tier === 'Free' && this.currentModule >= 2) {
-            this.autoGenerating = false;
             console.log('[Lectio] ✅ Bloccata al Modulo 2 per utente Free.');
             var paywallMsg = Metering.showFreePaywall('lectio');
             this._addMessage('ai', paywallMsg);
             this._showListenButton();
-            // Mostra pulsante per abbonarsi
+            
             var container = document.getElementById('lezione-messages');
             if (container) {
                 container.innerHTML += `<div class="flex justify-center mt-4 mb-6 fade-in">
@@ -521,13 +535,30 @@ export const LezioneController = {
         }
 
         // Cerca il tag di continuazione
-        var continuaMatch = lastReply.match(/\[CONTINUA\s*[—–-]\s*MODULO\s*(\d+)\s*:\s*(.+?)\]/i);
-        if (!continuaMatch || !this.autoGenerating) {
-            // Lectio completata (Modulo 5 o nessun tag)
-            this.autoGenerating = false;
+        var continuaMatch = reply.match(/\[CONTINUA\s*[—–-]\s*MODULO\s*(\d+)\s*:\s*(.+?)\]/i);
+        
+        var nextModNum;
+        var nextModTitle;
+        
+        if (continuaMatch) {
+            nextModNum = parseInt(continuaMatch[1]);
+            nextModTitle = continuaMatch[2].trim();
+        } else if (this.currentModule < 5) {
+            // FALLBACK ROBUSTO: Se il tag manca o la risposta è stata troncata a causa del limite di token,
+            // autodetectiamo il modulo successivo per continuare in autonomia senza bloccarsi.
+            nextModNum = this.currentModule + 1;
+            const fallbackTitles = {
+                2: "L'ARCHITETTURA DOGMATICA E DIACRONICA",
+                3: "LE TENSIONI E LE FUGHE GIURISPRUDENZIALI",
+                4: "IL PUNTO DI CADUTA NOMOFILATTICO",
+                5: "COROLLARI APPLICATIVI E VISIONE DI SISTEMA"
+            };
+            nextModTitle = fallbackTitles[nextModNum] || "Modulo successivo";
+            console.warn(`[Lectio] ⚠️ Tag [CONTINUA] mancante o troncato a Modulo ${this.currentModule}. Fallback automatico.`);
+        } else {
+            // Lectio completata (Modulo 5 o nessun tag alla fine)
             this._updateProgressBar(5);
             console.log('[Lectio] ✅ Completata! Tutti i moduli generati.');
-            // Mostra pulsante Ascolta
             this._showListenButton();
             // Mostra input per domande post-lectio
             var inputArea = document.querySelector('#lezione-input-form')?.parentElement;
@@ -535,17 +566,35 @@ export const LezioneController = {
             return;
         }
 
-        var nextModNum = parseInt(continuaMatch[1]);
-        var nextModTitle = continuaMatch[2].trim();
+        // Mostra il pulsante per far progredire il modulo manualmente
+        var container = document.getElementById('lezione-messages');
+        if (container) {
+            container.innerHTML += `
+            <div class="flex justify-center my-6 fade-in lp-continue-block">
+                <button onclick="window.Lezione?.generateLectioModule(${nextModNum}, '${nextModTitle.replace(/'/g, "\\'")}')" 
+                    class="px-6 py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/20 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all transform hover:scale-[1.03] cursor-pointer">
+                    <svg class="w-4 h-4 animate-bounce-horizontal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    Eroga Modulo ${nextModNum}: ${nextModTitle}
+                </button>
+            </div>`;
+            container.scrollTop = container.scrollHeight;
+            lucide.createIcons();
+        }
+    },
+
+    /**
+     * Eroga un singolo modulo Lectio Magistralis in modo manuale.
+     */
+    generateLectioModule: async function(nextModNum, nextModTitle) {
+        // Rimuove blocchi di avanzamento precedenti per evitare disordine visivo
+        document.querySelectorAll('.lp-continue-block').forEach(el => el.remove());
+
         this.currentModule = nextModNum;
         this._updateProgressBar(nextModNum);
 
-        console.log(`[Lectio] Auto-generazione Modulo ${nextModNum}: ${nextModTitle}`);
+        console.log(`[Lectio] Generazione Manuale Modulo ${nextModNum}: ${nextModTitle}`);
 
-        // Breve pausa prima del prossimo modulo
-        await new Promise(r => setTimeout(r, 1500));
-
-        this._showTyping();
+        this._showTyping(`Stesura Modulo ${nextModNum}: ${nextModTitle}...`);
 
         try {
             // Ricostruisci la conversazione completa per mantenere contesto
@@ -553,9 +602,7 @@ export const LezioneController = {
                 { role: 'system', content: LECTIO_MAGISTRALIS_PROMPT }
             ];
 
-            // RAG viene iniettato dal proxy grazie a useRAG:true
-
-            // Aggiungi tutti i messaggi precedenti
+            // Aggiungi gli ultimi 20 messaggi precedenti per contesto coerente
             var chatSlice = AppState.lezioneChat.slice(-20);
             chatSlice.forEach(msg => {
                 messages.push({
@@ -564,7 +611,7 @@ export const LezioneController = {
                 });
             });
 
-            // Chiedi il prossimo modulo
+            // Chiedi esplicitamente il prossimo modulo
             messages.push({
                 role: 'user',
                 content: `Prosegui con il **MODULO ${nextModNum}: ${nextModTitle}**. Mantieni lo stesso registro e la stessa profondità. Ricorda: genera SOLO questo modulo, poi inserisci il tag [CONTINUA] per il successivo (o chiudi definitivamente se è il Modulo 5).`
@@ -579,6 +626,7 @@ export const LezioneController = {
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
                     materia: AppState.lezioneMeta?.materia || null,
+                    ragQuery: AppState.lezioneMeta?.argomento || null,
                     messages: messages,
                     temperature: 0.5,
                     max_tokens: 8000
@@ -590,9 +638,8 @@ export const LezioneController = {
             if (!response.ok) {
                 var errBody = '';
                 try { errBody = await response.text(); } catch(_e) {}
-                console.error('[Lectio] Modulo continuazione errore:', response.status, errBody);
-                this._addMessage('ai', `Errore nella generazione del modulo successivo (${response.status}). Dettagli in console.`);
-                this.autoGenerating = false;
+                console.error('[Lectio] Modulo continuazione manuale errore:', response.status, errBody);
+                this._addMessage('ai', `Errore nella generazione del modulo successivo (${response.status}). Riprova tra qualche istante.`);
                 return;
             }
 
@@ -602,13 +649,12 @@ export const LezioneController = {
             Metering.consume('tutorChats');
             this._addMessage('ai', reply);
 
-            // Ricorsione: continua col prossimo modulo
-            await this._continueNextModule(reply);
+            // Analizza la risposta per mostrare il pulsante del modulo successivo o chiudere
+            this._handleLectioResponse(reply);
 
         } catch (err) {
             this._hideTyping();
             this._addMessage('ai', 'Errore durante la generazione del modulo.');
-            this.autoGenerating = false;
             console.error(`[Lectio] Errore modulo ${nextModNum}:`, err);
         }
     },
@@ -694,6 +740,7 @@ export const LezioneController = {
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
                     materia: AppState.lezioneMeta?.materia || null,
+                    ragQuery: AppState.lezioneMeta?.argomento || null,
                     messages: messages,
                     temperature: 0.5,
                     max_tokens: 4000
@@ -985,25 +1032,97 @@ export const LezioneController = {
         }
     },
 
-    _showTyping: function() {
+    _showTyping: function(customLabel) {
         var container = document.getElementById('lezione-messages');
-        if (!container || document.getElementById('lezione-typing')) return;
+        if (!container) return;
+        
+        this._hideTyping();
+
+        var title = customLabel || (this.isLectio ? `Stesura Modulo ${this.currentModule} in corso...` : "Il Maestro sta elaborando...");
+        
         container.innerHTML += `
-        <div id="lezione-typing" class="flex gap-3 max-w-[85%]">
-            <div class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center bg-gradient-to-tr from-amber-600 to-orange-500 mt-1">
+        <div id="lezione-typing" class="flex gap-3 max-w-[95%] fade-in">
+            <div class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center bg-gradient-to-tr from-amber-600 to-orange-500 mt-1 shadow-lg shadow-amber-500/20">
                 <i data-lucide="graduation-cap" class="w-4 h-4 text-white"></i>
             </div>
-            <div class="bg-gray-800/80 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
-                <div class="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style="animation-delay:0ms"></div>
-                <div class="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style="animation-delay:150ms"></div>
-                <div class="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style="animation-delay:300ms"></div>
+            <div class="bg-gray-800/80 border border-gray-700/50 text-gray-200 rounded-2xl rounded-tl-sm px-5 py-4 shadow-md relative leading-relaxed text-sm w-full md:max-w-md">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-bold text-amber-400 flex items-center gap-2">
+                        <svg class="animate-spin w-4 h-4 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        ${title}
+                    </span>
+                    <span id="lezione-typing-pct" class="text-xs font-mono text-gray-400">0%</span>
+                </div>
+                
+                <p id="lezione-typing-status" class="text-xs text-gray-400 mb-3 italic">Inizializzazione della sessione...</p>
+                
+                <div class="w-full bg-gray-900 rounded-full h-1.5 overflow-hidden">
+                    <div id="lezione-typing-bar" class="bg-gradient-to-r from-amber-500 to-orange-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                
+                <div class="mt-2 text-[10px] text-gray-500 flex justify-between">
+                    <span>Tempo stimato: 30-45s per modulo</span>
+                    <span>Non chiudere la pagina</span>
+                </div>
             </div>
         </div>`;
+        
         lucide.createIcons();
         container.scrollTop = container.scrollHeight;
+
+        this._startTypingProgress();
+    },
+
+    _startTypingProgress: function() {
+        this._stopTypingProgress();
+        
+        var bar = document.getElementById('lezione-typing-bar');
+        var pctEl = document.getElementById('lezione-typing-pct');
+        var statusEl = document.getElementById('lezione-typing-status');
+        if (!bar || !pctEl || !statusEl) return;
+
+        var start = Date.now();
+        var duration = 40000; // 40 secondi per raggiungere il 95%
+        
+        var statuses = [
+            { pct: 0, text: "Consultazione del database giurisprudenziale (RAG)..." },
+            { pct: 20, text: "Analisi sistematica e inquadramento dei principi..." },
+            { pct: 45, text: "Sintesi dei contrasti ed elaborazione della ratio decidendi..." },
+            { pct: 70, text: "Stesura accademica e calibrazione dello stile magistrale..." },
+            { pct: 90, text: "Rifinitura finale e apposizione dei tag di continuazione..." }
+        ];
+
+        this._typingInterval = setInterval(() => {
+            var elapsed = Date.now() - start;
+            var pct = Math.min((elapsed / duration) * 95, 95);
+            
+            var barEl = document.getElementById('lezione-typing-bar');
+            var pctTextEl = document.getElementById('lezione-typing-pct');
+            var statusTextEl = document.getElementById('lezione-typing-status');
+            
+            if (barEl) barEl.style.width = pct + '%';
+            if (pctTextEl) pctTextEl.textContent = Math.round(pct) + '%';
+            
+            var currentStatus = statuses[0].text;
+            for (var i = 0; i < statuses.length; i++) {
+                if (pct >= statuses[i].pct) {
+                    currentStatus = statuses[i].text;
+                }
+            }
+            if (statusTextEl) statusTextEl.textContent = currentStatus;
+
+        }, 100);
+    },
+
+    _stopTypingProgress: function() {
+        if (this._typingInterval) {
+            clearInterval(this._typingInterval);
+            this._typingInterval = null;
+        }
     },
 
     _hideTyping: function() {
+        this._stopTypingProgress();
         var el = document.getElementById('lezione-typing');
         if (el) el.remove();
     },

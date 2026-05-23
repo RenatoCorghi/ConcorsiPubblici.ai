@@ -226,7 +226,7 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
         
         if (matches && matches.length > 0) {
             let contextText = "\n\n<RAG_CONTEXT>\n";
-            contextText += "⚠️ AVVERTENZA: I frammenti seguenti provengono da sentenze di Giustizia Amministrativa. I codici numerici lunghi (es. 202401188) sono ID INTERNI del database, NON numeri di sentenza. NON citarli MAI come estremi giurisprudenziali. Se non conosci il numero reale della sentenza, usa formule generiche.\n\n";
+            contextText += "⚠️ AVVERTENZA: I frammenti seguenti provengono dal database giurisprudenziale e dottrinale (Cassazione, Consiglio di Stato, TAR, Corte Costituzionale, Riviste). Alcuni documenti sono \"Schede VIP\" strutturate in 7-8 sezioni (Fatto, Contrasto, Massima, Ratio, Obiter, Spendibilità, Tags, Rete Sistematica): SFRUTTA TUTTE LE SEZIONI per costruire argomentazioni profonde. I codici numerici lunghi (es. 202401188) sono ID INTERNI del database, NON numeri di sentenza. NON citarli MAI come estremi giurisprudenziali.\n\n";
             // Re-ranking con boost per fonti autorevoli (tipo arriva dall'RPC)
             matches.forEach(m => {
                 m.boostedScore = m.similarity;
@@ -234,6 +234,12 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                 if (m.tipo === 'massimario_cassazione') m.boostedScore *= 1.30; // Massimari Cassazione
                 if (m.tipo === 'nomofilachia_ssuu') m.boostedScore *= 1.25;     // SS.UU. VIP
                 if (m.tipo === 'sentenza_ssuu') m.boostedScore *= 1.20;         // SS.UU. schede
+                // Boost per schede VIP strutturate (hand-crafted, alta densità semantica)
+                if (m.tipo === 'sentenza_sez_semplici_vip') m.boostedScore *= 1.10;
+                if (m.tipo === 'giurisprudenza_sez_semplici') m.boostedScore *= 1.10;
+                if (m.tipo === 'sentenza_admin_vip') m.boostedScore *= 1.10;
+                if (m.tipo === 'sentenza_cgt_vip') m.boostedScore *= 1.10;
+                if (m.tipo === 'giurisprudenza_tributaria') m.boostedScore *= 1.10;
             });
             
             // Riordina per score boostato e prendi i top 8
@@ -258,6 +264,9 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                 else if (m.tipo === 'massimario_cassazione') sourceLabel = `📖 [MASSIMARIO DELLA CASSAZIONE]`;
                 else if (m.tipo === 'nomofilachia_ssuu') sourceLabel = `🏛️ [NOMOFILACHIA / SS.UU.]`;
                 else if (m.tipo === 'sentenza_ssuu') sourceLabel = `⚖️ [SS.UU. CASSAZIONE]`;
+                else if (m.tipo === 'sentenza_sez_semplici_vip' || m.tipo === 'giurisprudenza_sez_semplici') sourceLabel = `⚖️ [SCHEDA VIP — CASSAZIONE]`;
+                else if (m.tipo === 'sentenza_admin_vip') sourceLabel = `🏛️ [SCHEDA VIP — GIUSTIZIA AMMINISTRATIVA]`;
+                else if (m.tipo === 'sentenza_cgt_vip' || m.tipo === 'giurisprudenza_tributaria') sourceLabel = `⚖️ [SCHEDA VIP — GIUSTIZIA TRIBUTARIA]`;
                 
                 const label = cleanTitolo ? `${sourceLabel} - ${cleanTitolo}` : sourceLabel;
                 contextText += `[Fonte ${i+1} (${(m.boostedScore*100).toFixed(1)}% match): ${label}]\n${cleanContent}\n\n`;
@@ -449,13 +458,15 @@ export default async function handler(req, res) {
         if (useRAG) {
             const requestedMateria = req.body.materia || null; // <--- Routing dinamico per materia
             const userMessages = validation.payload.messages.filter(m => m.role === 'user');
+            const explicitRagQuery = typeof req.body.ragQuery === 'string' ? req.body.ragQuery.trim().substring(0, 300) : null;
             
-            if (userMessages.length > 0) {
-                // Prende l'ultimo messaggio inviato per la ricerca semantica
-                const lastUserMessage = userMessages[userMessages.length - 1].content;
+            if (explicitRagQuery || userMessages.length > 0) {
+                // Prende la query esplicita se presente, altrimenti l'ultimo messaggio dell'utente per la ricerca semantica
+                const lastUserMessage = userMessages.length > 0 ? userMessages[userMessages.length - 1].content : '';
+                const queryText = explicitRagQuery || lastUserMessage;
                 
                 // Cerca nel DB usando il filtro materia (se presente)
-                const ragResult = await fetchRAGContext(lastUserMessage, requestedMateria);
+                const ragResult = await fetchRAGContext(queryText, requestedMateria);
                 
                 if (ragResult) {
                     let systemMsg = validation.payload.messages.find(m => m.role === 'system');
