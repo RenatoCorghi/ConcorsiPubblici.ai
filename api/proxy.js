@@ -227,9 +227,11 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
         if (matches && matches.length > 0) {
             let contextText = "\n\n<RAG_CONTEXT>\n";
             contextText += "⚠️ AVVERTENZA: I frammenti seguenti provengono dal database giurisprudenziale e dottrinale (Cassazione, Consiglio di Stato, TAR, Corte Costituzionale, Riviste). Alcuni documenti sono \"Schede VIP\" strutturate in 7-8 sezioni (Fatto, Contrasto, Massima, Ratio, Obiter, Spendibilità, Tags, Rete Sistematica): SFRUTTA TUTTE LE SEZIONI per costruire argomentazioni profonde. I codici numerici lunghi (es. 202401188) sono ID INTERNI del database, NON numeri di sentenza. NON citarli MAI come estremi giurisprudenziali.\n\n";
-            // Re-ranking con boost per fonti autorevoli (tipo arriva dall'RPC)
+            // Re-ranking con boost per fonti autorevoli e RECENCY
             matches.forEach(m => {
                 m.boostedScore = m.similarity;
+                
+                // 1. Boost per Autorità
                 if (m.tipo === 'teoria_massimario') m.boostedScore *= 1.35;    // Riviste VIP
                 if (m.tipo === 'massimario_cassazione') m.boostedScore *= 1.30; // Massimari Cassazione
                 if (m.tipo === 'nomofilachia_ssuu') m.boostedScore *= 1.25;     // SS.UU. VIP
@@ -240,6 +242,22 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                 if (m.tipo === 'sentenza_admin_vip') m.boostedScore *= 1.10;
                 if (m.tipo === 'sentenza_cgt_vip') m.boostedScore *= 1.10;
                 if (m.tipo === 'giurisprudenza_tributaria') m.boostedScore *= 1.10;
+                
+                // 2. Boost per Recency (Priorità assoluta alle novelle 2024/2025/2026)
+                // Estrae l'anno dal titolo o, se assente, dal frammento iniziale del contenuto.
+                const searchStr = (m.titolo + " " + (m.content || '').substring(0, 200)).match(/\b(202[0-9])\b/);
+                if (searchStr) {
+                    const anno = parseInt(searchStr[1], 10);
+                    if (anno === 2026 || anno === 2025) {
+                        m.boostedScore *= 1.15; // Massimo boost per l'anno in corso
+                    } else if (anno === 2024) {
+                        m.boostedScore *= 1.08; // Forte boost per il 2024 (riforma fiscale/Cartabia)
+                    } else if (anno === 2023) {
+                        m.boostedScore *= 1.02; // Lieve boost per 2023
+                    } else if (anno <= 2019) {
+                        m.boostedScore *= 0.95; // Penalizzazione lieve per sentenze vecchie
+                    }
+                }
             });
             
             // Riordina per score boostato e prendi i top 8
