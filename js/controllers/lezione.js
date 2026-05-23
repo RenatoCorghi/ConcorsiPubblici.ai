@@ -260,7 +260,7 @@ export const LezioneController = {
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
                     materia: materia,
-                    ragQuery: argomento,
+                    ragQuery: this._getExpandedRAGQuery(argomento, 1),
                     messages: [
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: userPrompt }
@@ -369,7 +369,7 @@ export const LezioneController = {
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
                     materia: materia,
-                    ragQuery: argomento,
+                    ragQuery: this._getExpandedRAGQuery(argomento, 1),
                     messages: [
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: userPrompt }
@@ -469,7 +469,7 @@ export const LezioneController = {
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
                     materia: materia,
-                    ragQuery: argomento,
+                    ragQuery: this._getExpandedRAGQuery(argomento, 1),
                     messages: [
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: userPrompt }
@@ -626,7 +626,7 @@ export const LezioneController = {
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
                     materia: AppState.lezioneMeta?.materia || null,
-                    ragQuery: AppState.lezioneMeta?.argomento || null,
+                    ragQuery: this._getExpandedRAGQuery(AppState.lezioneMeta?.argomento, nextModNum),
                     messages: messages,
                     temperature: 0.5,
                     max_tokens: 8000
@@ -740,7 +740,7 @@ export const LezioneController = {
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
                     materia: AppState.lezioneMeta?.materia || null,
-                    ragQuery: AppState.lezioneMeta?.argomento || null,
+                    ragQuery: this._getExpandedRAGQuery(AppState.lezioneMeta?.argomento, this.currentModule || 1),
                     messages: messages,
                     temperature: 0.5,
                     max_tokens: 4000
@@ -1171,6 +1171,25 @@ export const LezioneController = {
         if (!AppState.lezioneMeta) AppState.lezioneMeta = {};
         AppState.lezioneMeta._ragContext = '';
         return '';
+    },
+
+    /**
+     * Genera una query RAG espansa e mirata per ciascun modulo specifico
+     * per massimizzare la diversità e pertinenza dei frammenti estratti.
+     */
+    _getExpandedRAGQuery: function(argomento, modNum) {
+        if (!argomento) return "";
+        const cleanArg = argomento.replace(/["'“”«»]/g, '').trim();
+        
+        const suffixes = {
+            1: "inquadramento sistematico dogmatico principi costituzionali legalità",
+            2: "evoluzione storica riforme legislative novità legge diacronica 21-nonies PNRR DDL Semplificazione A.S. 1184 6 mesi",
+            3: "contrasto giurisprudenziale Adunanza Plenaria Cassazione Sezioni Unite responsabilità risarcimento danno affidamento gemelle 2021",
+            4: "casi speciali eccezioni SCIA edilizia beni culturali Corte Costituzionale 88 2025 Plenaria 8 2017 Plenaria 14 2024",
+            5: "profili processuali giurisdizione decadenza vincolata GSE Adunanza Plenaria 18 2020 errori comuni"
+        };
+        
+        return `${cleanArg} ${suffixes[modNum] || ""}`.trim();
     },
 
     /**
