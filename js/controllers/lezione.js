@@ -132,6 +132,32 @@ Alcuni documenti nel RAG sono "Schede VIP" — dossier giurisprudenziali ad alta
 — Sezione 8 (Rete Sistematica): Se presente, usa i cross-link per costruire catene argomentative tra pronunce diverse, mostrando l'evoluzione dell'orientamento nel tempo — questo è il vero valore aggiunto della tua Lectio.
 
 ═══════════════════════════════════════════════
+🏛️ VERITÀ DOGMATICHE E AGGIORNAMENTI TASSATIVI (VIGENTI AL 2026)
+═══════════════════════════════════════════════
+
+Per garantire l'idoneità concorsuale di livello superiore, devi attenerti RIGOROSAMENTE alle seguenti verità dogmatiche e riforme normative:
+
+1. AUTOTUTELA AMMINISTRATIVA - IL TERMINE DI 6 MESI (Legge n. 182/2025):
+   Il termine massimo perentorio per l'esercizio dell'annullamento d'ufficio (art. 21-nonies l. 241/1990) è stato DIMEZZATO da dodici a SEI MESI dalla Legge 2 dicembre 2025, n. 182 (in vigore dal 18 dicembre 2025). Qualsiasi riferimento a termini di 12 o 18 mesi è un anacronismo e un errore fatale. Cita sempre la Legge n. 182/2025.
+
+2. TEORIA DELLE INVALIDITÀ (Annullabilità vs Nullità):
+   L'annullamento d'ufficio adottato tardivamente (oltre i 6 mesi) è affetto da violazione di legge per consumazione temporale del potere ed è ANNULLABILE ai sensi dell'art. 21-octies, NON nullo. La nullità ex art. 21-septies costituisce un numero chiuso ed è configurabile solo per carenza di potere in astratto (difetto assoluto di attribuzione). Non qualificare mai l'autotutela tardiva come nulla per "carenza di potere in concreto".
+
+3. LA DEROGA DEL "FALSO" E LA GIURISPRUDENZA (Cons. Stato n. 1926/2024):
+   Il superamento del termine di 6 mesi (art. 21-nonies comma 2-bis) in presenza di falsità si applica a due fattispecie distinte:
+   - Per le "dichiarazioni sostitutive false o mendaci" è richiesta la copertura del giudicato penale.
+   - Per le "false rappresentazioni dei fatti" (che possono realizzarsi anche tramite omissione o silenzio rilevante), la giurisprudenza (Consiglio di Stato, Sez. VI, 27 febbraio 2024, n. 1926) chiarisce che il termine può essere superato anche senza un accertamento penale definitivo, purché la falsità sia accertata inequivocabilmente dall'amministrazione in via istruttoria.
+
+4. IL DIES A QUO DEL TERMINE:
+   Ai sensi dell'art. 21-nonies, il termine decorre dall'adozione del provvedimento di primo grado (o dalla scadenza del termine per l'inibitoria nella SCIA), e MAI dalla presentazione dell'istanza o della documentazione tecnica da parte del privato.
+
+5. DECADENZA GSE E COORDINAMENTO CON L'ART. 21-NONIES:
+   Il potere di decadenza del GSE dagli incentivi energetici (art. 42 d.lgs. 28/2011), sebbene nasca come vincolato (Plenaria n. 18/2020), è stato successivamente attratto nel paradigma temporale e motivazionale dell'art. 21-nonies dalle novelle dei decreti semplificazioni (d.l. 76/2020 e d.l. 77/2021). Non descriverlo come un potere assoluto e atemporale.
+
+6. AIUTI DI STATO EUROPEI E DIRITTO UNIONALE:
+   Concludi l'analisi del Modulo 4 trattando sempre la giurisprudenza eurounitaria sul recupero degli aiuti di Stato illegittimi. Spiega che l'obbligo di recupero imposto dal diritto dell'Unione Europea impone al giudice nazionale e all'amministrazione di disapplicare i termini di decadenza interni (incluso il termine di sei mesi), in virtù del principio di primazia ed effettività del diritto dell'Unione.
+
+═══════════════════════════════════════════════
 🏛 STRUTTURA DELLA LECTIO (5 MACRO-MODULI)
 ═══════════════════════════════════════════════
 
@@ -451,7 +477,8 @@ export const LezioneController = {
         this._addMessage('user', `📖 Lectio Magistralis su: **${argomento}** (${materia})`);
         this._showTyping("Inizializzazione della Lectio Magistralis...");
 
-        var userPrompt = `Argomento della Lectio Magistralis: "${argomento}" (Materia: ${materia}). Genera ora il MODULO 1.`;
+        var userPrompt = `Argomento della Lectio Magistralis: "${argomento}" (Materia: ${materia}). Genera ora il **MODULO 1**. 
+⚠️ IMPORTANTE: Calibra la lunghezza in modo da non superare ASSOLUTAMENTE le 1000 parole per evitare troncamenti accidentali della risposta dell'API. Arriva sempre alla conclusione logica del modulo e chiudilo scrivendo l'apposito tag di continuazione in fondo.`;
 
         try {
             var systemPrompt = LECTIO_MAGISTRALIS_PROMPT;
@@ -648,7 +675,8 @@ export const LezioneController = {
             // Chiedi esplicitamente il prossimo modulo
             messages.push({
                 role: 'user',
-                content: `Prosegui con il **MODULO ${nextModNum}: ${nextModTitle}**. Mantieni lo stesso registro e la stessa profondità. Ricorda: genera SOLO questo modulo, poi inserisci il tag [CONTINUA] per il successivo (o chiudi definitivamente se è il Modulo 5).`
+                content: `Prosegui con il **MODULO ${nextModNum}: ${nextModTitle}**. Mantieni lo stesso registro e la stessa profondità. 
+⚠️ IMPORTANTE: Genera SOLO questo modulo. Calibra rigidamente la lunghezza affinché NON superi le 1000 parole per prevenire troncamenti accidentali dell'API. Arriva sempre al termine logico del discorso del modulo e concludi inserendo il relativo tag [CONTINUA] (o chiudi in modo definitivo senza tag se è il Modulo 5).`
             });
 
             var response = await fetch('/api/proxy', {
