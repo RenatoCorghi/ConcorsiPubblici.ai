@@ -944,9 +944,25 @@ export const LezioneController = {
         if (!container) return;
 
         var formatted = escapeHtml(content)
+            .replace(/&lt;thought&gt;([\s\S]*?)&lt;\/thought&gt;/gi, function(match, innerText) {
+                return '<THOUGHT_BLOCK>' + innerText + '</THOUGHT_BLOCK>';
+            });
+
+        formatted = formatted
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/\*(.*?)\*/g, '<em>$1</em>')
             .replace(/\n/g, '<br/>');
+
+        formatted = formatted.replace(/<THOUGHT_BLOCK>([\s\S]*?)<\/THOUGHT_BLOCK>/gi, function(match, innerText) {
+            return `<details class="mt-2 mb-4 bg-gray-900/40 rounded-lg border border-gray-700/50 overflow-hidden shadow-sm">
+                <summary class="cursor-pointer px-4 py-2.5 text-xs font-medium text-amber-500/80 hover:text-amber-400 bg-gray-800/80 hover:bg-gray-700/80 transition-colors select-none flex items-center gap-2 outline-none">
+                    🧠 Vedi il ragionamento (RAG)
+                </summary>
+                <div class="p-4 text-xs text-gray-400 border-t border-gray-700/50 leading-relaxed italic opacity-90 bg-black/20">
+                    ${innerText}
+                </div>
+            </details>`;
+        });
 
         // Determina se è un messaggio di "attesa" (non ha senso leggerlo ad alta voce)
         var isWaitMsg = content.includes('Tempo stimato:') || content.includes('Preparazione della');
