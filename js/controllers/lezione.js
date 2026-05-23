@@ -1234,21 +1234,80 @@ export const LezioneController = {
 
     /**
      * Genera una query RAG espansa e mirata per ciascun modulo specifico
-     * per massimizzare la diversità e pertinenza dei frammenti estratti.
+     * per massimizzare la diversità e pertinenza dei frammenti estratti,
+     * adattandoli dinamicamente alla materia della lezione per evitare "inquinamenti" semantici.
      */
     _getExpandedRAGQuery: function(argomento, modNum) {
         if (!argomento) return "";
         const cleanArg = argomento.replace(/["'“”«»]/g, '').trim();
         
-        const suffixes = {
-            1: "inquadramento sistematico dogmatico principi costituzionali legalità",
-            2: "evoluzione storica riforme legislative novità legge diacronica 21-nonies PNRR DDL Semplificazione A.S. 1184 6 mesi",
-            3: "contrasto giurisprudenziale Adunanza Plenaria Cassazione Sezioni Unite responsabilità risarcimento danno affidamento gemelle 2021",
-            4: "casi speciali eccezioni SCIA edilizia beni culturali Corte Costituzionale 88 2025 Plenaria 8 2017 Plenaria 14 2024",
-            5: "profili processuali giurisdizione decadenza vincolata GSE Adunanza Plenaria 18 2020 errori comuni"
+        // Estraiamo la materia dallo stato per profilare l'espansione
+        const materia = AppState.lezioneMeta?.materia || "Diritto Civile";
+        const isAmministrativo = materia.toLowerCase().includes('amministrativo');
+        const isPenale = materia.toLowerCase().includes('penale');
+        const isCivile = materia.toLowerCase().includes('civile') || materia.toLowerCase().includes('commerciale');
+        const isCostituzionale = materia.toLowerCase().includes('costituzionale');
+        const isTributario = materia.toLowerCase().includes('tributario');
+
+        // Suffix generici legati all'architettura didattica dei moduli
+        const baseSuffixes = {
+            1: "inquadramento sistematico dogmatico principi fondamentali ratio",
+            2: "evoluzione diacronica storica riforme novelle legislative quadro normativo",
+            3: "contrasto giurisprudenziale tesi contrapposte orientamenti pretori ermeneutica",
+            4: "casi speciali eccezioni questioni problematiche casi limite",
+            5: "profili processuali tutele giurisdizione eccezioni spendibilità concorsuale"
         };
-        
-        return `${cleanArg} ${suffixes[modNum] || ""}`.trim();
+
+        // Arricchimenti specifici per materia per massimizzare l'attinenza nel database vettoriale
+        let enrichment = "";
+        if (isAmministrativo) {
+            const adminEnhancements = {
+                1: "principi costituzionali imparzialità buon andamento legalità",
+                2: "novella legislativa PNRR semplificazione termini provvedimento 21-nonies",
+                3: "Adunanza Plenaria Consiglio di Stato orientamento nomofilattico risarcimento danno",
+                4: "autotutela SCIA silenzio assenso beni culturali paesaggistici edilizia",
+                5: "giurisdizione amministrativa TAR Consiglio di Stato ricorso annullamento decadenza"
+            };
+            enrichment = adminEnhancements[modNum] || "";
+        } else if (isPenale) {
+            const penalEnhancements = {
+                1: "principio di legalità tassatività offensività riserva di legge delitto",
+                2: "successione di leggi nel tempo favor rei riforme giurisprudenza diacronica",
+                3: "Sezioni Unite Cassazione Penale contrasto interpretativo concorso",
+                4: "cause di giustificazione scriminanti cause di esclusione colpevolezza casi limite",
+                5: "profili sanzionatori punibilità procedibilità risvolti applicativi concorsuali"
+            };
+            enrichment = penalEnhancements[modNum] || "";
+        } else if (isCivile) {
+            const civilEnhancements = {
+                1: "principio di autonomia contrattuale buona fede diligenza correttezza negozio",
+                2: "evoluzione storica tutela del contraente debole codice civile",
+                3: "Sezioni Unite Cassazione Civile contrasto giurisprudenziale nomofilachia",
+                4: "clausole vessatorie eccezioni di inadempimento nullità speciali nullità di protezione",
+                5: "profili rimediali risarcimento risoluzione onere della prova prescrizione"
+            };
+            enrichment = civilEnhancements[modNum] || "";
+        } else if (isCostituzionale) {
+            const costEnhancements = {
+                1: "valori costituzionali diritti fondamentali bilanciamento riserva di legge",
+                2: "riforme costituzionali revisione costituzionale leggi costituzionali",
+                3: "Corte Costituzionale sentenze di accoglimento rigetto interpretative",
+                4: "conflitti di attribuzione eccezioni casi limite ammissibilità",
+                5: "giudizio in via incidentale diretta risvolti processuali"
+            };
+            enrichment = costEnhancements[modNum] || "";
+        } else if (isTributario) {
+            const tribEnhancements = {
+                1: "capacità contributiva riserva di legge art 53 cost principio di legalità",
+                2: "novelle tributarie riforma fiscale decreti legislativi statuto contribuente",
+                3: "Corte di Cassazione Sezioni Unite CGT CGIL contrasto elusione abuso del diritto",
+                4: "agevolazioni esenzioni casi particolari accertamento con adesione",
+                5: "processo tributario ricorso mediazione onere della prova sanzioni"
+            };
+            enrichment = tribEnhancements[modNum] || "";
+        }
+
+        return `${cleanArg} ${baseSuffixes[modNum] || ""} ${enrichment}`.replace(/\s+/g, ' ').trim();
     },
 
     /**
