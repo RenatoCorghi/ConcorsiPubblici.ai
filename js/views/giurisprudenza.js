@@ -18,7 +18,7 @@ let searchState = {
     offset: 0,
     stats: null,
     selectedId: null,
-    tab: 'amministrativa',
+    tab: 'schede',       // Rimosso amministrativa di default
     vipDocs: null,       // Cache per schede VIP
     vipFilter: '',       // Filtro testo per schede VIP
     vipCategory: 'all'   // Categoria attiva VIP
@@ -96,18 +96,8 @@ async function loadDetail(id) {
 // ── RENDER ──
 
 export function renderGiurisprudenza() {
-    // Carica stats in background (solo se nel tab amministrativo)
-    if (searchState.tab !== 'cassazione') {
-        loadStats().then(() => {
-            const el = document.getElementById('ga-stats-bar');
-            if (el && searchState.stats) {
-                el.innerHTML = renderStatsBar(searchState.stats);
-                if (window.lucide) lucide.createIcons();
-            }
-        });
-    }
-
-    const isCassazione = searchState.tab === 'cassazione';
+    // Carichiamo subito le schede VIP dato che questa è l'unica vista ora
+    setTimeout(loadVIPSchede, 0);
 
     return `
         <div class="fade-in space-y-6">
@@ -119,17 +109,6 @@ export function renderGiurisprudenza() {
                 </div>
             </div>
 
-            <!-- TABS -->
-            <div class="flex flex-wrap gap-1 bg-gray-900/50 p-1 rounded-xl border border-gray-800 w-full md:w-max">
-                <button onclick="window._biblioTab('amministrativa')" class="px-4 md:px-6 py-2.5 rounded-lg text-sm font-bold transition flex items-center gap-2 ${searchState.tab === 'amministrativa' ? 'bg-magis-600 text-white shadow-lg shadow-magis-600/20' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">
-                    <i data-lucide="scale" class="w-4 h-4"></i> Giustizia Amm.
-                </button>
-                <button onclick="window._biblioTab('schede')" class="px-4 md:px-6 py-2.5 rounded-lg text-sm font-bold transition flex items-center gap-2 ${searchState.tab === 'schede' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' : 'text-gray-400 hover:text-white hover:bg-gray-800'}">
-                    <i data-lucide="sparkles" class="w-4 h-4"></i> Schede VIP (SS.UU. e tanto altro)
-                </button>
-            </div>
-
-            ${searchState.tab === 'schede' ? `
             <!-- SCHEDE VIP TAB -->
             <div id="ga-vip-container" class="space-y-4">
                 <div class="glass-panel border border-gray-800 rounded-2xl p-5">
@@ -143,7 +122,7 @@ export function renderGiurisprudenza() {
                         </div>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        ${[{id:'all',label:'Tutte',icon:'layers'},{id:'ssuu_civili',label:'SS.UU. Civili',icon:'scale'},{id:'ssuu_penali',label:'SS.UU. Penali',icon:'gavel'},{id:'massimari',label:'Massimari',icon:'book-marked'},{id:'cds',label:'Consiglio di Stato',icon:'landmark'},{id:'tar',label:'TAR Lazio',icon:'file-text'}].map(c => 
+                        ${[{id:'all',label:'Tutte',icon:'layers'},{id:'ssuu_civili',label:'SS.UU. Civili',icon:'scale'},{id:'ssuu_penali',label:'SS.UU. Penali',icon:'gavel'},{id:'sez_semplici',label:'Cass. Sez. Semplici',icon:'scale-3d'},{id:'massimari',label:'Massimari',icon:'book-marked'},{id:'riviste',label:'Casi Rilievo Sistematico',icon:'book-open-check'},{id:'cds',label:'Consiglio di Stato',icon:'landmark'},{id:'tar',label:'TAR',icon:'file-text'},{id:'cgt',label:'Corti Giust. Tributaria',icon:'coins'}].map(c => 
                             `<button onclick="window._gaVipCategory('${c.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${searchState.vipCategory === c.id ? 'bg-emerald-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 border border-gray-700'}">
                                 <i data-lucide="${c.icon}" class="w-3.5 h-3.5"></i> ${c.label}
                             </button>`
@@ -154,66 +133,6 @@ export function renderGiurisprudenza() {
                     <div class="text-center py-12"><div class="inline-block w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div><p class="text-gray-500 text-sm mt-3">Caricamento schede...</p></div>
                 </div>
             </div>
-            ` : `
-            ${searchState.tab === 'amministrativa' ? `
-            <!-- Stats Bar (Amministrativa) -->
-            <div id="ga-stats-bar" class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                ${renderStatsBarPlaceholder()}
-            </div>
-            ` : ''}
-
-            <!-- Search -->
-            <div class="glass-panel border border-gray-800 rounded-2xl p-5 space-y-4">
-                <div class="flex flex-col md:flex-row gap-3">
-                    <div class="flex-grow relative">
-                        <i data-lucide="search" class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
-                        <input id="ga-search-input" type="text" placeholder="${isCassazione ? 'Cerca nelle Sezioni Unite...' : 'Cerca per oggetto... es. appalto, concessione'}" 
-                            class="w-full pl-10 pr-4 py-3 bg-gray-900 border border-gray-700 rounded-xl text-white text-sm placeholder-gray-500 focus:border-magis-500 focus:outline-none transition"
-                            value="${searchState.query}"
-                            onkeydown="if(event.key==='Enter') window._gaSearch()">
-                    </div>
-                    <button onclick="window._gaSearch()" class="px-6 py-3 bg-magis-600 hover:bg-magis-500 text-white rounded-xl font-bold text-sm transition shadow-lg shadow-magis-600/30 flex items-center gap-2 justify-center shrink-0">
-                        <i data-lucide="search" class="w-4 h-4"></i> Cerca
-                    </button>
-                </div>
-
-                ${!isCassazione ? `
-                <!-- Filters Amministrativa -->
-                <div class="flex flex-wrap gap-3">
-                    <select id="ga-filter-tipo" class="px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-300 text-xs focus:border-magis-500 focus:outline-none" onchange="window._gaFilterChange()">
-                        <option value="">Tutti i tipi</option>
-                        ${TIPI.map(t => `<option value="${t}" ${searchState.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}
-                    </select>
-                    <select id="ga-filter-anno" class="px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-300 text-xs focus:border-magis-500 focus:outline-none" onchange="window._gaFilterChange()">
-                        <option value="">Tutti gli anni</option>
-                        ${ANNI.map(a => `<option value="${a}" ${searchState.anno == a ? 'selected' : ''}>${a}</option>`).join('')}
-                    </select>
-                    ${searchState.query || searchState.tipo || searchState.anno ? `
-                        <button onclick="window._gaReset()" class="px-3 py-2 text-xs text-gray-400 hover:text-white transition flex items-center gap-1">
-                            <i data-lucide="x" class="w-3 h-3"></i> Reset
-                        </button>
-                    ` : ''}
-                </div>
-                ` : `
-                <!-- Filters Cassazione -->
-                <div class="flex flex-wrap gap-3">
-                    <span class="px-3 py-2 bg-magis-900/30 text-magis-300 border border-magis-800/50 rounded-lg text-xs font-bold flex items-center gap-1.5">
-                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Dossier RAG VIP
-                    </span>
-                    ${searchState.query ? `
-                        <button onclick="window._gaReset()" class="px-3 py-2 text-xs text-gray-400 hover:text-white transition flex items-center gap-1">
-                            <i data-lucide="x" class="w-3 h-3"></i> Reset
-                        </button>
-                    ` : ''}
-                </div>
-                `}
-            </div>
-
-            <!-- Results -->
-            <div id="ga-results" class="space-y-3">
-                ${searchState.results.length > 0 ? renderResults() : renderEmptyState()}
-            </div>
-            `}
         </div>
     `;
 }
@@ -560,7 +479,7 @@ async function loadVIPSchede() {
             const { data, error } = await window.supabaseClient
                 .from('rag_documents')
                 .select('id, titolo, tipo, materia, filename')
-                .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'massimario_cassazione'])
+                .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip'])
                 .order('titolo', { ascending: true })
                 .range(offset, offset + limit - 1);
             if (error) throw error;
@@ -597,9 +516,12 @@ function renderVIPSchede() {
         const catMap = {
             'ssuu_civili': d => (d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') && (d.materia === 'Diritto Civile' || d.materia === 'Giurisprudenza Civile'),
             'ssuu_penali': d => (d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') && (d.materia === 'Diritto Penale' || d.materia === 'Giurisprudenza Penale'),
+            'sez_semplici': d => d.tipo === 'sentenza_sez_semplici_vip',
             'massimari': d => d.tipo === 'massimario_cassazione',
+            'riviste': d => d.tipo === 'rivista_vip',
             'cds': d => d.tipo === 'sentenza_admin' && d.filename?.startsWith('cds_'),
             'tar': d => d.tipo === 'sentenza_admin' && d.filename?.startsWith('tar-'),
+            'cgt': d => d.tipo === 'sentenza_cgt_vip',
         };
         if (catMap[searchState.vipCategory]) docs = docs.filter(catMap[searchState.vipCategory]);
     }
@@ -611,6 +533,9 @@ function renderVIPSchede() {
     }
 
     const catLabel = (d) => {
+        if (d.tipo === 'sentenza_sez_semplici_vip') return { text: 'Cass. Sez. Semplici', color: 'purple' };
+        if (d.tipo === 'rivista_vip') return { text: 'Casi di Rilievo', color: 'indigo' };
+        if (d.tipo === 'sentenza_cgt_vip') return { text: 'CGT Tributaria', color: 'amber' };
         if (d.tipo === 'massimario_cassazione') return { text: 'Massimario', color: 'amber' };
         if ((d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') && (d.materia === 'Diritto Penale' || d.materia === 'Giurisprudenza Penale')) return { text: 'SS.UU. Penali', color: 'red' };
         if (d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') return { text: 'SS.UU. Civili', color: 'magis' };

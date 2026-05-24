@@ -51,7 +51,7 @@ Per garantire l'idoneità concorsuale di livello superiore, devi attenerti RIGOR
 
 11. DIVIETO DI ALLUCINAZIONE ASSOCIATIVA:
     Non associare mai un numero di articolo del codice (es. art. 580 c.c. sull'assegno vitalizio) a un inesistente numero di sentenza (es. App. Firenze n. 580/2023). Un simile scambio concettuale è considerato fatale.
-\`;
+`;
 
 // Helper per ottenere headers con token auth
 async function _getAuthHeaders() {

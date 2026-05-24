@@ -6,6 +6,7 @@ export function renderAdmin() {
     const adminEmails = [
         'renatocorghi80@gmail.com',
         'david.dimeo@gmail.com',
+        'chantconte@gmail.com',
         'admin@concorsipubblici.ai'
     ];
 

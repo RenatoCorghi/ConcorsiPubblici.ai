@@ -343,6 +343,7 @@ export const Metering = {
     _ADMIN_EMAILS: [
         'renatocorghi80@gmail.com',
         'david.dimeo@gmail.com',
+        'chantconte@gmail.com',
     ],
 
     /**

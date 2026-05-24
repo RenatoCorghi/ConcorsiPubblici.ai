@@ -67,7 +67,7 @@ function getFilesRecursive(dir) {
 async function main() {
     console.log('🚀 INGESTIONE SS.UU. VIP (NOMOFILACHIA)');
     
-    const allFiles = getFilesRecursive('sentenze_ssuu_vip');
+    const allFiles = getFilesRecursive('sentenze_ssuu_vip_schede');
     console.log(`Trovati ${allFiles.length} file totali.`);
     
     const filesToProcess = LIMIT < Infinity 

@@ -268,8 +268,8 @@ export async function initVIPDossiers() {
             return allDocs;
         }
 
-        // Fetch documenti con parent document (sentenza_ssuu, sentenza_ssuu_vip, sentenza_admin, massimario_cassazione)
-        const allDocs = await fetchAllDocs(['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'massimario_cassazione']);
+        // Fetch documenti con parent document
+        const allDocs = await fetchAllDocs(['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip']);
         
         console.log(`✅ [Glossario] Docs: ${allDocs.length}`);
 
@@ -299,6 +299,9 @@ export async function initVIPDossiers() {
         let massimari = uniqueDocs.filter(d => d.tipo === 'massimario_cassazione');
         let adminCds = uniqueDocs.filter(d => d.tipo === 'sentenza_admin' && d.filename && d.filename.startsWith('cds_'));
         let adminTar = uniqueDocs.filter(d => d.tipo === 'sentenza_admin' && d.filename && d.filename.startsWith('tar-'));
+        let sezSemplici = uniqueDocs.filter(d => d.tipo === 'sentenza_sez_semplici_vip');
+        let riviste = uniqueDocs.filter(d => d.tipo === 'rivista_vip');
+        let cgt = uniqueDocs.filter(d => d.tipo === 'sentenza_cgt_vip');
 
         let html = '';
         
@@ -334,9 +337,12 @@ export async function initVIPDossiers() {
 
         html += buildSection('⚖️ SS.UU. Civili', ssuuCivile, 'scale');
         html += buildSection('🔨 SS.UU. Penali', ssuuPenale, 'gavel');
+        html += buildSection('🏛️ Cass. Sez. Semplici', sezSemplici, 'scale-3d');
         html += buildSection('📖 Massimari della Cassazione', massimari, 'book-marked');
+        html += buildSection('📑 Casi di Rilievo Sistematico', riviste, 'book-open-check');
         html += buildSection('🏛️ Sentenze CdS', adminCds, 'landmark');
-        html += buildSection('📄 Sentenze TAR Lazio', adminTar, 'file-text');
+        html += buildSection('📄 Sentenze TAR', adminTar, 'file-text');
+        html += buildSection('⚖️ Corti Giustizia Tributaria', cgt, 'coins');
 
         container.innerHTML = html;
         lucide.createIcons();
