@@ -269,7 +269,7 @@ export async function initVIPDossiers() {
         }
 
         // Fetch documenti con parent document
-        const allDocs = await fetchAllDocs(['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip', 'sentenza_corte_cost_vip', 'sentenza_corte_cost']);
+        const allDocs = await fetchAllDocs(['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip', 'sentenza_corte_cost_vip', 'sentenza_cc_vip']);
         
         console.log(`✅ [Glossario] Docs: ${allDocs.length}`);
 
@@ -300,6 +300,7 @@ export async function initVIPDossiers() {
         let adminCds = uniqueDocs.filter(d => d.tipo === 'sentenza_admin' && d.filename && d.filename.startsWith('cds_'));
         let adminTar = uniqueDocs.filter(d => d.tipo === 'sentenza_admin' && d.filename && d.filename.startsWith('tar-'));
         let sezSemplici = uniqueDocs.filter(d => d.tipo === 'sentenza_sez_semplici_vip');
+        let corteCost = uniqueDocs.filter(d => d.tipo === 'sentenza_cc_vip' || d.tipo === 'sentenza_corte_cost_vip');
         let riviste = uniqueDocs.filter(d => d.is_caso_sistematico === true);
         let cgt = uniqueDocs.filter(d => d.tipo === 'sentenza_cgt_vip');
 
@@ -337,7 +338,8 @@ export async function initVIPDossiers() {
 
         html += buildSection('⚖️ SS.UU. Civili', ssuuCivile, 'scale');
         html += buildSection('🔨 SS.UU. Penali', ssuuPenale, 'gavel');
-        html += buildSection('🏛️ Cass. Sez. Semplici', sezSemplici, 'scale-3d');
+        html += buildSection('⚖️ Cassazione Sez. Semplici', sezSemplici, 'scale-3d');
+        html += buildSection('🏛️ Corte Costituzionale', corteCost, 'building-2');
         html += buildSection('📖 Massimari della Cassazione', massimari, 'book-marked');
         html += buildSection('📑 Casi di Rilievo Sistematico', riviste, 'book-open-check');
         html += buildSection('🏛️ Sentenze CdS', adminCds, 'landmark');

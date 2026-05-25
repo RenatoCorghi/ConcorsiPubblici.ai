@@ -44,7 +44,7 @@ async function populate() {
             } else if (item.corte === 'Consiglio di Stato' || item.corte === 'TAR') {
                 if (!d.tipo.includes('admin')) return false;
             } else if (item.corte === 'Corte Costituzionale') {
-                if (!d.tipo.includes('corte_cost')) return false;
+                if (!d.tipo.includes('cc')) return false;
             }
             
             // The number must be in the title or filename

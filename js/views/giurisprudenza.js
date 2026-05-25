@@ -122,7 +122,7 @@ export function renderGiurisprudenza() {
                         </div>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        ${[{id:'all',label:'Tutte',icon:'layers'},{id:'ssuu_civili',label:'SS.UU. Civili',icon:'scale'},{id:'ssuu_penali',label:'SS.UU. Penali',icon:'gavel'},{id:'sez_semplici',label:'Cass. Sez. Semplici',icon:'scale-3d'},{id:'massimari',label:'Massimari',icon:'book-marked'},{id:'riviste',label:'Casi Rilievo Sistematico',icon:'book-open-check'},{id:'cds',label:'Consiglio di Stato',icon:'landmark'},{id:'tar',label:'TAR',icon:'file-text'},{id:'cgt',label:'Corti Giust. Tributaria',icon:'coins'}].map(c => 
+                        ${[{id:'all',label:'Tutte',icon:'layers'},{id:'ssuu_civili',label:'SS.UU. Civili',icon:'scale'},{id:'ssuu_penali',label:'SS.UU. Penali',icon:'gavel'},{id:'corte_cost',label:'Corte Costituzionale',icon:'building-2'},{id:'sez_semplici',label:'Cass. Sez. Semplici',icon:'scale-3d'},{id:'massimari',label:'Massimari',icon:'book-marked'},{id:'riviste',label:'Casi Rilievo Sistematico',icon:'book-open-check'},{id:'cds',label:'Consiglio di Stato',icon:'landmark'},{id:'tar',label:'TAR',icon:'file-text'},{id:'cgt',label:'Corti Giust. Tributaria',icon:'coins'}].map(c => 
                             `<button onclick="window._gaVipCategory('${c.id}')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${searchState.vipCategory === c.id ? 'bg-emerald-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 border border-gray-700'}">
                                 <i data-lucide="${c.icon}" class="w-3.5 h-3.5"></i> ${c.label}
                             </button>`
@@ -516,6 +516,7 @@ function renderVIPSchede() {
         const catMap = {
             'ssuu_civili': d => (d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') && (d.materia === 'Diritto Civile' || d.materia === 'Giurisprudenza Civile'),
             'ssuu_penali': d => (d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') && (d.materia === 'Diritto Penale' || d.materia === 'Giurisprudenza Penale'),
+            'corte_cost': d => d.tipo === 'sentenza_corte_cost_vip' || d.tipo === 'sentenza_cc_vip',
             'sez_semplici': d => d.tipo === 'sentenza_sez_semplici_vip',
             'massimari': d => d.tipo === 'massimario_cassazione',
             'riviste': d => d.is_caso_sistematico === true,
@@ -538,6 +539,7 @@ function renderVIPSchede() {
         if (d.tipo === 'massimario_cassazione') return { text: 'Massimario', color: 'amber' };
         if ((d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') && (d.materia === 'Diritto Penale' || d.materia === 'Giurisprudenza Penale')) return { text: 'SS.UU. Penali', color: 'red' };
         if (d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') return { text: 'SS.UU. Civili', color: 'magis' };
+        if (d.tipo === 'sentenza_corte_cost_vip' || d.tipo === 'sentenza_cc_vip') return { text: 'Corte Costituzionale', color: 'rose' };
         if (d.tipo === 'sentenza_sez_semplici_vip') return { text: 'Cass. Sez. Semplici', color: 'purple' };
         if (d.filename?.startsWith('cds_')) return { text: 'CdS', color: 'emerald' };
         if (d.filename?.startsWith('tar-')) return { text: 'TAR', color: 'blue' };
