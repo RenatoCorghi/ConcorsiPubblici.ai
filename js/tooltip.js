@@ -1,3 +1,6 @@
+import { APP_CONFIG } from './config.js';
+import { getAuthHeaders } from './api/helpers.js';
+
 let tooltipEl = null;
 let titleEl = null;
 let contentEl = null;
@@ -146,8 +149,11 @@ async function fetchNormaText(riferimento) {
     try {
         const response = await fetch('/api/proxy', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: await getAuthHeaders(),
             body: JSON.stringify({
+                feature: 'phantomTutor',
+                provider: APP_CONFIG.ACTIVE_AI_STACK,
+                model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].CHAT,
                 messages: [{ role: 'user', content: prompt }],
                 temperature: 0.1
             })
@@ -160,8 +166,8 @@ async function fetchNormaText(riferimento) {
         const data = await response.json();
         
         let text = "";
-        if (data && data.reply) {
-            text = data.reply.trim();
+        if (data && data.choices && data.choices[0]) {
+            text = data.choices[0].message.content.trim();
         } else {
             throw new Error("Empty AI response");
         }
