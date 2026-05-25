@@ -133,13 +133,13 @@ export function renderHome() {
                     
                     <!-- Content -->
                     <div class="flex-1 min-w-0">
-                        <h3 class="text-lg md:text-xl font-display font-bold text-white mb-3 leading-tight">Cosa rende ConcorsiPubblici.ai uno strumento di livello concorsuale?</h3>
+                        <h3 class="text-lg md:text-xl font-display font-bold text-white mb-3 leading-tight">Cosa rende ConcorsiPubblici.ai uno strumento a prova di commissione?</h3>
                         <div class="space-y-3 text-sm text-gray-300 leading-relaxed">
                             <p>A differenza delle comuni AI che <strong class="text-indigo-300">"indovinano" le parole sulla base di probabilità statistiche</strong>, ConcorsiPubblici.ai utilizza un'architettura <strong class="text-white">RAG avanzata</strong>.</p>
-                            <p>Dottrina, massime e sentenze integrali vengono trasformate in <strong class="text-magis-300">rappresentazioni matematiche</strong>. Questo permette al sistema di individuare relazioni sostanziali tra principi, istituti e orientamenti giurisprudenziali, andando ben oltre la semplice ricerca per parole chiave.</p>
+                            <p>Dottrina, massime e sentenze vengono scomposte, trasformate in <strong class="text-magis-300">rappresentazioni matematiche</strong> e mappate in una rete semantica. Questo permette al sistema di individuare relazioni sostanziali tra principi, istituti e orientamenti giurisprudenziali, andando ben oltre la semplice ricerca per parole chiave.</p>
                             <div class="flex items-start gap-3 mt-4 p-4 rounded-xl bg-white/5 border border-white/10">
                                 <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400 shrink-0 mt-0.5"></i>
-                                <p class="text-gray-200"><strong class="text-emerald-300">Il risultato?</strong> Un'intelligenza artificiale ancorata a un <strong class="text-white">corpus giuridico verificabile</strong>, progettata per ridurre drasticamente il rischio di allucinazioni e offrire analisi rigorose, precise e sistematicamente coerenti.</p>
+                                <p class="text-gray-200"><strong class="text-emerald-300">Il risultato?</strong> Un'intelligenza artificiale ancorata a un <strong class="text-white">corpus giuridico verificabile</strong>, progettata per neutralizzare il rischio di allucinazioni e offrire analisi rigorose, precise e sistematicamente coerenti.</p>
                             </div>
                         </div>
                     </div>
