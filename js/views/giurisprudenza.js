@@ -478,8 +478,8 @@ async function loadVIPSchede() {
         while (true) {
             const { data, error } = await window.supabaseClient
                 .from('rag_documents')
-                .select('id, titolo, tipo, materia, filename')
-                .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip'])
+                .select('id, titolo, tipo, materia, filename, is_caso_sistematico')
+                .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip', 'sentenza_corte_cost_vip', 'sentenza_corte_cost'])
                 .order('titolo', { ascending: true })
                 .range(offset, offset + limit - 1);
             if (error) throw error;
@@ -518,7 +518,7 @@ function renderVIPSchede() {
             'ssuu_penali': d => (d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') && (d.materia === 'Diritto Penale' || d.materia === 'Giurisprudenza Penale'),
             'sez_semplici': d => d.tipo === 'sentenza_sez_semplici_vip',
             'massimari': d => d.tipo === 'massimario_cassazione',
-            'riviste': d => d.tipo === 'rivista_vip',
+            'riviste': d => d.is_caso_sistematico === true,
             'cds': d => d.tipo === 'sentenza_admin' && d.filename?.startsWith('cds_'),
             'tar': d => d.tipo === 'sentenza_admin' && d.filename?.startsWith('tar-'),
             'cgt': d => d.tipo === 'sentenza_cgt_vip',
@@ -533,12 +533,12 @@ function renderVIPSchede() {
     }
 
     const catLabel = (d) => {
-        if (d.tipo === 'sentenza_sez_semplici_vip') return { text: 'Cass. Sez. Semplici', color: 'purple' };
-        if (d.tipo === 'rivista_vip') return { text: 'Casi di Rilievo', color: 'indigo' };
-        if (d.tipo === 'sentenza_cgt_vip') return { text: 'CGT Tributaria', color: 'amber' };
+        if (d.is_caso_sistematico) return { text: 'Casi di Rilievo', color: 'indigo' };
+        if (d.tipo === 'sentenza_cgt_vip') return { text: 'Corti Tributarie', color: 'slate' };
         if (d.tipo === 'massimario_cassazione') return { text: 'Massimario', color: 'amber' };
         if ((d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') && (d.materia === 'Diritto Penale' || d.materia === 'Giurisprudenza Penale')) return { text: 'SS.UU. Penali', color: 'red' };
         if (d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') return { text: 'SS.UU. Civili', color: 'magis' };
+        if (d.tipo === 'sentenza_sez_semplici_vip') return { text: 'Cass. Sez. Semplici', color: 'purple' };
         if (d.filename?.startsWith('cds_')) return { text: 'CdS', color: 'emerald' };
         if (d.filename?.startsWith('tar-')) return { text: 'TAR', color: 'blue' };
         return { text: 'Altro', color: 'gray' };

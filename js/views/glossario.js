@@ -255,7 +255,7 @@ export async function initVIPDossiers() {
             while (true) {
                 const { data, error } = await window.supabaseClient
                     .from('rag_documents')
-                    .select('titolo, tipo, materia, filename')
+                    .select('titolo, tipo, materia, filename, is_caso_sistematico')
                     .in('tipo', tipoFilter)
                     .order('titolo', { ascending: true })
                     .range(offset, offset + limit - 1);
@@ -269,7 +269,7 @@ export async function initVIPDossiers() {
         }
 
         // Fetch documenti con parent document
-        const allDocs = await fetchAllDocs(['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip']);
+        const allDocs = await fetchAllDocs(['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip', 'sentenza_corte_cost_vip', 'sentenza_corte_cost']);
         
         console.log(`✅ [Glossario] Docs: ${allDocs.length}`);
 
@@ -300,7 +300,7 @@ export async function initVIPDossiers() {
         let adminCds = uniqueDocs.filter(d => d.tipo === 'sentenza_admin' && d.filename && d.filename.startsWith('cds_'));
         let adminTar = uniqueDocs.filter(d => d.tipo === 'sentenza_admin' && d.filename && d.filename.startsWith('tar-'));
         let sezSemplici = uniqueDocs.filter(d => d.tipo === 'sentenza_sez_semplici_vip');
-        let riviste = uniqueDocs.filter(d => d.tipo === 'rivista_vip');
+        let riviste = uniqueDocs.filter(d => d.is_caso_sistematico === true);
         let cgt = uniqueDocs.filter(d => d.tipo === 'sentenza_cgt_vip');
 
         let html = '';
