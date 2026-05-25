@@ -518,7 +518,7 @@ export default async function handler(req, res) {
                     const { data: profile } = await supabaseAdmin.from('profiles').select('tier').eq('id', userId).single();
                     const tier = (profile && profile.tier) || 'Free';
                     
-                    const freeLimits = { aiCalls: 3, oralSessions: 0, tutorChats: 5, aiTraces: 0, pdfExports: 0, aiQuiz: 5, phantomTutor: 0 };
+                    const freeLimits = { aiCalls: 3, oralSessions: 0, tutorChats: 5, aiTraces: 0, pdfExports: 0, aiQuiz: 5, phantomTutor: 0, normeTooltip: 30 };
                     
                     if (tier === 'Free') {
                         const limit = freeLimits[requestedFeature];

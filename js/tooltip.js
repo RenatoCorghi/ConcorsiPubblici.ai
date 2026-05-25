@@ -151,7 +151,7 @@ async function fetchNormaText(riferimento) {
             method: 'POST',
             headers: await getAuthHeaders(),
             body: JSON.stringify({
-                feature: 'phantomTutor',
+                feature: 'normeTooltip',
                 provider: APP_CONFIG.ACTIVE_AI_STACK,
                 model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].CHAT,
                 messages: [{ role: 'user', content: prompt }],
