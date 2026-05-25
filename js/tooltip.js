@@ -54,6 +54,7 @@ function closeTooltip() {
             tooltipEl.classList.add('hidden');
         }
     }, 300);
+}
 
 async function handleMouseOver(e) {
     const target = e.target.closest('.norma-hover');
