@@ -479,7 +479,7 @@ async function loadVIPSchede() {
             const { data, error } = await window.supabaseClient
                 .from('rag_documents')
                 .select('id, titolo, tipo, materia, filename, is_caso_sistematico')
-                .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip', 'sentenza_corte_cost_vip', 'sentenza_corte_cost'])
+                .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip', 'sentenza_corte_cost_vip', 'sentenza_corte_cost', 'sentenza_cc_vip'])
                 .order('titolo', { ascending: true })
                 .range(offset, offset + limit - 1);
             if (error) throw error;
