@@ -14,7 +14,7 @@ export function initNormeTooltip() {
     if (!document.getElementById('norma-tooltip')) {
         tooltipEl = document.createElement('div');
         tooltipEl.id = 'norma-tooltip';
-        tooltipEl.className = 'fixed z-[9999] hidden max-w-sm w-full bg-gray-950/95 backdrop-blur-xl border border-magis-500/30 rounded-2xl p-5 shadow-2xl opacity-0 transition-opacity duration-300 pointer-events-none';
+        tooltipEl.className = 'fixed z-[9999] hidden max-w-lg w-full bg-gray-950/95 backdrop-blur-xl border border-magis-500/30 rounded-2xl p-5 shadow-2xl opacity-0 transition-opacity duration-300';
         tooltipEl.innerHTML = `
             <div class="flex items-center gap-3 mb-3 border-b border-gray-800 pb-3">
                 <div class="w-8 h-8 rounded-full bg-magis-500/20 flex items-center justify-center">
@@ -22,7 +22,7 @@ export function initNormeTooltip() {
                 </div>
                 <h4 id="norma-tooltip-title" class="font-bold text-white text-sm"></h4>
             </div>
-            <div id="norma-tooltip-content" class="text-sm text-gray-300 leading-relaxed min-h-[60px] max-h-64 overflow-y-auto custom-scrollbar">
+            <div id="norma-tooltip-content" class="text-sm text-gray-300 leading-relaxed min-h-[60px] max-h-[60vh] overflow-y-auto custom-scrollbar">
             </div>
         `;
         document.body.appendChild(tooltipEl);
@@ -31,17 +31,35 @@ export function initNormeTooltip() {
         contentEl = document.getElementById('norma-tooltip-content');
         
         if (window.lucide) window.lucide.createIcons({ root: tooltipEl });
+
+        // Aggiungi listener al tooltip stesso per tenerlo aperto se l'utente ci passa sopra
+        tooltipEl.addEventListener('mouseenter', () => {
+            if (hoverTimeout) clearTimeout(hoverTimeout);
+        });
+        tooltipEl.addEventListener('mouseleave', () => {
+            hoverTimeout = setTimeout(closeTooltip, 300);
+        });
     }
 
     // Usiamo il delegation event sul body per catturare tutti gli hover su .norma-hover
     document.body.addEventListener('mouseover', handleMouseOver);
     document.body.addEventListener('mouseout', handleMouseOut);
-    document.body.addEventListener('mousemove', handleMouseMove);
+    // Non seguiamo più il mouse in continuo per permettere all'utente di entrare nel tooltip e scrollare
 }
+
+function closeTooltip() {
+    tooltipEl.classList.add('opacity-0');
+    setTimeout(() => {
+        if (tooltipEl.classList.contains('opacity-0')) {
+            tooltipEl.classList.add('hidden');
+        }
+    }, 300);
 
 async function handleMouseOver(e) {
     const target = e.target.closest('.norma-hover');
     if (!target) return;
+
+    if (hoverTimeout) clearTimeout(hoverTimeout);
 
     const norma = target.getAttribute('data-norma');
     if (!norma) return;
@@ -78,19 +96,8 @@ function handleMouseOut(e) {
     const target = e.target.closest('.norma-hover');
     if (!target) return;
     
-    // Nascondi il tooltip
-    tooltipEl.classList.add('opacity-0');
-    setTimeout(() => {
-        if (tooltipEl.classList.contains('opacity-0')) {
-            tooltipEl.classList.add('hidden');
-        }
-    }, 300);
-}
-
-function handleMouseMove(e) {
-    if (tooltipEl && !tooltipEl.classList.contains('hidden')) {
-        positionTooltip(e);
-    }
+    // Nascondi il tooltip con un ritardo per permettere di spostare il mouse sul tooltip
+    hoverTimeout = setTimeout(closeTooltip, 300);
 }
 
 function positionTooltip(e) {
