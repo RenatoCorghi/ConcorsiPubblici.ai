@@ -143,37 +143,46 @@ async function fetchNormaText(riferimento) {
     
     const prompt = `Sei un assistente giuridico. L'utente richiede il testo ESATTO dell'articolo: "${riferimento}". Restituisci SOLO IL TESTO della norma, senza introduzioni, commenti o spiegazioni. Se la norma ha più commi, separali con ritorni a capo.`;
     
-    // Siccome non vogliamo mischiare con la history del rag, passiamo history vuota e forziamo la risposta
     try {
-        const aiResponse = await window.supabaseClient.functions.invoke('chat', {
-            body: { 
-                query: prompt,
-                history: [],
-                useRAG: false // Parametro fittizio, se l'edge function lo supporta, altrimenti si comporterà da chatbot standard
-            }
+        const response = await fetch('/api/proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.1
+            })
         });
         
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
         let text = "";
-        if (aiResponse.data && aiResponse.data.reply) {
-            text = aiResponse.data.reply.trim();
+        if (data && data.reply) {
+            text = data.reply.trim();
         } else {
             throw new Error("Empty AI response");
         }
         
-        // Pulizia: se l'AI risponde con "Ecco il testo...", lo puliamo un po'
+        // Pulizia
         text = text.replace(/Ecco il testo.+?:/gi, '').trim();
 
         // Salva in memoria
         memoryCache.set(riferimento, text);
 
-        // Salva su Supabase per gli utenti futuri
+        // Salva su Supabase
         if (window.supabaseClient) {
-            window.supabaseClient.from('norme_cache').insert({
-                riferimento: riferimento,
-                testo: text
-            }).then(({error}) => {
+            try {
+                const { error } = await window.supabaseClient.from('norme_cache').insert({
+                    riferimento: riferimento,
+                    testo: text
+                });
                 if (error) console.error("Failed to cache norma", error);
-            });
+            } catch (dbErr) {
+                console.error("DB Insert Exception:", dbErr);
+            }
         }
 
         return text;
