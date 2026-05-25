@@ -31,6 +31,7 @@ import { LezioneController } from './controllers/lezione.js';
 window.Lezione = LezioneController; // Esposto per il pulsante "Ascolta la Lezione"
 import { Metering } from './metering.js';
 import { QuizController } from './controllers/quiz.js';
+import { initNormeTooltip } from './tooltip.js';
 import { applyThemeColor, initComfortMode, toggleComfortMode } from './theme.js';
 import { searchBandi, filterBandiCategoria, toggleBandiAperti, bandiPagina, toggleBandoDescrizione } from './views/bandi.js';
 
@@ -556,6 +557,7 @@ export const app = {
 
             if (window.cloud) cloud.initAuthListener();
             initNetworkListeners();
+            initNormeTooltip();
     
             // BUGFIX CHROME: Se c'è un token nell'URL, non usiamo navigateToRoute che 
             // sovrascriverebbe l'hash prima che Supabase possa leggerlo in modo asincrono.

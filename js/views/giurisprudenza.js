@@ -607,6 +607,12 @@ window._gaVipOpen = async (filename, tipo) => {
         const fullContent = chunkData.map(c => c.content).join('\n\n');
         let mdHtml = window.marked ? window.marked.parse(fullContent) : `<div class="whitespace-pre-wrap">${escapeHtml(fullContent)}</div>`;
 
+        // Wrap legal references per Tooltip
+        const regex = /\b(?:art|artt)\.?\s+\d+(?:\s+(?:bis|ter|quater|quinquies))?(?:\s+e\s+\d+)?(?:(?:,\s*)?commi?\s*\d+(?:\s+e\s+\d+)?)?(?:\s+della\s+)?\s+(?:c\.c\.|c\.p\.c\.|c\.p\.|c\.p\.p\.|Cost\.|T\.U\.I\.|TUSP|TUEL|d\.lgs\.\s*(?:n\.\s*)?\d+\/\d+|l\.\s*(?:n\.\s*)?\d+\/\d+|d\.P\.R\.\s*(?:n\.\s*)?\d+\/\d+)/gi;
+        
+        mdHtml = mdHtml.replace(regex, (match) => {
+            return `<span class="norma-hover cursor-help text-magis-400 font-semibold border-b border-magis-400/50 hover:bg-magis-900/50 transition-colors rounded px-0.5" data-norma="${escapeHtml(match.trim())}">${match}</span>`;
+        });
         showDetailModal({
             titolo: docData.titolo,
             filename: filename,
