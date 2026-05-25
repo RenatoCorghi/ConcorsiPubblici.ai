@@ -387,6 +387,41 @@ export function renderHome() {
                 </div>
             </div>
 
+            <!-- RAG STATS BANNER -->
+            <div class="mt-16 mb-8 border border-magis-500/30 rounded-2xl p-8 glass-panel relative overflow-hidden bg-gradient-to-br from-gray-900 to-magis-950/40 shadow-2xl">
+                <!-- Background animations -->
+                <div class="absolute -top-24 -right-24 w-72 h-72 bg-magis-600/10 rounded-full blur-3xl animate-pulse"></div>
+                <div class="absolute -bottom-24 -left-24 w-72 h-72 bg-indigo-600/10 rounded-full blur-3xl animate-pulse" style="animation-delay: 2s;"></div>
+                
+                <div class="relative z-10 text-center mb-10">
+                    <span class="px-4 py-1.5 text-[10px] font-bold rounded-full bg-magis-900/50 text-magis-300 border border-magis-800 uppercase tracking-widest mb-4 inline-block">Il Motore Giuridico</span>
+                    <h2 class="text-3xl font-display font-bold text-white mb-4">Un Patrimonio di Oltre 80.000 Pronunce</h2>
+                    <p class="text-gray-400 text-sm max-w-2xl mx-auto leading-relaxed">ConcorsiPubblici.ai non "inventa" le risposte. Il suo motore neurale (RAG) interroga in tempo reale un database giurisprudenziale immenso, garantendo risposte ancorate a fonti reali, esatte e costantemente aggiornate.</p>
+                </div>
+
+                <div class="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                    <div class="flex flex-col items-center justify-center p-6 rounded-2xl bg-gray-900/50 border border-gray-800 hover:border-magis-500/50 transition-all card-hover group">
+                        <div class="text-3xl font-bold text-white mb-2 group-hover:text-magis-400 transition-colors" style="text-shadow: 0 0 20px rgba(99,102,241,0.5);">66.500+</div>
+                        <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest font-bold text-center">Cassazione<br/>(SS.UU. & Semplici)</div>
+                    </div>
+                    
+                    <div class="flex flex-col items-center justify-center p-6 rounded-2xl bg-gray-900/50 border border-gray-800 hover:border-blue-500/50 transition-all card-hover group">
+                        <div class="text-3xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors" style="text-shadow: 0 0 20px rgba(59,130,246,0.5);">11.000+</div>
+                        <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest font-bold text-center">Giust. Amministr.<br/>(TAR e CdS)</div>
+                    </div>
+                    
+                    <div class="flex flex-col items-center justify-center p-6 rounded-2xl bg-gray-900/50 border border-gray-800 hover:border-emerald-500/50 transition-all card-hover group">
+                        <div class="text-3xl font-bold text-white mb-2 group-hover:text-emerald-400 transition-colors" style="text-shadow: 0 0 20px rgba(16,185,129,0.5);">1.000+</div>
+                        <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest font-bold text-center">Giust. Tributaria<br/>(CGT)</div>
+                    </div>
+                    
+                    <div class="flex flex-col items-center justify-center p-6 rounded-2xl bg-gray-900/50 border border-gray-800 hover:border-amber-500/50 transition-all card-hover group">
+                        <div class="text-3xl font-bold text-white mb-2 group-hover:text-amber-400 transition-colors" style="text-shadow: 0 0 20px rgba(245,158,11,0.5);">~2.000</div>
+                        <div class="text-[10px] md:text-xs text-gray-500 uppercase tracking-widest font-bold text-center">Casi di Rilievo<br/>Sistematico</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- PWA INSTALL BANNER (bottom) -->
             ${window.deferredPrompt ? `
                 <div id="pwa-install-banner" class="mt-8 border border-green-500/30 bg-green-500/10 rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between fade-in">
