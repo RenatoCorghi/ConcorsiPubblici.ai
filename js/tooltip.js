@@ -1,5 +1,3 @@
-import { askRAG } from './rag.js';
-
 let tooltipEl = null;
 let titleEl = null;
 let contentEl = null;
