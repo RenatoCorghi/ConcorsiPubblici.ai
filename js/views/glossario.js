@@ -269,7 +269,7 @@ export async function initVIPDossiers() {
         }
 
         // Fetch documenti con parent document
-        const allDocs = await fetchAllDocs(['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip', 'sentenza_corte_cost_vip', 'sentenza_cc_vip']);
+        const allDocs = await fetchAllDocs(['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'sentenza_admin_vip', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip', 'sentenza_corte_cost_vip', 'sentenza_cc_vip', 'scheda_manualistica', 'scheda_manualistica_v3']);
         
         console.log(`✅ [Glossario] Docs: ${allDocs.length}`);
 
@@ -297,12 +297,12 @@ export async function initVIPDossiers() {
             (d.materia === 'Diritto Penale' || d.materia === 'Giurisprudenza Penale')
         );
         let massimari = uniqueDocs.filter(d => d.tipo === 'massimario_cassazione');
-        let adminCds = uniqueDocs.filter(d => d.tipo === 'sentenza_admin' && d.filename && d.filename.startsWith('cds_'));
-        let adminTar = uniqueDocs.filter(d => d.tipo === 'sentenza_admin' && d.filename && d.filename.startsWith('tar-'));
-        let sezSemplici = uniqueDocs.filter(d => d.tipo === 'sentenza_sez_semplici_vip');
+        let adminCds = uniqueDocs.filter(d => (d.tipo === 'sentenza_admin' || d.tipo === 'sentenza_admin_vip') && d.filename && d.filename.startsWith('cds_'));
+        let adminTar = uniqueDocs.filter(d => (d.tipo === 'sentenza_admin' || d.tipo === 'sentenza_admin_vip') && d.filename && d.filename.startsWith('tar-'));
+        let sezSemplici = uniqueDocs.filter(d => d.tipo === 'sentenza_sez_semplici_vip' || d.tipo === 'scheda_manualistica_v3');
         let corteCost = uniqueDocs.filter(d => d.tipo === 'sentenza_cc_vip' || d.tipo === 'sentenza_corte_cost_vip');
         let riviste = uniqueDocs.filter(d => d.is_caso_sistematico === true);
-        let cgt = uniqueDocs.filter(d => d.tipo === 'sentenza_cgt_vip');
+        let cgt = uniqueDocs.filter(d => d.tipo === 'sentenza_cgt_vip' || d.tipo === 'scheda_manualistica');
 
         let html = '';
         

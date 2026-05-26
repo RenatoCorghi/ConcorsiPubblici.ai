@@ -36,7 +36,9 @@ const REGIONI = [
     'trga-bolzano',
     'tar-umbria',
     'tar-valle-d-aosta',
-    'tar-veneto'
+    'tar-veneto',
+    'tar-lazio-roma',
+    'cds'
 ];
 
 function log(msg) {

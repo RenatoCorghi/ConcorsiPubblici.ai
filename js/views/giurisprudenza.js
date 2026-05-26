@@ -481,7 +481,7 @@ async function loadVIPSchede() {
             const { data, error } = await window.supabaseClient
                 .from('rag_documents')
                 .select('id, titolo, tipo, materia, filename, is_caso_sistematico')
-                .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip', 'sentenza_corte_cost_vip', 'sentenza_corte_cost', 'sentenza_cc_vip'])
+                .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'sentenza_admin_vip', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip', 'sentenza_corte_cost_vip', 'sentenza_corte_cost', 'sentenza_cc_vip', 'scheda_manualistica', 'scheda_manualistica_v3'])
                 .order('titolo', { ascending: true })
                 .range(offset, offset + limit - 1);
             if (error) throw error;
@@ -519,12 +519,12 @@ function renderVIPSchede() {
             'ssuu_civili': d => (d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') && (d.materia === 'Diritto Civile' || d.materia === 'Giurisprudenza Civile'),
             'ssuu_penali': d => (d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') && (d.materia === 'Diritto Penale' || d.materia === 'Giurisprudenza Penale'),
             'corte_cost': d => d.tipo === 'sentenza_corte_cost_vip' || d.tipo === 'sentenza_cc_vip',
-            'sez_semplici': d => d.tipo === 'sentenza_sez_semplici_vip',
+            'sez_semplici': d => d.tipo === 'sentenza_sez_semplici_vip' || d.tipo === 'scheda_manualistica_v3',
             'massimari': d => d.tipo === 'massimario_cassazione',
             'riviste': d => d.is_caso_sistematico === true,
-            'cds': d => d.tipo === 'sentenza_admin' && d.filename?.startsWith('cds_'),
-            'tar': d => d.tipo === 'sentenza_admin' && d.filename?.startsWith('tar-'),
-            'cgt': d => d.tipo === 'sentenza_cgt_vip',
+            'cds': d => (d.tipo === 'sentenza_admin' || d.tipo === 'sentenza_admin_vip') && d.filename?.startsWith('cds_'),
+            'tar': d => (d.tipo === 'sentenza_admin' || d.tipo === 'sentenza_admin_vip') && d.filename?.startsWith('tar-'),
+            'cgt': d => d.tipo === 'sentenza_cgt_vip' || d.tipo === 'scheda_manualistica',
         };
         if (catMap[searchState.vipCategory]) docs = docs.filter(catMap[searchState.vipCategory]);
     }
@@ -550,12 +550,12 @@ function renderVIPSchede() {
 
     const catLabel = (d) => {
         if (d.is_caso_sistematico) return { text: 'Casi di Rilievo', color: 'indigo' };
-        if (d.tipo === 'sentenza_cgt_vip') return { text: 'Corti Tributarie', color: 'slate' };
+        if (d.tipo === 'sentenza_cgt_vip' || d.tipo === 'scheda_manualistica') return { text: 'Corti Tributarie', color: 'slate' };
         if (d.tipo === 'massimario_cassazione') return { text: 'Massimario', color: 'amber' };
         if ((d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') && (d.materia === 'Diritto Penale' || d.materia === 'Giurisprudenza Penale')) return { text: 'SS.UU. Penali', color: 'red' };
         if (d.tipo === 'sentenza_ssuu' || d.tipo === 'sentenza_ssuu_vip') return { text: 'SS.UU. Civili', color: 'magis' };
         if (d.tipo === 'sentenza_corte_cost_vip' || d.tipo === 'sentenza_cc_vip') return { text: 'Corte Costituzionale', color: 'rose' };
-        if (d.tipo === 'sentenza_sez_semplici_vip') return { text: 'Cass. Sez. Semplici', color: 'purple' };
+        if (d.tipo === 'sentenza_sez_semplici_vip' || d.tipo === 'scheda_manualistica_v3') return { text: 'Cass. Sez. Semplici', color: 'purple' };
         if (d.filename?.startsWith('cds_')) return { text: 'CdS', color: 'emerald' };
         if (d.filename?.startsWith('tar-')) return { text: 'TAR', color: 'blue' };
         return { text: 'Altro', color: 'gray' };
