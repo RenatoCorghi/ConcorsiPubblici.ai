@@ -23,7 +23,9 @@ let searchState = {
     vipFilter: '',       // Filtro testo per schede VIP
     vipCategory: '',     // Categoria attiva VIP (di default vuota per lazy loading)
     contentMatchIds: null,   // Set<document_id> da ricerca FTS nel contenuto
-    contentSearching: false  // Flag ricerca contenuto in corso
+    contentSearching: false, // Flag ricerca contenuto in corso
+    vipOffset: 0,        // Offset per paginazione delle schede VIP
+    vipHasMore: false    // Flag se ci sono altri elementi da caricare nelle schede VIP
 };
 
 const TIPI = ['SENTENZA', 'ORDINANZA', 'DECRETO', 'PARERE'];
@@ -477,8 +479,8 @@ async function loadVIPSchede() {
         return;
     }
 
-    // Use cache if available
-    if (searchState.vipDocs) {
+    // Use cache if available and we are not doing a paginated load
+    if (searchState.vipDocs && searchState.vipDocs.length > 0 && searchState.vipOffset > 0 && searchState.vipOffset % 90 !== 0) {
         renderVIPSchede();
         return;
     }
@@ -488,17 +490,18 @@ async function loadVIPSchede() {
         return;
     }
 
-    container.innerHTML = `
-        <div class="text-center py-12">
-            <div class="inline-block w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-            <p class="text-gray-500 text-sm mt-3">Caricamento schede...</p>
-        </div>
-    `;
+    // Mostra caricamento solo sul primo blocco
+    if (!searchState.vipDocs || searchState.vipDocs.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-12">
+                <div class="inline-block w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                <p class="text-gray-500 text-sm mt-3">Caricamento schede...</p>
+            </div>
+        `;
+    }
 
     try {
-        let allDocs = [];
-        let offset = 0;
-        const limit = 1000;
+        const limit = 90;
 
         // Costruiamo la query mirata in base alla categoria selezionata per caricare solo il necessario!
         let queryBuilder = window.supabaseClient.from('rag_documents').select('id, titolo, tipo, materia, filename, is_caso_sistematico');
@@ -533,35 +536,42 @@ async function loadVIPSchede() {
                 queryBuilder = queryBuilder.in('tipo', ['sentenza_cgt_vip', 'scheda_manualistica']);
             }
         } else {
-            // Per 'all' carichiamo l'intero dataset strutturato in blocchi
+            // Per 'all' carichiamo l'intero dataset strutturato in blocchi da 90
             queryBuilder = queryBuilder.in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'sentenza_admin_vip', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip', 'sentenza_corte_cost_vip', 'sentenza_corte_cost', 'sentenza_cc_vip', 'scheda_manualistica', 'scheda_manualistica_v3']);
         }
 
-        while (true) {
-            const { data, error } = await queryBuilder
-                .order('titolo', { ascending: true })
-                .range(offset, offset + limit - 1);
+        const { data, error } = await queryBuilder
+            .order('titolo', { ascending: true })
+            .range(searchState.vipOffset, searchState.vipOffset + limit - 1);
 
-            if (error) throw error;
-            if (!data || data.length === 0) break;
-            allDocs.push(...data);
-            offset += limit;
-            if (data.length < limit) break;
-        }
+        if (error) throw error;
 
-        // Dedup
-        const seen = new Set();
-        searchState.vipDocs = allDocs.filter(d => {
+        if (!searchState.vipDocs) searchState.vipDocs = [];
+        
+        // Dedup su inserimento
+        const seen = new Set(searchState.vipDocs.map(d => d.filename + d.titolo));
+        const newDocs = (data || []).filter(d => {
             const key = d.filename + d.titolo;
             if (seen.has(key)) return false;
             seen.add(key);
             return true;
         });
 
+        searchState.vipDocs.push(...newDocs);
+        
+        if (!data || data.length < limit) {
+            searchState.vipHasMore = false;
+        } else {
+            searchState.vipHasMore = true;
+            searchState.vipOffset += limit;
+        }
+
         renderVIPSchede();
     } catch (err) {
         console.error('[VIP] Errore:', err);
-        if (container) container.innerHTML = '<p class="text-red-500 text-center py-8">Errore di caricamento.</p>';
+        if (container && (!searchState.vipDocs || searchState.vipDocs.length === 0)) {
+            container.innerHTML = '<p class="text-red-500 text-center py-8">Errore di caricamento.</p>';
+        }
     }
 }
 
@@ -644,6 +654,17 @@ function renderVIPSchede() {
             `;
         });
         html += '</div>';
+
+        // Aggiungiamo il pulsante di caricamento se ci sono altre schede da mostrare
+        if (searchState.vipHasMore && !searchState.vipFilter) {
+            html += `
+                <div class="mt-6 text-center">
+                    <button id="ga-vip-loadmore-btn" onclick="window._gaVipLoadMore()" class="px-5 py-2.5 text-xs font-bold text-emerald-400 hover:text-white border border-gray-700 bg-gray-850 hover:bg-gray-800 rounded-xl hover:border-emerald-500/30 transition flex items-center justify-center mx-auto gap-2">
+                        <i data-lucide="chevron-down" class="w-4 h-4"></i> Carica altre schede...
+                    </button>
+                </div>
+            `;
+        }
     }
 
     container.innerHTML = html;
@@ -758,6 +779,8 @@ async function _searchVIPContent(query) {
 window._gaVipCategory = (cat) => {
     searchState.vipCategory = cat;
     searchState.vipDocs = null; // Forza il ricaricamento mirato per la nuova categoria!
+    searchState.vipOffset = 0;   // Reset offset per nuova categoria!
+    searchState.vipHasMore = false;
     // Re-render tabs to show active state + results
     const main = document.getElementById('main-content');
     if (main) {
@@ -765,6 +788,15 @@ window._gaVipCategory = (cat) => {
         if (window.lucide) lucide.createIcons();
     }
     loadVIPSchede();
+};
+
+window._gaVipLoadMore = async () => {
+    const btn = document.getElementById('ga-vip-loadmore-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<div class="inline-block w-4.5 h-4.5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mr-2"></div> Caricamento...`;
+    }
+    await loadVIPSchede();
 };
 
 window._gaVipOpen = async (filename, tipo) => {
