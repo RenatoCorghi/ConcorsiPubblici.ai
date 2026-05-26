@@ -679,19 +679,18 @@ async function _searchVIPContent(query) {
     if (searchState.vipFilter !== query) return;
 
     try {
-        // FASE 1: plainto_tsquery — stemming italiano preciso
-        // "ricettazione" → trova solo ricettazione/ricettazioni (stem corretto)
+        // FASE 1: plainto_tsquery — stemming italiano preciso (usando 'simple' coerentemente con la colonna del DB!)
+        // "ricettazione" → trova ricettazione (coincidenza esatta delle parole)
         let { data, error } = await window.supabaseClient
             .from('rag_chunks')
             .select('document_id')
-            .textSearch('fts', query, { type: 'plain', config: 'italian' })
+            .textSearch('fts', query, { type: 'plain', config: 'simple' })
             .limit(1000);
 
         if (error) throw error;
         if (searchState.vipFilter !== query) return;
 
-        // FASE 2: Se plainto_tsquery non trova nulla (parola parziale/incompleta),
-        // fallback a prefix matching con :* (es. "ricett" → "ricett:*")
+        // FASE 2: Se plainto_tsquery non trova nulla, fallback a prefix matching con :* (usando 'simple')
         if (!data || data.length === 0) {
             const words = query.trim().split(/\s+/).filter(w => w.length >= 2);
             if (words.length > 0) {
@@ -705,7 +704,7 @@ async function _searchVIPContent(query) {
                     const fallback = await window.supabaseClient
                            .from('rag_chunks')
                            .select('document_id')
-                           .textSearch('fts', tsQuery, { config: 'italian' })
+                           .textSearch('fts', tsQuery, { config: 'simple' })
                            .limit(1000);
 
                     if (searchState.vipFilter !== query) return;
@@ -721,12 +720,14 @@ async function _searchVIPContent(query) {
 
         // Se non abbiamo ancora caricato i documenti VIP (es. pagina inizialmente vuota),
         // carichiamo solo quelli che contengono la parola cercata per un risparmio enorme di risorse!
+        // Eseguiamo anche il filtro sui soli tipi VIP validi per evitare che sentenze semplici non filtrate inquinino l'elenco.
         if (!searchState.vipCategory || !searchState.vipDocs) {
             if (matchedDocIds.length > 0) {
                 const { data: matchedDocs, error: docsError } = await window.supabaseClient
                     .from('rag_documents')
                     .select('id, titolo, tipo, materia, filename, is_caso_sistematico')
-                    .in('id', matchedDocIds);
+                    .in('id', matchedDocIds)
+                    .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'sentenza_admin_vip', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip', 'sentenza_corte_cost_vip', 'sentenza_corte_cost', 'sentenza_cc_vip', 'scheda_manualistica', 'scheda_manualistica_v3']);
 
                 if (docsError) throw docsError;
                 if (searchState.vipFilter !== query) return;
