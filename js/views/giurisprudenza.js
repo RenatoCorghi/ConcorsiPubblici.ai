@@ -621,38 +621,42 @@ async function _searchVIPContent(query) {
     if (searchState.vipFilter !== query) return;
 
     try {
-        // Costruisci tsquery con prefix matching: "ricett" → "ricett:*"
-        // "reato colposo" → "reato & colposo:*" (ultimo termine con prefix)
-        const words = query.trim().split(/\s+/).filter(w => w.length >= 2);
-        if (words.length === 0) {
-            searchState.contentSearching = false;
-            renderVIPSchede();
-            return;
-        }
-
-        const tsQuery = words.map((w, i) => {
-            // Rimuovi caratteri speciali per sicurezza tsquery
-            const cleaned = w.replace(/[^a-zA-ZàèéìòùÀÈÉÌÒÙ0-9]/g, '');
-            if (!cleaned) return null;
-            // Ultimo termine con prefix matching, gli altri come stem completi
-            return i === words.length - 1 ? `${cleaned}:*` : cleaned;
-        }).filter(Boolean).join(' & ');
-
-        if (!tsQuery) {
-            searchState.contentSearching = false;
-            renderVIPSchede();
-            return;
-        }
-
-        // Usa to_tsquery (niente 'type') per supportare la sintassi :* di prefix
-        const { data, error } = await window.supabaseClient
+        // FASE 1: plainto_tsquery — stemming italiano preciso
+        // "ricettazione" → trova solo ricettazione/ricettazioni (stem corretto)
+        let { data, error } = await window.supabaseClient
             .from('rag_chunks')
             .select('document_id')
-            .textSearch('fts', tsQuery, { config: 'italian' })
+            .textSearch('fts', query, { type: 'plain', config: 'italian' })
             .limit(1000);
 
         if (error) throw error;
-        if (searchState.vipFilter !== query) return; // query cambiata
+        if (searchState.vipFilter !== query) return;
+
+        // FASE 2: Se plainto_tsquery non trova nulla (parola parziale/incompleta),
+        // fallback a prefix matching con :* (es. "ricett" → "ricett:*")
+        if (!data || data.length === 0) {
+            const words = query.trim().split(/\s+/).filter(w => w.length >= 2);
+            if (words.length > 0) {
+                const tsQuery = words.map((w, i) => {
+                    const cleaned = w.replace(/[^a-zA-ZàèéìòùÀÈÉÌÒÙ0-9]/g, '');
+                    if (!cleaned) return null;
+                    return i === words.length - 1 ? `${cleaned}:*` : cleaned;
+                }).filter(Boolean).join(' & ');
+
+                if (tsQuery) {
+                    const fallback = await window.supabaseClient
+                        .from('rag_chunks')
+                        .select('document_id')
+                        .textSearch('fts', tsQuery, { config: 'italian' })
+                        .limit(1000);
+
+                    if (searchState.vipFilter !== query) return;
+                    if (!fallback.error && fallback.data) {
+                        data = fallback.data;
+                    }
+                }
+            }
+        }
 
         searchState.contentMatchIds = new Set(data.map(d => d.document_id));
         searchState.contentSearching = false;
