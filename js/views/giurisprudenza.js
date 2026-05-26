@@ -21,7 +21,9 @@ let searchState = {
     tab: 'schede',       // Rimosso amministrativa di default
     vipDocs: null,       // Cache per schede VIP
     vipFilter: '',       // Filtro testo per schede VIP
-    vipCategory: 'all'   // Categoria attiva VIP
+    vipCategory: 'all',  // Categoria attiva VIP
+    contentMatchIds: null,   // Set<document_id> da ricerca FTS nel contenuto
+    contentSearching: false  // Flag ricerca contenuto in corso
 };
 
 const TIPI = ['SENTENZA', 'ORDINANZA', 'DECRETO', 'PARERE'];
@@ -115,7 +117,7 @@ export function renderGiurisprudenza() {
                     <div class="flex flex-col md:flex-row gap-3 mb-4">
                         <div class="flex-grow relative">
                             <i data-lucide="search" class="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
-                            <input id="ga-vip-search" type="text" placeholder="Filtra schede..." 
+                            <input id="ga-vip-search" type="text" placeholder="Cerca per titolo o contenuto (es. ricettazione, appalti, risarcimento...)" 
                                 class="w-full pl-10 pr-4 py-3 bg-gray-900 border border-gray-700 rounded-xl text-white text-sm placeholder-gray-500 focus:border-emerald-500 focus:outline-none transition"
                                 value="${searchState.vipFilter}"
                                 oninput="window._gaVipFilter(this.value)">
@@ -527,10 +529,23 @@ function renderVIPSchede() {
         if (catMap[searchState.vipCategory]) docs = docs.filter(catMap[searchState.vipCategory]);
     }
 
-    // Text filter
+    // Text filter — titolo/filename + contenuto (FTS)
+    let contentOnlyIds = new Set();
     if (searchState.vipFilter) {
         const q = searchState.vipFilter.toLowerCase();
-        docs = docs.filter(d => d.titolo?.toLowerCase().includes(q) || d.filename?.toLowerCase().includes(q));
+        docs = docs.filter(d => {
+            const titleMatch = d.titolo?.toLowerCase().includes(q) || d.filename?.toLowerCase().includes(q);
+            const contentMatch = searchState.contentMatchIds?.has(d.id);
+            if (contentMatch && !titleMatch) contentOnlyIds.add(d.id);
+            return titleMatch || contentMatch;
+        });
+        // Ordina: match titolo prima, match solo-contenuto dopo
+        docs.sort((a, b) => {
+            const aContent = contentOnlyIds.has(a.id);
+            const bContent = contentOnlyIds.has(b.id);
+            if (aContent !== bContent) return aContent ? 1 : -1;
+            return 0;
+        });
     }
 
     const catLabel = (d) => {
@@ -546,7 +561,13 @@ function renderVIPSchede() {
         return { text: 'Altro', color: 'gray' };
     };
 
-    let html = `<div class="text-xs text-gray-500 mb-2">${docs.length} schede${searchState.vipFilter ? ` per "${escapeHtml(searchState.vipFilter)}"` : ''}</div>`;
+    let countExtra = '';
+    if (searchState.vipFilter && searchState.contentSearching) {
+        countExtra = ' · <span class="text-emerald-400"><span class="inline-block animate-pulse">🔍</span> Ricerca nel contenuto...</span>';
+    } else if (searchState.vipFilter && contentOnlyIds.size > 0) {
+        countExtra = ` · <span class="text-amber-400">${contentOnlyIds.size} trovate nel contenuto</span>`;
+    }
+    let html = `<div class="text-xs text-gray-500 mb-2">${docs.length} schede${searchState.vipFilter ? ` per "${escapeHtml(searchState.vipFilter)}"` : ''}${countExtra}</div>`;
 
     if (docs.length === 0) {
         html += '<div class="text-center py-12 text-gray-500"><p>Nessuna scheda trovata.</p></div>';
@@ -558,6 +579,7 @@ function renderVIPSchede() {
                 <div class="p-4 rounded-xl border border-gray-800 bg-gray-900/50 hover:bg-gray-800/70 hover:border-${cat.color}-500/50 transition cursor-pointer group relative overflow-hidden" onclick="window._gaVipOpen('${escapeHtml(d.filename.replace(/'/g, "\\'"))}', '${d.tipo}')">
                     <div class="flex items-center gap-2 mb-2">
                         <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-${cat.color}-900/50 text-${cat.color}-300 border border-${cat.color}-800/50">${cat.text}</span>
+                        ${contentOnlyIds.has(d.id) ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-900/50 text-amber-300 border border-amber-800/50 flex items-center gap-0.5"><i data-lucide="search" class="w-2.5 h-2.5"></i>contenuto</span>' : ''}
                     </div>
                     <p class="text-sm font-medium text-gray-200 group-hover:text-white transition line-clamp-2 leading-snug">${escapeHtml(d.titolo || d.filename)}</p>
                 </div>
@@ -570,10 +592,52 @@ function renderVIPSchede() {
     if (window.lucide) lucide.createIcons();
 }
 
+let _contentSearchTimeout = null;
+
 window._gaVipFilter = (val) => {
     searchState.vipFilter = val;
+    clearTimeout(_contentSearchTimeout);
+
+    if (!val || val.length < 3) {
+        searchState.contentMatchIds = null;
+        searchState.contentSearching = false;
+        renderVIPSchede();
+        return;
+    }
+
+    // Filtro immediato per titolo/filename
     renderVIPSchede();
+
+    // Ricerca nel contenuto debounced (600ms)
+    searchState.contentSearching = true;
+    _contentSearchTimeout = setTimeout(() => _searchVIPContent(val), 600);
 };
+
+async function _searchVIPContent(query) {
+    if (!window.supabaseClient || !query || query.length < 3) return;
+    // Se la query è cambiata nel frattempo, ignora
+    if (searchState.vipFilter !== query) return;
+
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('rag_chunks')
+            .select('document_id')
+            .textSearch('fts', query, { type: 'plain', config: 'italian' })
+            .limit(1000);
+
+        if (error) throw error;
+        if (searchState.vipFilter !== query) return; // query cambiata
+
+        searchState.contentMatchIds = new Set(data.map(d => d.document_id));
+        searchState.contentSearching = false;
+        renderVIPSchede();
+    } catch (err) {
+        console.error('[VIP] Errore ricerca contenuto:', err);
+        searchState.contentSearching = false;
+        searchState.contentMatchIds = null;
+        renderVIPSchede();
+    }
+}
 
 window._gaVipCategory = (cat) => {
     searchState.vipCategory = cat;
