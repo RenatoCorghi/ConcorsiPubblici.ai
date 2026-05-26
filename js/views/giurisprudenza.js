@@ -605,11 +605,13 @@ window._gaVipFilter = (val) => {
         return;
     }
 
-    // Filtro immediato per titolo/filename
+    // Setta flag PRIMA del render così l'indicatore appare subito
+    searchState.contentSearching = true;
+
+    // Filtro immediato per titolo/filename (+ mostra indicatore ricerca)
     renderVIPSchede();
 
     // Ricerca nel contenuto debounced (600ms)
-    searchState.contentSearching = true;
     _contentSearchTimeout = setTimeout(() => _searchVIPContent(val), 600);
 };
 
@@ -619,10 +621,34 @@ async function _searchVIPContent(query) {
     if (searchState.vipFilter !== query) return;
 
     try {
+        // Costruisci tsquery con prefix matching: "ricett" → "ricett:*"
+        // "reato colposo" → "reato & colposo:*" (ultimo termine con prefix)
+        const words = query.trim().split(/\s+/).filter(w => w.length >= 2);
+        if (words.length === 0) {
+            searchState.contentSearching = false;
+            renderVIPSchede();
+            return;
+        }
+
+        const tsQuery = words.map((w, i) => {
+            // Rimuovi caratteri speciali per sicurezza tsquery
+            const cleaned = w.replace(/[^a-zA-ZàèéìòùÀÈÉÌÒÙ0-9]/g, '');
+            if (!cleaned) return null;
+            // Ultimo termine con prefix matching, gli altri come stem completi
+            return i === words.length - 1 ? `${cleaned}:*` : cleaned;
+        }).filter(Boolean).join(' & ');
+
+        if (!tsQuery) {
+            searchState.contentSearching = false;
+            renderVIPSchede();
+            return;
+        }
+
+        // Usa to_tsquery (niente 'type') per supportare la sintassi :* di prefix
         const { data, error } = await window.supabaseClient
             .from('rag_chunks')
             .select('document_id')
-            .textSearch('fts', query, { type: 'plain', config: 'italian' })
+            .textSearch('fts', tsQuery, { config: 'italian' })
             .limit(1000);
 
         if (error) throw error;
