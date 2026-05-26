@@ -479,6 +479,12 @@ async function loadVIPSchede() {
         return;
     }
 
+    // Se c'è una ricerca attiva, la deleghiamo interamente a _searchVIPContent per trovare tutti i risultati nel DB
+    if (searchState.vipFilter) {
+        _searchVIPContent(searchState.vipFilter);
+        return;
+    }
+
     // Use cache if available and we are not doing a paginated load
     if (searchState.vipDocs && searchState.vipDocs.length > 0 && searchState.vipOffset > 0 && searchState.vipOffset % 90 !== 0) {
         renderVIPSchede();
@@ -680,7 +686,10 @@ window._gaVipFilter = (val) => {
     if (!val || val.length < 3) {
         searchState.contentMatchIds = null;
         searchState.contentSearching = false;
-        renderVIPSchede();
+        searchState.vipDocs = null;
+        searchState.vipOffset = 0;
+        searchState.vipHasMore = false;
+        loadVIPSchede();
         return;
     }
 
@@ -739,31 +748,29 @@ async function _searchVIPContent(query) {
         const matchedDocIds = Array.from(new Set(data.map(d => d.document_id)));
         searchState.contentMatchIds = new Set(matchedDocIds);
 
-        // Se non abbiamo ancora caricato i documenti VIP (es. pagina inizialmente vuota),
-        // carichiamo solo quelli che contengono la parola cercata per un risparmio enorme di risorse!
+        // Cerchiamo sempre i documenti che hanno fatto match dal database,
+        // garantendo una ricerca globale su tutte le schede (e non solo su quelle precaricate in prima pagina!)
         // Eseguiamo anche il filtro sui soli tipi VIP validi per evitare che sentenze semplici non filtrate inquinino l'elenco.
-        if (!searchState.vipCategory || !searchState.vipDocs) {
-            if (matchedDocIds.length > 0) {
-                const { data: matchedDocs, error: docsError } = await window.supabaseClient
-                    .from('rag_documents')
-                    .select('id, titolo, tipo, materia, filename, is_caso_sistematico')
-                    .in('id', matchedDocIds)
-                    .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'sentenza_admin_vip', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip', 'sentenza_corte_cost_vip', 'sentenza_corte_cost', 'sentenza_cc_vip', 'scheda_manualistica', 'scheda_manualistica_v3']);
+        if (matchedDocIds.length > 0) {
+            const { data: matchedDocs, error: docsError } = await window.supabaseClient
+                .from('rag_documents')
+                .select('id, titolo, tipo, materia, filename, is_caso_sistematico')
+                .in('id', matchedDocIds)
+                .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'sentenza_admin_vip', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip', 'sentenza_corte_cost_vip', 'sentenza_corte_cost', 'sentenza_cc_vip', 'scheda_manualistica', 'scheda_manualistica_v3']);
 
-                if (docsError) throw docsError;
-                if (searchState.vipFilter !== query) return;
+            if (docsError) throw docsError;
+            if (searchState.vipFilter !== query) return;
 
-                // Dedup
-                const seen = new Set();
-                searchState.vipDocs = matchedDocs.filter(d => {
-                    const key = d.filename + d.titolo;
-                    if (seen.has(key)) return false;
-                    seen.add(key);
-                    return true;
-                });
-            } else {
-                searchState.vipDocs = [];
-            }
+            // Dedup
+            const seen = new Set();
+            searchState.vipDocs = matchedDocs.filter(d => {
+                const key = d.filename + d.titolo;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+        } else {
+            searchState.vipDocs = [];
         }
 
         searchState.contentSearching = false;
