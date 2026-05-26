@@ -751,15 +751,23 @@ async function _searchVIPContent(query) {
         // Cerchiamo sempre i documenti che hanno fatto match dal database,
         // garantendo una ricerca globale su tutte le schede (e non solo su quelle precaricate in prima pagina!)
         // Eseguiamo anche il filtro sui soli tipi VIP validi per evitare che sentenze semplici non filtrate inquinino l'elenco.
+        // Eseguiamo la query in blocchi di 100 elementi per evitare errori 400 Bad Request legati alla lunghezza dell'URL.
         if (matchedDocIds.length > 0) {
-            const { data: matchedDocs, error: docsError } = await window.supabaseClient
-                .from('rag_documents')
-                .select('id, titolo, tipo, materia, filename, is_caso_sistematico')
-                .in('id', matchedDocIds)
-                .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'sentenza_admin_vip', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip', 'sentenza_corte_cost_vip', 'sentenza_corte_cost', 'sentenza_cc_vip', 'scheda_manualistica', 'scheda_manualistica_v3']);
+            let matchedDocs = [];
+            const batchSize = 100;
 
-            if (docsError) throw docsError;
-            if (searchState.vipFilter !== query) return;
+            for (let i = 0; i < matchedDocIds.length; i += batchSize) {
+                const batch = matchedDocIds.slice(i, i + batchSize);
+                const { data: batchData, error: docsError } = await window.supabaseClient
+                    .from('rag_documents')
+                    .select('id, titolo, tipo, materia, filename, is_caso_sistematico')
+                    .in('id', batch)
+                    .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'sentenza_admin_vip', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip', 'sentenza_corte_cost_vip', 'sentenza_corte_cost', 'sentenza_cc_vip', 'scheda_manualistica', 'scheda_manualistica_v3']);
+
+                if (docsError) throw docsError;
+                if (searchState.vipFilter !== query) return;
+                if (batchData) matchedDocs.push(...batchData);
+            }
 
             // Dedup
             const seen = new Set();
