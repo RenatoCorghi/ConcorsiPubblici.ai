@@ -21,7 +21,7 @@ let searchState = {
     tab: 'schede',       // Rimosso amministrativa di default
     vipDocs: null,       // Cache per schede VIP
     vipFilter: '',       // Filtro testo per schede VIP
-    vipCategory: 'all',  // Categoria attiva VIP
+    vipCategory: '',     // Categoria attiva VIP (di default vuota per lazy loading)
     contentMatchIds: null,   // Set<document_id> da ricerca FTS nel contenuto
     contentSearching: false  // Flag ricerca contenuto in corso
 };
@@ -462,6 +462,21 @@ async function loadVIPSchede() {
     const container = document.getElementById('ga-vip-results');
     if (!container) return;
 
+    // Se non c'è nessuna categoria selezionata e non c'è ricerca attiva, mostriamo lo stato iniziale vuoto
+    if (!searchState.vipCategory && !searchState.vipFilter) {
+        container.innerHTML = `
+            <div class="text-center py-16 text-gray-500">
+                <div class="w-16 h-16 rounded-full bg-gray-800/30 flex items-center justify-center mx-auto mb-4 border border-gray-800/50">
+                    <i data-lucide="sparkles" class="w-8 h-8 text-emerald-500/70 animate-pulse"></i>
+                </div>
+                <p class="text-base font-medium text-gray-300 mb-1">Seleziona una sezione</p>
+                <p class="text-xs text-gray-500 max-w-md mx-auto">Scegli una categoria di sentenze qui sopra oppure digita un termine nella barra di ricerca per visualizzare le schede della giurisprudenza decodificata.</p>
+            </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
+
     // Use cache if available
     if (searchState.vipDocs) {
         renderVIPSchede();
@@ -473,17 +488,60 @@ async function loadVIPSchede() {
         return;
     }
 
+    container.innerHTML = `
+        <div class="text-center py-12">
+            <div class="inline-block w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-gray-500 text-sm mt-3">Caricamento schede...</p>
+        </div>
+    `;
+
     try {
         let allDocs = [];
         let offset = 0;
         const limit = 1000;
+
+        // Costruiamo la query mirata in base alla categoria selezionata per caricare solo il necessario!
+        let queryBuilder = window.supabaseClient.from('rag_documents').select('id, titolo, tipo, materia, filename, is_caso_sistematico');
+
+        const cat = searchState.vipCategory;
+        if (cat && cat !== 'all') {
+            if (cat === 'ssuu_civili') {
+                queryBuilder = queryBuilder
+                    .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip'])
+                    .in('materia', ['Diritto Civile', 'Giurisprudenza Civile']);
+            } else if (cat === 'ssuu_penali') {
+                queryBuilder = queryBuilder
+                    .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip'])
+                    .in('materia', ['Diritto Penale', 'Giurisprudenza Penale']);
+            } else if (cat === 'corte_cost') {
+                queryBuilder = queryBuilder.in('tipo', ['sentenza_corte_cost_vip', 'sentenza_cc_vip']);
+            } else if (cat === 'sez_semplici') {
+                queryBuilder = queryBuilder.in('tipo', ['sentenza_sez_semplici_vip', 'scheda_manualistica_v3']);
+            } else if (cat === 'massimari') {
+                queryBuilder = queryBuilder.eq('tipo', 'massimario_cassazione');
+            } else if (cat === 'riviste') {
+                queryBuilder = queryBuilder.eq('is_caso_sistematico', true);
+            } else if (cat === 'cds') {
+                queryBuilder = queryBuilder
+                    .in('tipo', ['sentenza_admin', 'sentenza_admin_vip'])
+                    .like('filename', 'cds_%');
+            } else if (cat === 'tar') {
+                queryBuilder = queryBuilder
+                    .in('tipo', ['sentenza_admin', 'sentenza_admin_vip'])
+                    .like('filename', 'tar-%');
+            } else if (cat === 'cgt') {
+                queryBuilder = queryBuilder.in('tipo', ['sentenza_cgt_vip', 'scheda_manualistica']);
+            }
+        } else {
+            // Per 'all' carichiamo l'intero dataset strutturato in blocchi
+            queryBuilder = queryBuilder.in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'sentenza_admin_vip', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip', 'sentenza_corte_cost_vip', 'sentenza_corte_cost', 'sentenza_cc_vip', 'scheda_manualistica', 'scheda_manualistica_v3']);
+        }
+
         while (true) {
-            const { data, error } = await window.supabaseClient
-                .from('rag_documents')
-                .select('id, titolo, tipo, materia, filename, is_caso_sistematico')
-                .in('tipo', ['sentenza_ssuu', 'sentenza_ssuu_vip', 'sentenza_admin', 'sentenza_admin_vip', 'massimario_cassazione', 'sentenza_sez_semplici_vip', 'rivista_vip', 'sentenza_cgt_vip', 'sentenza_corte_cost_vip', 'sentenza_corte_cost', 'sentenza_cc_vip', 'scheda_manualistica', 'scheda_manualistica_v3'])
+            const { data, error } = await queryBuilder
                 .order('titolo', { ascending: true })
                 .range(offset, offset + limit - 1);
+
             if (error) throw error;
             if (!data || data.length === 0) break;
             allDocs.push(...data);
@@ -645,10 +703,10 @@ async function _searchVIPContent(query) {
 
                 if (tsQuery) {
                     const fallback = await window.supabaseClient
-                        .from('rag_chunks')
-                        .select('document_id')
-                        .textSearch('fts', tsQuery, { config: 'italian' })
-                        .limit(1000);
+                           .from('rag_chunks')
+                           .select('document_id')
+                           .textSearch('fts', tsQuery, { config: 'italian' })
+                           .limit(1000);
 
                     if (searchState.vipFilter !== query) return;
                     if (!fallback.error && fallback.data) {
@@ -658,7 +716,34 @@ async function _searchVIPContent(query) {
             }
         }
 
-        searchState.contentMatchIds = new Set(data.map(d => d.document_id));
+        const matchedDocIds = Array.from(new Set(data.map(d => d.document_id)));
+        searchState.contentMatchIds = new Set(matchedDocIds);
+
+        // Se non abbiamo ancora caricato i documenti VIP (es. pagina inizialmente vuota),
+        // carichiamo solo quelli che contengono la parola cercata per un risparmio enorme di risorse!
+        if (!searchState.vipCategory || !searchState.vipDocs) {
+            if (matchedDocIds.length > 0) {
+                const { data: matchedDocs, error: docsError } = await window.supabaseClient
+                    .from('rag_documents')
+                    .select('id, titolo, tipo, materia, filename, is_caso_sistematico')
+                    .in('id', matchedDocIds);
+
+                if (docsError) throw docsError;
+                if (searchState.vipFilter !== query) return;
+
+                // Dedup
+                const seen = new Set();
+                searchState.vipDocs = matchedDocs.filter(d => {
+                    const key = d.filename + d.titolo;
+                    if (seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                });
+            } else {
+                searchState.vipDocs = [];
+            }
+        }
+
         searchState.contentSearching = false;
         renderVIPSchede();
     } catch (err) {
@@ -671,6 +756,7 @@ async function _searchVIPContent(query) {
 
 window._gaVipCategory = (cat) => {
     searchState.vipCategory = cat;
+    searchState.vipDocs = null; // Forza il ricaricamento mirato per la nuova categoria!
     // Re-render tabs to show active state + results
     const main = document.getElementById('main-content');
     if (main) {
