@@ -136,6 +136,10 @@ COLLISIONE NUMERI TRA RAMI (ATTENZIONE): Lo stesso numero di sentenza può esist
 
 OBBLIGO DI ESTRAZIONE DELLA MASSIMA: Prima di citare qualsiasi estremo giurisprudenziale nella Lectio, DEVI aver estratto nella <scaletta> la RATIO DECIDENDI o il PRINCIPIO DI DIRITTO testuale dal chunk RAG. Non basta citare "Cass. n. XXXX/YYYY": devi sapere COSA ha statuito. Se dal frammento RAG riesci a estrarre solo il dispositivo (P.Q.M.) ma non la ratio, la sentenza ha valore limitato — segnalalo nella scaletta e nel testo usa formule come "La Suprema Corte, pur non enunciando un principio di diritto in senso formale, ha confermato l'orientamento secondo cui...".
 
+VINCOLO DI CITAZIONE VERBATIM OBBLIGATORIA: Quando citi una sentenza dal RAG nella Lectio, DEVI riportare tra virgolette almeno UNA FRASE TESTUALE del frammento RAG che giustifichi l'associazione numero→principio. Se non riesci a trovare nel chunk RAG una frase che supporti il principio che stai attribuendo a quella sentenza, NON CITARE il numero. Esempio corretto: "La Cassazione n. 35823/2023 ha affermato che 'ricorre un'ipotesi di litisconsorzio necessario tra le parti del contratto stesso'". Esempio VIETATO: "La Cassazione n. 35823/2023 ha stabilito il principio X" [dove X non è presente nel chunk RAG]. Se il chunk RAG associato a quel numero parla di un argomento DIVERSO (es. il numero è nel chunk ma il chunk tratta di liquidazione societaria e non di litisconsorzio), l'associazione è FALSA — NON citare quel numero.
+
+VINCOLO ANTI-RIDONDANZA INTER-MODULO: Prima di sviluppare un concetto, verifica nel blocco <thought> se quel concetto (norma, sentenza, principio) è già stato trattato nei moduli precedenti. Se nel prompt è presente un blocco <CONCETTI_GIA_TRATTATI>, consultalo OBBLIGATORIAMENTE. Se un concetto è già stato sviscerato in un modulo precedente, NON ripeterlo: usa la formula "Come già illustrato nel Modulo X, [richiamo di una riga]" e prosegui con materiale NUOVO e INEDITO. La ripetizione di interi paragrafi o concetti già scritti è un difetto grave che riduce drasticamente il valore didattico della lezione e va evitata con ogni mezzo.
+
 AGGIORNAMENTO NORMATIVO PRIORITARIO: Dai precedenza assoluta alle riforme e ai decreti legislativi del biennio 2024-2025 (es. D.Lgs. 139/2024 in materia fiscale, riforma Cartabia, ecc.) qualora incidano sulla materia. Il diritto vivente è composto sia dalla nomofilachia che dal dato testuale codicistico novellato.
 
 PRECISIONE DIACRONICA E RISOLUZIONE DEGLI ANACRONISMI (SISTEMICA): Il diritto è stratificazione. Non operare mai "compressioni cronologiche" né generare anacronismi. Se il <RAG_CONTEXT> contiene informazioni o sentenze contrastanti di anni diversi, applica la regola della "Recency Semantica": l'informazione o il dato normativo legato all'anno più recente (es. 2025 o 2026) rappresenta il DIRITTO VIGENTE. Spiega l'evoluzione storica fase per fase nei moduli storici (Modulo 2 e 3) per illustrare la genesi dell'istituto, ma qualifica come vigente ed operante ad oggi esclusivamente l'ultimo approdo normativo o giurisprudenziale, citando le novelle e le riforme (es. dimezzamento termini, riforme di semplificazione, mutamenti nomofilattici) in modo inequivocabile. Non mediare o confondere mai i regimi abrogati con quelli vigenti.
@@ -376,6 +380,9 @@ export const LezioneController = {
             var data = await response.json();
             var reply = data.choices[0].message.content.trim();
 
+            // Salva le fonti RAG per la verifica anti-allucinazione
+            if (data.rag_sources) AppState.lezioneMeta.ragSources = data.rag_sources;
+
             Metering.consume('tutorChats');
             Metering.consumeFreeLifetime('lezione'); // Segna la socratica come usata per sempre
             this._addMessage('ai', this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
@@ -486,6 +493,9 @@ export const LezioneController = {
             var data = await response.json();
             var reply = data.choices[0].message.content.trim();
 
+            // Salva le fonti RAG per la verifica anti-allucinazione
+            if (data.rag_sources) AppState.lezioneMeta.ragSources = data.rag_sources;
+
             Metering.consume('tutorChats');
             Metering.consumeFreeLifetime('lezione'); // Segna la socratica come usata per sempre
             this._addMessage('ai', this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
@@ -590,6 +600,9 @@ export const LezioneController = {
 
             var data = await response.json();
             var reply = data.choices[0].message.content.trim();
+
+            // Salva le fonti RAG per la verifica anti-allucinazione
+            if (data.rag_sources) AppState.lezioneMeta.ragSources = data.rag_sources;
 
             Metering.consume('tutorChats');
             Metering.consumeFreeLifetime('lectio'); // Segna la lectio come usata per sempre
@@ -745,11 +758,15 @@ export const LezioneController = {
                 });
             });
 
-            // Chiedi esplicitamente il prossimo modulo
+            // STATE TRACKING: costruisci il blocco dei concetti già trattati
+            var coveredBlock = this._buildCoveredTopicsBlock();
+
+            // Chiedi esplicitamente il prossimo modulo con state tracking
             messages.push({
                 role: 'user',
                 content: `Prosegui con il **MODULO ${nextModNum}: ${nextModTitle}**. Mantieni lo stesso registro e la stessa profondità. 
-⚠️ IMPORTANTE: Genera ESCLUSIVAMENTE il testo del nuovo Modulo. TI È SEVERAMENTE VIETATO copiare, ripetere o stampare nuovamente il testo dei moduli precedenti. Scrivi SOLO il contenuto inedito del modulo ${nextModNum}. Prima di iniziare, pensa passo-passo in un blocco invisibile <thought>...</thought> ed elenca i numeri esatti di sentenza che hai estratto dal RAG. Non citare MAI numeri non presenti nel RAG. Calibra rigidamente la lunghezza affinché NON superi le 1000 parole per prevenire troncamenti accidentali dell'API. Arriva sempre al termine logico del discorso del modulo e concludi inserendo il relativo tag [CONTINUA] (o chiudi in modo definitivo senza tag se è il Modulo 7).`
+⚠️ IMPORTANTE: Genera ESCLUSIVAMENTE il testo del nuovo Modulo. TI È SEVERAMENTE VIETATO copiare, ripetere o stampare nuovamente il testo dei moduli precedenti. Scrivi SOLO il contenuto inedito del modulo ${nextModNum}. Prima di iniziare, pensa passo-passo in un blocco invisibile <thought>...</thought> ed elenca i numeri esatti di sentenza che hai estratto dal RAG. Non citare MAI numeri non presenti nel RAG. Calibra rigidamente la lunghezza affinché NON superi le 1000 parole per prevenire troncamenti accidentali dell'API. Arriva sempre al termine logico del discorso del modulo e concludi inserendo il relativo tag [CONTINUA] (o chiudi in modo definitivo senza tag se è il Modulo 7).
+${coveredBlock}`
             });
 
             var response = await fetch('/api/proxy', {
@@ -780,6 +797,15 @@ export const LezioneController = {
 
             var data = await response.json();
             var reply = data.choices[0].message.content.trim();
+
+            // Aggiorna le fonti RAG per verifica (merge senza duplicati)
+            if (data.rag_sources) {
+                if (!AppState.lezioneMeta.ragSources) AppState.lezioneMeta.ragSources = [];
+                for (const src of data.rag_sources) {
+                    const exists = AppState.lezioneMeta.ragSources.some(s => s.tipo === src.tipo && s.snippet === src.snippet);
+                    if (!exists) AppState.lezioneMeta.ragSources.push(src);
+                }
+            }
 
             Metering.consume('tutorChats');
             this._addMessage('ai', this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
@@ -1309,21 +1335,57 @@ export const LezioneController = {
         
         // --- CHECK 1: Citazioni non verificate nel RAG ---
         if (ragSources && ragSources.length > 0) {
-            const sentenceRegex = /(?:Cass\.?|Cons\.? Stato|TAR|Consiglio di Stato|Cassazione).*?(?:n\.?|num\.?)\s*([0-9]+)\/(20[0-9]{2})/gi;
+            const sentenceRegex = /(?:Cass\.?|Cons\.? Stato|TAR|Consiglio di Stato|Cassazione)[^.]*?(?:n\.?|num\.?)\s*([0-9]+)\/(20[0-9]{2})/gi;
             let match;
             let unverified = [];
+            let mismatch = [];
             const ragContent = JSON.stringify(ragSources);
             
             while ((match = sentenceRegex.exec(text)) !== null) {
                 const num = match[1];
                 const year = match[2];
-                if (!ragContent.includes(num + '/' + year) && !ragContent.includes('n. ' + num)) {
-                    unverified.push(match[0]);
+                const citationKey = num + '/' + year;
+                
+                // Estrai il contesto della citazione nel testo generato (±150 chars)
+                const ctxStart = Math.max(0, match.index - 150);
+                const ctxEnd = Math.min(text.length, match.index + match[0].length + 150);
+                const citationContext = text.substring(ctxStart, ctxEnd).toLowerCase();
+                
+                // Cerca il chunk RAG che contiene questo numero
+                const matchingSource = ragSources.find(s => {
+                    const content = (s.fullContent || s.snippet || '').toLowerCase();
+                    return content.includes(citationKey) || content.includes('n. ' + num);
+                });
+                
+                if (!matchingSource) {
+                    // Numero non trovato nel RAG → allucinazione pura
+                    unverified.push(match[0].substring(0, 60));
+                } else {
+                    // Numero trovato → verifica associazione tematica
+                    // Estrai entità chiave dal contesto della citazione e dal chunk RAG
+                    const sourceContent = (matchingSource.fullContent || matchingSource.snippet || '').toLowerCase();
+                    const legalEntities = this._extractLegalEntities(citationContext);
+                    const ragEntities = this._extractLegalEntities(sourceContent);
+                    
+                    // Calcola overlap: almeno 2 entità in comune o 30% parole chiave
+                    const commonEntities = legalEntities.filter(e => ragEntities.includes(e));
+                    const contextWords = citationContext.split(/\s+/).filter(w => w.length > 4);
+                    const ragWords = new Set(sourceContent.split(/\s+/).filter(w => w.length > 4));
+                    const wordOverlap = contextWords.filter(w => ragWords.has(w)).length;
+                    const overlapRatio = contextWords.length > 0 ? wordOverlap / contextWords.length : 0;
+                    
+                    if (commonEntities.length < 2 && overlapRatio < 0.15) {
+                        // MISMATCH ASSOCIATIVO: il numero esiste ma parla di altro
+                        mismatch.push(match[0].substring(0, 60));
+                    }
                 }
             }
             
             if (unverified.length > 0) {
                 alerts.push('<div class="mt-4 p-3 bg-red-900/40 border border-red-500/50 rounded-xl text-red-200 text-sm">⚠️ **Scudo Anti-Allucinazione:** L\'intelligenza artificiale ha citato questi estremi giurisprudenziali che non trovano riscontro diretto nel database: <i>' + unverified.join(', ') + '</i>. Verifica con attenzione.</div>');
+            }
+            if (mismatch.length > 0) {
+                alerts.push('<div class="mt-4 p-3 bg-orange-900/40 border border-orange-500/50 rounded-xl text-orange-200 text-sm">🔍 **Alert Associazione Dubbia:** Queste citazioni esistono nel database ma il contenuto del frammento potrebbe non corrispondere al principio attribuito: <i>' + mismatch.join(', ') + '</i>. Il principio citato nel testo potrebbe non essere supportato dal frammento RAG originale.</div>');
             }
         }
         
@@ -1347,10 +1409,126 @@ export const LezioneController = {
             alerts.push('<div class="mt-3 p-3 bg-yellow-900/40 border border-yellow-500/50 rounded-xl text-yellow-200 text-sm">📡 **Monitor Densità:** Questa risposta contiene ' + vagueCount + ' formule generiche senza estremi specifici. Potrebbe indicare lacune nel database su questo argomento. Valuta la profondità effettiva del contenuto.</div>');
         }
         
+        // --- STATE TRACKING: Estrai concetti coperti da questo modulo ---
+        this._extractCoveredTopics(text);
+        
         if (alerts.length > 0) {
             return text + '\n\n' + alerts.join('\n');
         }
         return text;
+    },
+
+    /**
+     * Estrae entità giuridiche chiave da un testo per il confronto semantico.
+     * Cerca articoli di legge, termini tecnici e concetti giuridici specifici.
+     */
+    _extractLegalEntities: function(text) {
+        const entities = [];
+        const lower = text.toLowerCase();
+        
+        // Articoli di legge (art. 102 c.p.c., art. 1414 c.c., ecc.)
+        const artRegex = /art\.?\s*(\d+[\w-]*)\s*(?:c\.?\s*(?:c|p|proc)?\.?\s*(?:c|p)?\.?)?/gi;
+        let artMatch;
+        while ((artMatch = artRegex.exec(lower)) !== null) {
+            entities.push('art.' + artMatch[1]);
+        }
+        
+        // Termini giuridici chiave (lemmi)
+        const legalTerms = [
+            'litisconsorzio', 'simulazione', 'simulato', 'frode', 'nullità', 'annullamento',
+            'revocatoria', 'contraddittorio', 'pretermessi', 'litisconsorti', 'legittimazione',
+            'risarcimento', 'responsabilità', 'inadempimento', 'risoluzione', 'rescissione',
+            'prescrizione', 'decadenza', 'usucapione', 'possesso', 'proprietà', 'servitù',
+            'ipoteca', 'pegno', 'fideiussione', 'cessione', 'delegazione', 'espromissione',
+            'donazione', 'testamento', 'legittima', 'collazione', 'divisione',
+            'liquidatore', 'cancellata', 'accertamento', 'avviso', 'notifica',
+            'commissorio', 'leonino', 'causa societatis', 'conferimento', 'trust',
+            'autotutela', 'discrezionalità', 'proporzionalità', 'affidamento',
+            'concorso', 'tentativo', 'dolo', 'colpa', 'confisca', 'sequestro'
+        ];
+        
+        for (const term of legalTerms) {
+            if (lower.includes(term)) entities.push(term);
+        }
+        
+        return [...new Set(entities)]; // deduplica
+    },
+
+    /**
+     * STATE TRACKING: Estrae automaticamente i concetti trattati dal testo di un modulo
+     * e li aggiunge a AppState.lezioneMeta.coveredTopics per il tracking inter-modulo.
+     */
+    _extractCoveredTopics: function(text) {
+        if (!AppState.lezioneMeta) return;
+        if (!AppState.lezioneMeta.coveredTopics) AppState.lezioneMeta.coveredTopics = [];
+        
+        const moduleNum = this.currentModule || 1;
+        
+        // Estrai sentenze citate
+        const sentRegex = /(?:Cass\.?|Cons\.? Stato|TAR)[^.]*?(?:n\.?|num\.?)\s*([0-9]+)\/(20[0-9]{2})/gi;
+        let match;
+        const citedCases = [];
+        while ((match = sentRegex.exec(text)) !== null) {
+            citedCases.push(match[1] + '/' + match[2]);
+        }
+        
+        // Estrai articoli di legge citati
+        const artRegex = /art\.?\s*(\d+[\w-]*)\s*(?:c\.?\s*(?:c|p|proc)?\.?\s*(?:c|p)?\.?)?/gi;
+        const citedArticles = [];
+        while ((match = artRegex.exec(text)) !== null) {
+            const artRef = 'art. ' + match[1];
+            if (!citedArticles.includes(artRef)) citedArticles.push(artRef);
+        }
+        
+        // Estrai concetti chiave (titoli di sezione, concetti in grassetto)
+        const boldRegex = /\*\*([^*]+)\*\*/g;
+        const topics = [];
+        while ((match = boldRegex.exec(text)) !== null) {
+            if (match[1].length > 10 && match[1].length < 100) {
+                topics.push(match[1]);
+            }
+        }
+        
+        // Aggiungi il record al tracker
+        if (citedCases.length > 0 || citedArticles.length > 0 || topics.length > 0) {
+            AppState.lezioneMeta.coveredTopics.push({
+                module: moduleNum,
+                topics: topics.slice(0, 5),
+                normative_references: [...new Set(citedArticles)].slice(0, 10),
+                jurisprudence: [...new Set(citedCases)].slice(0, 5)
+            });
+        }
+        
+        console.log(`[Lectio] State Tracking: Modulo ${moduleNum} — ${citedArticles.length} articoli, ${citedCases.length} sentenze, ${topics.length} concetti tracciati`);
+    },
+
+    /**
+     * STATE TRACKING: Costruisce il blocco di testo con i concetti già trattati
+     * da iniettare nel prompt del modulo successivo.
+     */
+    _buildCoveredTopicsBlock: function() {
+        if (!AppState.lezioneMeta?.coveredTopics || AppState.lezioneMeta.coveredTopics.length === 0) {
+            return '';
+        }
+        
+        let block = '\n\n<CONCETTI_GIA_TRATTATI>\n⚠️ I seguenti concetti, norme e sentenze sono GIÀ STATI SVISCERATI nei moduli precedenti. NON ripeterli — usa "Come già illustrato nel Modulo X..." se devi richiamarli brevemente.\n\n';
+        
+        for (const entry of AppState.lezioneMeta.coveredTopics) {
+            block += `📌 MODULO ${entry.module}:\n`;
+            if (entry.topics.length > 0) {
+                block += `   Concetti: ${entry.topics.join('; ')}\n`;
+            }
+            if (entry.normative_references.length > 0) {
+                block += `   Norme: ${entry.normative_references.join(', ')}\n`;
+            }
+            if (entry.jurisprudence.length > 0) {
+                block += `   Sentenze: ${entry.jurisprudence.join(', ')}\n`;
+            }
+            block += '\n';
+        }
+        
+        block += '</CONCETTI_GIA_TRATTATI>';
+        return block;
     },
 
     _updateProgressBar: function(mod) {

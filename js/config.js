@@ -26,7 +26,7 @@ export const APP_CONFIG = {
         },
         anthropic: {
             CORR:   'claude-opus-4-7',              // 🏆 Top: Debrief e Correzione temi
-            LESSON: 'claude-opus-4-7',              // 🏆 Top: Lezione Socratica + Lectio Magistralis
+            LESSON: 'claude-opus-4-8',              // 🏆 Top: Lezione Socratica + Lectio Magistralis
             CHAT:   'claude-sonnet-4-6',            // ⚡ Mid: Tutor CiceroAI e Orale
             GEN:    'claude-haiku-4-5-20251001'     // 🚀 Fast: Quiz AI e generazione tracce
         }

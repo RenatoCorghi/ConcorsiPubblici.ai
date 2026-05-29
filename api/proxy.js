@@ -31,6 +31,7 @@ const MODEL_WHITELIST = {
         'gemini-1.5-flash'
     ],
     anthropic: [
+        'claude-opus-4-8',
         'claude-opus-4-7',
         'claude-sonnet-4-6',
         'claude-haiku-4',
@@ -424,12 +425,13 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
             console.log(`[RAG] Recuperati ${matches.length} chunk, top ${topMatches.length} dopo boost. Top: ${topMatches[0].tipo} (${(topMatches[0].boostedScore*100).toFixed(1)}%)`);
             contextText += "</RAG_CONTEXT>\nISTRUZIONE: Usa questo contesto normativo per fondare le tue risposte. Cita SOLO articoli di legge e principi di diritto riportati testualmente. NON inventare numeri di sentenza. I codici lunghi tipo '202601187' sono ID interni, NON numeri di sentenza.\n";
             
-            // Metadati delle fonti per il frontend (senza il contenuto completo per non appesantire la response)
+            // Metadati delle fonti per il frontend (include fullContent per la verifica citazioni lato client)
             const sources = topMatches.map(m => ({
                 tipo: m.titolo || 'documento',
                 materia: m.materia || '',
                 similarity: m.similarity || 0,
-                snippet: (m.content || '').substring(0, 250)
+                snippet: (m.content || '').substring(0, 250),
+                fullContent: m.content || ''
             }));
             
             return { contextText, sources };
