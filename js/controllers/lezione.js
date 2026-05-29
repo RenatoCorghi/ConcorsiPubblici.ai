@@ -196,6 +196,30 @@ FINALITÀ OPERATIVA: Questa Lectio deve essere immediatamente spendibile nella r
 — Le TRAPPOLE CONCORSUALI da evitare: errori dogmatici tipici che portano all'insufficienza.
 Non limitarti mai alla pura esposizione teorica: ogni passaggio deve rispondere alla domanda "come scrivo questo nel tema?".
 
+═══════════════════════════════════════════════
+⚖️ VINCOLO INTERDISCIPLINARE OBBLIGATORIO
+═══════════════════════════════════════════════
+
+Il giurista di vertice non ragiona a compartimenti stagni. Sotto pena di incompletezza critica, la tua Lectio DEVE integrare i seguenti profili trasversali ogni volta che la materia lo consenta:
+
+DINAMICA PROCESSUALE E PROBATORIA: Trasla ogni principio sostanziale in giudizio. Chi ha l'onere della prova (art. 2697 c.c.)? Quali sono le decadenze? Vi è litisconsorzio necessario? Il regime delle presunzioni (art. 2729 c.c.) è ammesso? La domanda giudiziale richiede trascrizione (art. 2652 c.c.)? La sentenza è di mero accertamento o costitutiva?
+
+INTERSEZIONE TRIBUTARIA E CONCORSUALE: Quando tratti di invalidità civile, elusione, segregazione patrimoniale (simulazione, trust, società fittizie, conferimenti), cerca obbligatoriamente i riflessi fiscali (abuso del diritto tributario ex art. 10-bis L. 212/2000, imposte di registro in misura fissa vs proporzionale) e fallimentari/concorsuali (opponibilità ai creditori, revocatoria fallimentare ex art. 64-67 L.Fall. o CCII, data certa ex art. 2704 c.c. e art. 45 L.Fall.). L'omissione di questi raccordi è il tratto che distingue un tema sufficiente da uno eccellente.
+
+RACCORDO CON PRINCIPI SOVRANAZIONALI: Ove pertinente, innesta i principi eurounitari (direttive antiabuso, proporzionalità, legittimo affidamento) e CEDU (art. 1 Prot. Add., equo processo) per dimostrare padronanza della dimensione multilivello dell'ordinamento.
+
+═══════════════════════════════════════════════
+🧠 ELEMENTO SOGGETTIVO E PROFILO PROBATORIO
+═══════════════════════════════════════════════
+
+Nelle azioni a tutela del credito e nelle patologie negoziali, DEVI sempre esplodere analiticamente l'elemento psicologico richiesto:
+
+GRADUAZIONE DEL DOLO: Distingui con chirurgica precisione tra scientia damni (mera consapevolezza del pregiudizio — dolo generico, sufficiente per atti gratuiti e per atti successivi al sorgere del credito) e consilium fraudis / preordinazione dolosa (dolo specifico, richiesto per atti a titolo oneroso anteriori al credito). Spiega la ricaduta concreta: nell'azione revocatoria di un conferimento societario o di un atto di dotazione di trust anteriore al credito, il creditore deve provare non la generica consapevolezza, ma la specifica preordinazione callida a frodare le future ragioni creditorie.
+
+PARTICIPATIO FRAUDIS DEL TERZO: Per gli atti onerosi, il terzo acquirente deve essere a conoscenza della preordinazione; per gli atti gratuiti, è irrilevante. Questa distinzione è il fulcro dell'art. 2901 c.c. e va sempre esplicitata.
+
+ONERE DELLA PROVA DIFFERENZIATO: L'art. 2697 c.c. si declina diversamente a seconda della tipologia di azione (simulazione tra le parti vs terzi, frode alla legge, revocatoria). Tra le parti, l'art. 1417 c.c. limita la prova testimoniale; per i terzi e i creditori, la prova è libera. Queste asimmetrie probatorie sono un passaggio obbligato nella redazione del tema.
+
 ${VERITA_DOGMATICHE_PLACEHOLDER}
 
 ═══════════════════════════════════════════════
