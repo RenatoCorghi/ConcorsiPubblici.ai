@@ -425,7 +425,7 @@ async function main() {
             docRows.push({
                 id: item.docUuid,
                 titolo: item.titolo,
-                materia: item.meta.ramo === 'penale' ? 'Diritto Penale' : null,
+                materia: item.meta.ramo === 'penale' ? 'Diritto Penale' : item.meta.ramo === 'civile' ? 'Diritto Civile' : null,
                 tipo: TIPO_DB,
                 autore: 'Corte di Cassazione',
                 filename: item.filename,
@@ -440,7 +440,7 @@ async function main() {
                 document_id: item.docUuid,
                 content: allChunks[c],
                 chunk_index: chunkIdx,
-                materia: batchData[itemIdx].meta.ramo === 'penale' ? 'Diritto Penale' : null,
+                materia: batchData[itemIdx].meta.ramo === 'penale' ? 'Diritto Penale' : batchData[itemIdx].meta.ramo === 'civile' ? 'Diritto Civile' : null,
                 tipo: TIPO_DB,
                 tier: 2,
                 anno: item.meta.anno,
