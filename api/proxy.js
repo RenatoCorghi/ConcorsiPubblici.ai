@@ -251,6 +251,8 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
             } else if (matches.length < 3 || topVipScore < 0.85) {
                 // ── WATERFALL FASE 3: Fallback a Tier 2 ──
                 // Il VIP non copre bene l'argomento. Apriamo il recinto.
+                // NOTA: Limitiamo a 2022+ per evitare timeout su dataset enormi
+                // (181k penale + 56k NULL = sequential scan impossibile senza indice vettoriale)
                 try {
                     const fallbackTier2Res = await fetch(hybridUrl, {
                         method: 'POST',
@@ -259,8 +261,9 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                             query_embedding: vector,
                             query_text: userMessageText,
                             match_count: 5,
-                            match_threshold: 0.70,
+                            match_threshold: 0.60,
                             filter_tier: 2,
+                            filter_anno_min: 2022,  // Limita per evitare timeout
                             ...(normalizedMateria ? { filter_materia: normalizedMateria } : {})
                         })
                     });
@@ -275,7 +278,7 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                                 matches.push(m);
                             }
                         }
-                        console.log(`[RAG] 📂 PHASE 3 (Fallback Tier 2): ${tier2Matches.length} sentenze sez. semplici aggiunte`);
+                        console.log(`[RAG] 📂 PHASE 3 (Fallback Tier 2, 2022+): ${tier2Matches.length} sentenze sez. semplici aggiunte`);
                     }
                 } catch (fb2Err) {
                     console.warn(`[RAG] ⚠️ Phase 3 fallita: ${fb2Err.message}`);
@@ -350,8 +353,18 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                 }
             });
             
+            // Hard-filter PQM: se abbiamo abbastanza risultati non-PQM, elimina i PQM
+            const nonPQM = matches.filter(m => !m._isPQMOnly);
+            const pqmCount = matches.length - nonPQM.length;
+            if (nonPQM.length >= 2 && pqmCount > 0) {
+                console.log(`[RAG] 🗑️ PQM hard-filter: rimossi ${pqmCount} chunk dispositivo (${nonPQM.length} risultati utili rimasti)`);
+                matches = nonPQM;
+            } else if (pqmCount > 0) {
+                console.warn(`[RAG] ⚠️ ${pqmCount}/${matches.length} risultati sono PQM/dispositivo — qualità RAG degradata`);
+            }
+            
             // Riordina per score boostato e prendi i top 8
-            matches = matches.filter(m => m.boostedScore > 0.72);
+            matches = matches.filter(m => m.boostedScore > 0.50);
 
             // 4. Filtro post-retrieval per materia (safety net anti-contaminazione)
             // Se abbiamo richiesto una materia specifica, rimuovi i risultati di materie diverse
