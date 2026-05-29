@@ -61,8 +61,8 @@ CREATE OR REPLACE FUNCTION match_documents_hybrid(
     filter_anno_min int DEFAULT NULL
 )
 RETURNS TABLE (
-    id bigint,
-    document_id bigint,
+    id uuid,
+    document_id uuid,
     content text,
     materia text,
     tipo text,

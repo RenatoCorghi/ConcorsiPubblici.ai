@@ -158,7 +158,7 @@ async function main() {
     }
 
     // 3. Elaborazione a Batch
-    const BATCH_SIZE = 25; // Ottimale per evitare rate limits Gemini e massimizzare la velocità
+    const BATCH_SIZE = 10; // Ottimale per evitare rate limits Gemini, timeout DB e massimizzare la stabilità
     let successCount = 0;
     let failCount = 0;
     const startTime = Date.now();

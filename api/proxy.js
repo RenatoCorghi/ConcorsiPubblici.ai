@@ -129,7 +129,7 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 model: 'models/gemini-embedding-2',
-                content: { parts: [{ text: userMessageText }] },
+                content: { parts: [{ text: materiaFilter ? `${normalizeMateria(materiaFilter)}: ${userMessageText}` : userMessageText }] },
                 outputDimensionality: 768
             })
         });
@@ -151,6 +151,8 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
         // B) Premium search — garantisce fonti autorevoli (SS.UU., Massimari, Riviste)
         let matches = [];
         let usedHybrid = false;
+        const normalizedMateria = materiaFilter ? normalizeMateria(materiaFilter) : null;
+        if (normalizedMateria) console.log(`[RAG] 🎯 Filtro materia attivo: ${normalizedMateria}`);
 
         try {
             const allResponses = await Promise.all([
@@ -163,7 +165,8 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                         query_text: userMessageText,
                         match_count: 12,
                         match_threshold: 0.60,
-                        filter_tier: 1  // SOLO VIP
+                        filter_tier: 1,  // SOLO VIP
+                        ...(normalizedMateria ? { filter_materia: normalizedMateria } : {})
                     })
                 }),
                 // B) Premium: solo fonti di alta autorità VIP, soglia bassa
@@ -223,7 +226,8 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                             match_count: 2,
                             match_threshold: 0.80,
                             filter_tier: 2,
-                            filter_anno_min: 2024
+                            filter_anno_min: 2024,
+                            ...(normalizedMateria ? { filter_materia: normalizedMateria } : {})
                         })
                     });
                     if (recentRes.ok) {
@@ -256,7 +260,8 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                             query_text: userMessageText,
                             match_count: 5,
                             match_threshold: 0.70,
-                            filter_tier: 2
+                            filter_tier: 2,
+                            ...(normalizedMateria ? { filter_materia: normalizedMateria } : {})
                         })
                     });
                     if (fallbackTier2Res.ok) {
@@ -331,10 +336,42 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                         m.boostedScore *= 0.95; // Penalizzazione lieve per sentenze vecchie
                     }
                 }
+
+                // 3. Penalizzazione chunk PQM/Dispositivi (inutili per didattica)
+                // I frammenti che contengono solo "P.Q.M." o dispositivo sono privi di
+                // contenuto argomentativo — penalizzarli pesantemente.
+                const contentLower = (m.content || '').toLowerCase();
+                const isPQM = contentLower.includes('p.q.m') || contentLower.includes('per questi motivi') ||
+                              (contentLower.includes('rigetta') && contentLower.includes('ricorso') && contentLower.length < 500) ||
+                              (contentLower.includes('annulla') && contentLower.includes('rinvia') && contentLower.length < 500);
+                if (isPQM) {
+                    m.boostedScore *= 0.50; // Penalizzazione severa: dispositivi inutili
+                    m._isPQMOnly = true;
+                }
             });
             
             // Riordina per score boostato e prendi i top 8
             matches = matches.filter(m => m.boostedScore > 0.72);
+
+            // 4. Filtro post-retrieval per materia (safety net anti-contaminazione)
+            // Se abbiamo richiesto una materia specifica, rimuovi i risultati di materie diverse
+            // TRANNE i risultati senza materia (materia null) e le fonti VIP cross-disciplinari
+            if (normalizedMateria && matches.length > 3) {
+                const materiaLower = normalizedMateria.toLowerCase();
+                const beforeFilter = matches.length;
+                matches = matches.filter(m => {
+                    if (!m.materia) return true; // Nessuna materia → tieni (potrebbe essere cross-disciplinare)
+                    const mLower = m.materia.toLowerCase();
+                    // Match se la materia contiene la keyword (es. "Civile" in "Diritto Civile")
+                    if (mLower.includes(materiaLower.replace('diritto ', '')) || materiaLower.includes(mLower.replace('diritto ', ''))) return true;
+                    // Eccezione: tieni fonti VIP autorevoli anche se cross-materia (boostScore > 0.90)
+                    if (m.boostedScore > 0.90 && (m.tipo || '').includes('teoria_massimario')) return true;
+                    return false;
+                });
+                if (beforeFilter !== matches.length) {
+                    console.log(`[RAG] 🧹 Filtro materia post-retrieval: ${beforeFilter} → ${matches.length} (rimossi ${beforeFilter - matches.length} risultati di materie diverse)`);
+                }
+            }
             matches.sort((a, b) => b.boostedScore - a.boostedScore);
             const topMatches = matches.slice(0, 8);
 

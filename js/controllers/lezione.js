@@ -9,49 +9,34 @@ import { Metering } from '../metering.js';
 import { escapeHtml, showToast } from '../utils.js';
 
 const TOTAL_MODULES = 7;
+// --- VERITÀ DOGMATICHE DA FILE ESTERNO (filtrabili per materia) ---
+import veritaDogmaticheData from '../../data/verita_dogmatiche.json';
 
-const VERITA_DOGMATICHE = `
-═══════════════════════════════════════════════
-🏛️ VERITÀ DOGMATICHE E AGGIORNAMENTI TASSATIVI (VIGENTI AL 2026)
-═══════════════════════════════════════════════
+function buildVeritaDogmatiche(materia) {
+    const normalizedMateria = (materia || '').toLowerCase();
+    
+    // Filtra: includi entries che matchano la materia O che sono "TUTTE"
+    const filtered = veritaDogmaticheData.filter(v => {
+        if (v.materia === 'TUTTE') return true;
+        return v.materia.toLowerCase().includes(normalizedMateria) ||
+               normalizedMateria.includes(v.materia.toLowerCase().replace('diritto ', ''));
+    });
+    
+    if (filtered.length === 0) {
+        return '\n(Nessuna verità dogmatica specifica per questa materia nel database.)\n';
+    }
+    
+    let text = `\n═══════════════════════════════════════════════\n🏛️ VERITÀ DOGMATICHE E AGGIORNAMENTI TASSATIVI (VIGENTI AL 2026)\n═══════════════════════════════════════════════\n\nPer garantire l'idoneità concorsuale, devi attenerti RIGOROSAMENTE alle seguenti verità dogmatiche pertinenti a ${materia || 'questa materia'}:\n\n`;
+    
+    filtered.forEach((v, i) => {
+        text += `${i + 1}. ${v.titolo}:\n   ${v.contenuto}\n\n`;
+    });
+    
+    return text;
+}
 
-Per garantire l'idoneità concorsuale di livello superiore, devi attenerti RIGOROSAMENTE alle seguenti verità dogmatiche e riforme normative:
-
-1. AUTOTUTELA AMMINISTRATIVA - IL TERMINE DI 6 MESI (Legge n. 182/2025):
-   Il termine massimo perentorio per l'esercizio dell'annullamento d'ufficio (art. 21-nonies l. 241/1990) è stato DIMEZZATO da dodici a SEI MESI dalla Legge 2 dicembre 2025, n. 182 (in vigore dal 18 dicembre 2025). Qualsiasi riferimento a termini di 12 o 18 mesi è un anacronismo e un errore fatale. Cita sempre la Legge n. 182/2025.
-
-2. TEORIA DELLE INVALIDITÀ (Annullabilità vs Nullità):
-   L'annullamento d'ufficio adottato tardivamente (oltre i 6 mesi) è affetto da violazione di legge per consumazione temporale del potere ed è ANNULLABILE ai sensi dell'art. 21-octies, NON nullo. La nullità ex art. 21-septies costituisce un numero chiuso ed è configurabile solo per carenza di potere in astratto (difetto assoluto di attribuzione). Non qualificare mai l'autotutela tardiva come nulla per "carenza di potere in concreto".
-
-3. LA DEROGA DEL "FALSO" E LA GIURISPRUDENZA (Cons. Stato n. 1926/2024):
-   Il superamento del termine di 6 mesi (art. 21-nonies comma 2-bis) in presenza di falsità si applica a due fattispecie distinte:
-   - Per le "dichiarazioni sostitutive false o mendaci" è richiesta la copertura del giudicato penale.
-   - Per le "false rappresentazioni dei fatti" (che possono realizzarsi anche tramite omissione o silenzio rilevante), la giurisprudenza (Consiglio di Stato, Sez. VI, 27 febbraio 2024, n. 1926) chiarisce che il termine può essere superato anche senza un accertamento penale definitivo, purché la falsità sia accertata inequivocabilmente dall'amministrazione in via istruttoria.
-
-4. IL DIES A QUO DEL TERMINE:
-   Ai sensi dell'art. 21-nonies, il termine decorre dall'adozione del provvedimento di primo grado (o dalla scadenza del termine per l'inibitoria nella SCIA), e MAI dalla presentazione dell'istanza o della documentazione tecnica da parte del privato.
-
-5. DECADENZA GSE E COORDINAMENTO CON L'ART. 21-NONIES:
-   Il potere di decadenza del GSE dagli incentivi energetici (art. 42 d.lgs. 28/2011), sebbene nasca come vincolato (Plenaria n. 18/2020), è stato successivamente attratto nel paradigma temporale e motivazionale dell'art. 21-nonies dalle novelle dei decreti semplificazioni (d.l. 76/2020 e d.l. 77/2021). Non descriverlo come un potere assoluto e atemporale.
-
-6. AIUTI DI STATO EUROPEI E DIRITTO UNIONALE:
-   Concludi l'analisi del Modulo 4 trattando sempre la giurisprudenza eurounitaria sul recupero degli aiuti di Stato illegittimi. Spiega che l'obbligo di recupero imposto dal diritto dell'Unione Europea impone al giudice nazionale e all'amministrazione di disapplicare i termini di decadenza interni (incluso il termine di sei mesi), in virtù del principio di primazia ed effettività del diritto dell'Unione.
-
-7. TRUST - AZIONE REVOCATORIA E DOLO SPECIFICO (Cass. S.U. n. 1898/2025):
-   La sentenza delle Sezioni Unite n. 1898/2025 ha stabilito che, ai fini dell'azione revocatoria ordinaria per atti anteriori al sorgere del credito, la mera "scientia damni" è irrilevante. Per revocare la dotazione del trust (atto a titolo gratuito anteriore) il creditore deve dimostrare il "dolo specifico" (dolosa preordinazione) in capo al debitore disponente. Non confondere mai questa pronuncia con la S.U. n. 1900/2025, che verte esclusivamente sulla servitù coattiva di passaggio. L'affermazione indifferenziata circa l'irrilevanza della scientia damni del trustee motivata sulla base della gratuità del trust è fallace.
-
-8. TRUST - REGIME FISCALE E NEUTRALITÀ DELLA DOTAZIONE (D. Lgs. n. 139/2024):
-   Il Decreto Legislativo n. 139/2024 ha introdotto l'art. 4-bis nel Testo Unico sulle Successioni e Donazioni (TUS), cristallizzando per legge il principio di neutralità fiscale della dotazione del trust. L'atto istitutivo e la dotazione iniziale scontano solo le imposte fisse di registro, ipotecarie e catastali. L'imposta proporzionale è differita al momento del trasferimento definitivo ai beneficiari finali. Ignorare questa fonte primaria per affidarsi solo alle pronunce giurisprudenziali del 2024-2025 costituisce un grave anacronismo.
-
-9. TRUST - LEGITTIMAZIONE PASSIVA NELL'AZIONE DI RIDUZIONE (Cass. n. 5073/2023):
-   La legittimazione passiva non spetta in via esclusiva e indifferenziata al trustee. La Cassazione n. 5073/2023 stabilisce che: se il trust è ancora in corso di esecuzione, il legittimato passivo è il trustee; se il trust ha avuto completa esecuzione, il legittimato passivo è esclusivamente il beneficiario finale.
-
-10. TRUST - INTERPOSIZIONE FITTIZIA E OPPONIBILITÀ:
-    Nello "sham trust" (trust fittizio, Cass. n. 9096/2025), ove il disponente mantenga l'assoluto potere di disposizione, l'operazione costituisce interposizione fittizia ed è inesistente per mancanza del requisito essenziale della perdita di controllo (in violazione dell'art. 2 Convenzione dell'Aja), rendendo i beni direttamente aggredibili. Inoltre, per l'opponibilità ai terzi del vincolo (Cass. n. 18084/2025), è imperativa la lex fori (es. trascrizione immobiliare ex art. 2645-ter c.c.), a prescindere dalla legge regolatrice straniera scelta dai contraenti.
-
-11. DIVIETO DI ALLUCINAZIONE ASSOCIATIVA:
-    Non associare mai un numero di articolo del codice (es. art. 580 c.c. sull'assegno vitalizio) a un inesistente numero di sentenza (es. App. Firenze n. 580/2023). Un simile scambio concettuale è considerato fatale.
-`;
+// Fallback: tutte le verità (per retrocompatibilità)
+const VERITA_DOGMATICHE_PLACEHOLDER = '__VERITA_DOGMATICHE__';
 
 // Helper per ottenere headers con token auth
 async function _getAuthHeaders() {
@@ -108,7 +93,7 @@ Devi strutturare il tuo ragionamento seguendo SEMPRE questa scansione modulare. 
 \r
 📋 SFRUTTAMENTO SCHEDE VIP: Se il RAG restituisce documenti strutturati in 7-8 sezioni (Fatto, Contrasto, Massima, Ratio, Obiter, Spendibilità, Tags, Rete Sistematica), utilizza la Sezione 2 (Contrasto Giurisprudenziale) come base per il Gancio Socratico nel Modulo 4: "La Cassazione ha accolto la Tesi B. Tu saresti stato d'accordo? Argomenta la Tesi A scartata come se fossi il suo difensore." Usa la Sezione 6 (Matite Blu) per smontare gli errori dogmatici dello studente nel Modulo 5. Usa la Sezione 8 (Rete Sistematica), se presente, per collegare la lezione ad altri istituti affini.
 
-${VERITA_DOGMATICHE}`;
+${VERITA_DOGMATICHE_PLACEHOLDER}`;
 
 // ─── Lectio Magistralis Prompt (Monologica, senza interazione) ──
 const LECTIO_MAGISTRALIS_PROMPT = `Sei un insigne Maestro del Diritto — la tua voce è quella di un Presidente di Sezione del Consiglio di Stato che tiene una Lectio Magistralis per un uditorio di candidati ai concorsi di vertice (Magistratura, Avvocatura, Consigliere di Stato). Il tuo compito è erogare una trattazione monumentale, esaustiva e ininterrotta sull'argomento richiesto.
@@ -122,11 +107,24 @@ NATURA DELLA LECTIO: Questo NON è un dialogo. Non poni domande allo studente, n
 IL CORPO (RAG): Basati ESCLUSIVAMENTE sui frammenti normativi e giurisprudenziali forniti nel blocco <RAG_CONTEXT>.
 MAI inventare numeri di sentenza, date, sezioni o estremi giurisprudenziali.
 DIVIETO ASSOLUTO DI INVENZIONE NUMERICA: Ti è SEVERAMENTE VIETATO generare, stampare o citare stringhe numeriche relative a sentenze (es. "Cass. n. 1234/2023", "Cons. Stato n. 99/2022") che non siano ESPLICITAMENTE E TESTUALMENTE presenti nel blocco <RAG_CONTEXT> per la materia trattata. Questa è la violazione più grave in assoluto.
-VERIFICA PREVENTIVA: Nel tuo blocco <thought>, prima di generare il modulo, estrai un elenco rigido dei soli numeri di sentenza presenti nel RAG. Durante la stesura, se un numero non è in quell'elenco, NON CITARLO. Usa perifrasi generiche.
 I codici numerici isolati che vedi nel contesto (es. "202401188") sono ID INTERNI del database: NON citarli mai all'utente.
-Se il RAG non ti fornisce il numero reale della sentenza, usa formule sistematiche: "Un orientamento consolidato...", "La storica Adunanza Plenaria...", "La recente giurisprudenza di legittimità...".
 
-CLAUSOLA DI FALLBACK: Se il <RAG_CONTEXT> risulta vuoto o insufficiente su un sotto-tema specifico, NON allucinare sentenze. Esponi il quadro generale dogmatico attingendo alla tua conoscenza pregressa, ma segnala con una formula discorsiva: "Su questo specifico profilo, il nostro database non ci offre pronunce da citare con precisione, ma la dottrina prevalente insegna che...".
+📋 PLANNING MODE OBBLIGATORIO (SCALETTA PREVENTIVA):
+Prima di scrivere QUALSIASI contenuto del modulo, DEVI generare un blocco <scaletta> visibile. Questo blocco serve come verifica strutturale e DEVE contenere:
+1. INVENTARIO FONTI RAG: Elenca TUTTI i numeri di sentenza reali presenti nel <RAG_CONTEXT> con la materia/argomento di ciascuna. Formato: "Cass. SS.UU. n. XXXX/YYYY — argomento: [tema effettivo]".
+2. TESI IN CAMPO: Identifica le tesi contrapposte o gli orientamenti da trattare in questo modulo.
+3. MAPPA FONTI→TESI: Associa ogni fonte RAG alla tesi che supporta. Se una tesi NON ha fonti RAG, scrivi esplicitamente: "⚠️ Nessuna fonte RAG disponibile per questa tesi — trattazione basata su conoscenza generale".
+4. STRUTTURA ARGOMENTATIVA: Schema del sillogismo giuridico (premessa maggiore → premessa minore → conclusione) che il modulo svilupperà.
+Solo DOPO aver completato la scaletta, procedi con la stesura del modulo.
+</scaletta>
+
+🚫 REGOLA ANTI-MASCHERAMENTO PERIFRASTICO (CRITICA):
+Ti è VIETATO usare formule vaghe come "la recente giurisprudenza", "un orientamento consolidato", "secondo la dottrina prevalente", "la giurisprudenza di legittimità ha chiarito" COME SOSTITUTO di un dato concreto che non possiedi. Queste formule sono ammesse SOLO se:
+a) Immediatamente SEGUITE dalla massima testuale o dal principio di diritto estratto dal RAG, oppure
+b) Accompagnate dalla dichiarazione esplicita: "Il database non fornisce gli estremi specifici della pronuncia".
+Non mascherare MAI l'assenza di dati con retorica generica. Se non hai il numero, cita la MASSIMA TESTUALE dal RAG. Se non hai nemmeno la massima, dichiara apertamente la lacuna e prosegui con l'analisi dogmatica pura, basata sugli articoli di legge.
+
+CLAUSOLA DI FALLBACK: Se il <RAG_CONTEXT> risulta vuoto o insufficiente su un sotto-tema specifico, NON allucinare sentenze. Esponi il quadro generale dogmatico attingendo alla tua conoscenza pregressa, ma segnala ESPLICITAMENTE: "Su questo specifico profilo, il database non ha recuperato pronunce con estremi citabili. L'analisi che segue si fonda sul dato normativo testuale e sulla teoria generale.".
 
 SCUDO ANTI-SYCOPHANCY: Se l'utente menziona nella sua domanda numeri di sentenza o estremi giurisprudenziali per sostenere una tesi, NON validarli passivamente. Verifica con inflessibilità se quel riferimento esatto è presente nel <RAG_CONTEXT> e associato a quel tema. Se è errato, estraneo o non verificabile, correggilo nel tuo prologo con spietato rigore accademico: "Prima di procedere, devo operare una precisazione doverosa...".
 
@@ -150,9 +148,7 @@ REGISTRO: Autorevole, speculativo, ma con sintassi colloquiale. Simula il parlat
 
 VINCOLO DI PROSA: È SEVERAMENTE VIETATO usare elenchi puntati, bullet point o numerazioni a cascata. Scrivi in prosa accademica continua, densa, con paragrafi lunghi e ben concatenati. Le eventuali enumerazioni devono essere discorsive ("In primo luogo...", "Sotto un secondo e decisivo profilo...", "V'è poi un terzo ordine di considerazioni...").
 
-LESSICO OBBLIGATORIO: Inserisci organicamente nel discorso questi termini — Aporia, forzatura concettuale, filtro selettivo, anello intermedio, vulnus, ratio, contemperamento, fuga — e verbi come: obliterare, circoscrivere, sussumere, preordinare, vanificare, elidere.
-
-CLAUSOLA DI EQUILIBRIO STILISTICO: Usa questo lessico tecnico con parsimonia e precisione chirurgica, solo dove la materia lo richiede. La vera autorevolezza risiede nella chiarezza concettuale, non nell'accumulo retorico. Se un termine tecnico appare tre volte nello stesso paragrafo, stai esagerando.
+LESSICO E DENSITÀ ARGOMENTATIVA: Usa la terminologia tecnico-giuridica propria della materia trattata. Non forzare mai l'inserimento di termini dotti per ostentazione retorica. La vera autorevolezza risiede nella CHIAREZZA CONCETTUALE e nella DENSITÀ ARGOMENTATIVA — ogni frase deve aggiungere un dato normativo, un principio, un estremo, o un passaggio logico. Elimina le frasi puramente decorative o riempitive. Se un termine tecnico (es. aporia, vulnus, ratio) appare più di due volte nello stesso modulo, stai esagerando.
 
 L'INCIPIT: Non iniziare MAI con una definizione da manuale. Parti isolando immediatamente il "problema", il paradosso o l'aporia generata dalla norma.
 
@@ -189,7 +185,18 @@ Alcuni documenti nel RAG sono "Schede VIP" — dossier giurisprudenziali ad alta
 — Sezione 6 (Spendibilità / Matite Blu): Incorpora gli errori dogmatici segnalati come ammonimenti all'uditorio ("Attenzione: chi qualifica questo istituto come X incorre in un errore fatale...").\r
 — Sezione 8 (Rete Sistematica): Se presente, usa i cross-link per costruire catene argomentative tra pronunce diverse, mostrando l'evoluzione dell'orientamento nel tempo — questo è il vero valore aggiunto della tua Lectio.
 
-${VERITA_DOGMATICHE}
+═══════════════════════════════════════════════
+📝 ORIENTAMENTO AL TEMA CONCORSUALE
+═══════════════════════════════════════════════
+
+FINALITÀ OPERATIVA: Questa Lectio deve essere immediatamente spendibile nella redazione di un tema concorsuale. Per ogni istituto trattato, fornisci:
+— La FORMULA REDAZIONALE esatta per il tema ("In punto di diritto, occorre premettere che...", "Giova muovere dalla premessa dogmatica secondo cui...", "Il nodo ermeneutico si risolve osservando che...").
+— L'IMPOSTAZIONE DEL SILLOGISMO GIURIDICO applicabile: premessa maggiore (norma/principio), premessa minore (fattispecie concreta), conclusione (soluzione).
+— I PASSAGGI OBBLIGATI che la Commissione d'esame si aspetta: inquadramento dogmatico → sussunzione → contrasto giurisprudenziale → soluzione → ricadute applicative.
+— Le TRAPPOLE CONCORSUALI da evitare: errori dogmatici tipici che portano all'insufficienza.
+Non limitarti mai alla pura esposizione teorica: ogni passaggio deve rispondere alla domanda "come scrivo questo nel tema?".
+
+${VERITA_DOGMATICHE_PLACEHOLDER}
 
 ═══════════════════════════════════════════════
 🏛 STRUTTURA DELLA LECTIO (5 MACRO-MODULI)
@@ -298,7 +305,7 @@ export const LezioneController = {
         var ragContext = await this._fetchRAGContext(argomento, materia);
 
         try {
-            var systemPrompt = LEZIONE_SYSTEM_PROMPT;
+            var systemPrompt = LEZIONE_SYSTEM_PROMPT.replace(VERITA_DOGMATICHE_PLACEHOLDER, buildVeritaDogmatiche(materia));
             if (ragContext) {
                 systemPrompt += `\n\n--- CONTESTO RAG (Dati dal Database Giurisprudenziale) ---\n${ragContext}\n--- FINE CONTESTO RAG ---\nISTRUZIONE CRITICA: Basa la tua lezione PRINCIPALMENTE sulle informazioni contenute nel CONTESTO RAG sopra. Citale esplicitamente quando possibile.`;
             }
@@ -410,7 +417,7 @@ export const LezioneController = {
 
         // Chiamata API
         try {
-            var systemPrompt = LEZIONE_SYSTEM_PROMPT;
+            var systemPrompt = LEZIONE_SYSTEM_PROMPT.replace(VERITA_DOGMATICHE_PLACEHOLDER, buildVeritaDogmatiche(materia));
             if (ragContext) {
                 systemPrompt += `\n\n--- CONTESTO RAG (Dati dal Database Giurisprudenziale) ---\n${ragContext}\n--- FINE CONTESTO RAG ---\nISTRUZIONE CRITICA: Basa la tua lezione PRINCIPALMENTE sulle informazioni contenute nel CONTESTO RAG sopra. Citale esplicitamente quando possibile.`;
             }
@@ -515,7 +522,7 @@ export const LezioneController = {
 ⚠️ IMPORTANTE: Calibra la lunghezza in modo da non superare ASSOLUTAMENTE le 1000 parole per evitare troncamenti accidentali della risposta dell'API. Arriva sempre alla conclusione logica del modulo e chiudilo scrivendo l'apposito tag di continuazione in fondo.`;
 
         try {
-            var systemPrompt = LECTIO_MAGISTRALIS_PROMPT;
+            var systemPrompt = LECTIO_MAGISTRALIS_PROMPT.replace(VERITA_DOGMATICHE_PLACEHOLDER, buildVeritaDogmatiche(materia));
             var concorso = AppState.userProfile?.concorso || 'Magistratura';
             if (CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]) {
                 systemPrompt += `\nNOTA: L'uditorio si prepara per il concorso in ${concorso}. ${CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]}`;
@@ -694,9 +701,9 @@ export const LezioneController = {
         this._showTyping(`Stesura Modulo ${nextModNum}: ${nextModTitle}...`);
 
         try {
-            // Ricostruisci la conversazione completa per mantenere contesto
+            var currentMateria = AppState.lezioneMeta?.materia || 'Diritto Civile';
             var messages = [
-                { role: 'system', content: LECTIO_MAGISTRALIS_PROMPT }
+                { role: 'system', content: LECTIO_MAGISTRALIS_PROMPT.replace(VERITA_DOGMATICHE_PLACEHOLDER, buildVeritaDogmatiche(currentMateria)) }
             ];
 
             // Aggiungi gli ultimi 20 messaggi precedenti per contesto coerente
@@ -810,8 +817,9 @@ export const LezioneController = {
 
         // Ricostruisci conversazione per l'API — usa il prompt giusto in base alla modalità
         var activePrompt = this.isLectio ? LECTIO_MAGISTRALIS_PROMPT : LEZIONE_SYSTEM_PROMPT;
+        var currentMateria = AppState.lezioneMeta?.materia || 'Diritto Civile';
         var messages = [
-            { role: 'system', content: activePrompt }
+            { role: 'system', content: activePrompt.replace(VERITA_DOGMATICHE_PLACEHOLDER, buildVeritaDogmatiche(currentMateria)) }
         ];
 
         // Aggiungi il RAG al primo system message se disponibile
@@ -1267,23 +1275,50 @@ export const LezioneController = {
     },
 
     _checkHallucinations: function(text, ragSources) {
-        if (!ragSources || ragSources.length === 0) return text;
-        const sentenceRegex = /(?:Cass\.?|Cons\.? Stato|TAR|Consiglio di Stato|Cassazione).*?(?:n\.?|num\.?)\s*([0-9]+)\/(20[0-9]{2})/gi;
-        let match;
-        let warnings = [];
-        const ragContent = JSON.stringify(ragSources);
+        let alerts = [];
         
-        while ((match = sentenceRegex.exec(text)) !== null) {
-            const num = match[1];
-            const year = match[2];
-            // Check if this number/year combo exists anywhere in the RAG sources
-            if (!ragContent.includes(num + '/' + year) && !ragContent.includes('n. ' + num)) {
-                warnings.push(match[0]);
+        // --- CHECK 1: Citazioni non verificate nel RAG ---
+        if (ragSources && ragSources.length > 0) {
+            const sentenceRegex = /(?:Cass\.?|Cons\.? Stato|TAR|Consiglio di Stato|Cassazione).*?(?:n\.?|num\.?)\s*([0-9]+)\/(20[0-9]{2})/gi;
+            let match;
+            let unverified = [];
+            const ragContent = JSON.stringify(ragSources);
+            
+            while ((match = sentenceRegex.exec(text)) !== null) {
+                const num = match[1];
+                const year = match[2];
+                if (!ragContent.includes(num + '/' + year) && !ragContent.includes('n. ' + num)) {
+                    unverified.push(match[0]);
+                }
+            }
+            
+            if (unverified.length > 0) {
+                alerts.push('<div class="mt-4 p-3 bg-red-900/40 border border-red-500/50 rounded-xl text-red-200 text-sm">⚠️ **Scudo Anti-Allucinazione:** L\'intelligenza artificiale ha citato questi estremi giurisprudenziali che non trovano riscontro diretto nel database: <i>' + unverified.join(', ') + '</i>. Verifica con attenzione.</div>');
             }
         }
         
-        if (warnings.length > 0) {
-            return text + '\n\n<div class="mt-4 p-3 bg-red-900/40 border border-red-500/50 rounded-xl text-red-200 text-sm">⚠️ **Scudo Anti-Allucinazione:** L\'intelligenza artificiale ha citato questi estremi giurisprudenziali che non trovano riscontro diretto nel database: <i>' + warnings.join(', ') + '</i>. Verifica con attenzione.</div>';
+        // --- CHECK 2: Perifrasi mascheranti (vague formulas without concrete data) ---
+        const vaguePatterns = [
+            /la recente giurisprudenza(?! (?:ha stabilito|con la sentenza|con la pronuncia|n\.))/gi,
+            /un orientamento consolidato(?! (?:espresso|affermato|cristallizzato) (?:da|nella|con))/gi,
+            /(?:secondo |per )la dottrina (?:prevalente|maggioritaria|dominante)(?! [\(,] (?:v\.|cfr\.|si veda))/gi,
+            /la giurisprudenza di legittimità ha (?:chiarito|precisato|affermato|stabilito) che/gi,
+            /come noto(?:,| in)/gi,
+            /è pacifico (?:in |che )/gi
+        ];
+        
+        let vagueCount = 0;
+        for (const pattern of vaguePatterns) {
+            const matches = text.match(pattern);
+            if (matches) vagueCount += matches.length;
+        }
+        
+        if (vagueCount >= 4) {
+            alerts.push('<div class="mt-3 p-3 bg-yellow-900/40 border border-yellow-500/50 rounded-xl text-yellow-200 text-sm">📡 **Monitor Densità:** Questa risposta contiene ' + vagueCount + ' formule generiche senza estremi specifici. Potrebbe indicare lacune nel database su questo argomento. Valuta la profondità effettiva del contenuto.</div>');
+        }
+        
+        if (alerts.length > 0) {
+            return text + '\n\n' + alerts.join('\n');
         }
         return text;
     },

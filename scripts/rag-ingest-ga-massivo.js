@@ -162,7 +162,8 @@ async function main() {
     let query = supabase
         .from('provvedimenti_ga')
         .select('id, tipo_provvedimento, sede_nome, numero_provvedimento, anno_pubblicazione')
-        .in('tipo_provvedimento', ['SENTENZA', 'SENTENZA BREVE']);
+        .in('tipo_provvedimento', ['SENTENZA', 'SENTENZA BREVE'])
+        .eq('importance_tier', 'TIER_2');
 
     if (SEDE) query = query.eq('sede_slug', SEDE);
 
