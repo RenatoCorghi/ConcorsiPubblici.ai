@@ -1,0 +1,90 @@
+[
+  {
+    "id": "autotutela_6mesi",
+    "materia": "Diritto Amministrativo",
+    "titolo": "Termine autotutela 6 mesi (Legge n. 182/2025)",
+    "contenuto": "Il termine massimo perentorio per l'esercizio dell'annullamento d'ufficio (art. 21-nonies l. 241/1990) è stato DIMEZZATO da dodici a SEI MESI dalla Legge 2 dicembre 2025, n. 182 (in vigore dal 18 dicembre 2025). Qualsiasi riferimento a termini di 12 o 18 mesi è un anacronismo e un errore fatale.",
+    "fonte": "Legge n. 182/2025",
+    "aggiornato_al": "2025-12-18"
+  },
+  {
+    "id": "invalidita_annullabilita",
+    "materia": "Diritto Amministrativo",
+    "titolo": "Annullabilità vs Nullità dell'autotutela tardiva",
+    "contenuto": "L'annullamento d'ufficio adottato tardivamente (oltre i 6 mesi) è affetto da violazione di legge per consumazione temporale del potere ed è ANNULLABILE ai sensi dell'art. 21-octies, NON nullo. La nullità ex art. 21-septies costituisce un numero chiuso ed è configurabile solo per carenza di potere in astratto.",
+    "fonte": "art. 21-octies, art. 21-septies L. 241/1990",
+    "aggiornato_al": "2025-12-18"
+  },
+  {
+    "id": "deroga_falso",
+    "materia": "Diritto Amministrativo",
+    "titolo": "Deroga del 'falso' e giurisprudenza (Cons. Stato n. 1926/2024)",
+    "contenuto": "Il superamento del termine di 6 mesi (art. 21-nonies comma 2-bis) in presenza di falsità si applica a due fattispecie distinte: per le 'dichiarazioni sostitutive false' è richiesta la copertura del giudicato penale; per le 'false rappresentazioni dei fatti' la giurisprudenza (Cons. Stato, Sez. VI, 27/02/2024, n. 1926) chiarisce che il termine può essere superato anche senza accertamento penale definitivo.",
+    "fonte": "Cons. Stato, Sez. VI, n. 1926/2024",
+    "aggiornato_al": "2024-02-27"
+  },
+  {
+    "id": "dies_a_quo",
+    "materia": "Diritto Amministrativo",
+    "titolo": "Dies a quo del termine di autotutela",
+    "contenuto": "Il termine decorre dall'adozione del provvedimento di primo grado (o dalla scadenza del termine per l'inibitoria nella SCIA), e MAI dalla presentazione dell'istanza o della documentazione tecnica da parte del privato.",
+    "fonte": "art. 21-nonies L. 241/1990",
+    "aggiornato_al": "2025-12-18"
+  },
+  {
+    "id": "decadenza_gse",
+    "materia": "Diritto Amministrativo",
+    "titolo": "Decadenza GSE e coordinamento con art. 21-nonies",
+    "contenuto": "Il potere di decadenza del GSE dagli incentivi energetici (art. 42 d.lgs. 28/2011), sebbene nasca come vincolato (Plenaria n. 18/2020), è stato successivamente attratto nel paradigma temporale e motivazionale dell'art. 21-nonies dalle novelle dei decreti semplificazioni (d.l. 76/2020 e d.l. 77/2021).",
+    "fonte": "Ad. Plenaria n. 18/2020, d.l. 76/2020, d.l. 77/2021",
+    "aggiornato_al": "2021-07-31"
+  },
+  {
+    "id": "aiuti_stato_ue",
+    "materia": "Diritto Amministrativo",
+    "titolo": "Aiuti di Stato e diritto unionale - disapplicazione termini",
+    "contenuto": "L'obbligo di recupero degli aiuti di Stato illegittimi imposto dal diritto dell'Unione Europea impone al giudice nazionale e all'amministrazione di disapplicare i termini di decadenza interni (incluso il termine di sei mesi), in virtù del principio di primazia ed effettività del diritto dell'Unione.",
+    "fonte": "Diritto UE, principio di primazia",
+    "aggiornato_al": "2026-01-01"
+  },
+  {
+    "id": "trust_revocatoria",
+    "materia": "Diritto Civile",
+    "titolo": "Trust - Azione revocatoria e dolo specifico (Cass. S.U. n. 1898/2025)",
+    "contenuto": "La sentenza delle Sezioni Unite n. 1898/2025 ha stabilito che, ai fini dell'azione revocatoria ordinaria per atti anteriori al sorgere del credito, la mera 'scientia damni' è irrilevante. Per revocare la dotazione del trust (atto a titolo gratuito anteriore) il creditore deve dimostrare il 'dolo specifico' (dolosa preordinazione). Non confondere con la S.U. n. 1900/2025 (servitù coattiva).",
+    "fonte": "Cass. S.U. n. 1898/2025",
+    "aggiornato_al": "2025-01-27"
+  },
+  {
+    "id": "trust_fiscale",
+    "materia": "Diritto Civile",
+    "titolo": "Trust - Regime fiscale e neutralità della dotazione (D.Lgs. 139/2024)",
+    "contenuto": "Il D.Lgs. n. 139/2024 ha introdotto l'art. 4-bis nel TUS, cristallizzando la neutralità fiscale della dotazione del trust. L'atto istitutivo e la dotazione iniziale scontano solo le imposte fisse. L'imposta proporzionale è differita al trasferimento ai beneficiari finali.",
+    "fonte": "D.Lgs. n. 139/2024, art. 4-bis TUS",
+    "aggiornato_al": "2024-09-02"
+  },
+  {
+    "id": "trust_legittimazione",
+    "materia": "Diritto Civile",
+    "titolo": "Trust - Legittimazione passiva nell'azione di riduzione (Cass. n. 5073/2023)",
+    "contenuto": "La legittimazione passiva non spetta in via esclusiva al trustee. Se il trust è ancora in corso di esecuzione, il legittimato passivo è il trustee; se il trust ha avuto completa esecuzione, il legittimato passivo è esclusivamente il beneficiario finale.",
+    "fonte": "Cass. n. 5073/2023",
+    "aggiornato_al": "2023-02-20"
+  },
+  {
+    "id": "trust_sham",
+    "materia": "Diritto Civile",
+    "titolo": "Trust fittizio (sham trust) e opponibilità (Cass. n. 9096/2025, n. 18084/2025)",
+    "contenuto": "Nello 'sham trust', ove il disponente mantenga l'assoluto potere di disposizione, l'operazione è inesistente per mancanza del requisito della perdita di controllo (art. 2 Conv. Aja), rendendo i beni direttamente aggredibili. Per l'opponibilità ai terzi è imperativa la lex fori (trascrizione immobiliare ex art. 2645-ter c.c.).",
+    "fonte": "Cass. n. 9096/2025, n. 18084/2025",
+    "aggiornato_al": "2025-04-07"
+  },
+  {
+    "id": "divieto_allucinazione_associativa",
+    "materia": "TUTTE",
+    "titolo": "Divieto di Allucinazione Associativa",
+    "contenuto": "Non associare mai un numero di articolo del codice (es. art. 580 c.c. sull'assegno vitalizio) a un inesistente numero di sentenza (es. App. Firenze n. 580/2023). Un simile scambio concettuale è considerato fatale.",
+    "fonte": "Regola interna anti-allucinazione",
+    "aggiornato_al": "2026-01-01"
+  }
+]
