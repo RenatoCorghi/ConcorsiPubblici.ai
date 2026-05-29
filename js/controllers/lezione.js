@@ -138,6 +138,12 @@ OBBLIGO DI ESTRAZIONE DELLA MASSIMA: Prima di citare qualsiasi estremo giurispru
 
 VINCOLO DI CITAZIONE VERBATIM OBBLIGATORIA: Quando citi una sentenza dal RAG nella Lectio, DEVI riportare tra virgolette almeno UNA FRASE TESTUALE del frammento RAG che giustifichi l'associazione numero→principio. Se non riesci a trovare nel chunk RAG una frase che supporti il principio che stai attribuendo a quella sentenza, NON CITARE il numero. Esempio corretto: "La Cassazione n. 35823/2023 ha affermato che 'ricorre un'ipotesi di litisconsorzio necessario tra le parti del contratto stesso'". Esempio VIETATO: "La Cassazione n. 35823/2023 ha stabilito il principio X" [dove X non è presente nel chunk RAG]. Se il chunk RAG associato a quel numero parla di un argomento DIVERSO (es. il numero è nel chunk ma il chunk tratta di liquidazione societaria e non di litisconsorzio), l'associazione è FALSA — NON citare quel numero.
 
+VINCOLO DI ASTENSIONE ATTIVA (TASSATIVO): Se nel <RAG_CONTEXT> NON è presente alcuna sentenza su un determinato profilo che stai trattando, hai il DIVIETO ASSOLUTO di inventare un numero di sentenza attingendo alla tua memoria parametrica. I modelli linguistici falliscono quasi interamente nel recuperare citazioni esatte a memoria — l'accuratezza è inferiore al 7%. In caso di assenza di dati RAG su un sotto-tema, usa ESCLUSIVAMENTE una di queste strategie:
+(a) Esponi il principio di diritto in forma anonima: "La giurisprudenza di legittimità, con orientamento ormai consolidato, ha affermato che..." [senza numero];
+(b) Dichiara la lacuna: "Su questo specifico profilo, il database non fornisce gli estremi della pronuncia di riferimento";
+(c) Prosegui con l'analisi dogmatica pura fondata sugli articoli di legge.
+MAI scrivere "Cass. n. XXXX/YYYY" se quel numero non compare testualmente nel <RAG_CONTEXT> o nelle <VERITA_DOGMATICHE>. L'invenzione di un numero di sentenza è il singolo errore più grave possibile in un tema di concorso e causa l'esclusione immediata.
+
 VINCOLO ANTI-RIDONDANZA INTER-MODULO: Prima di sviluppare un concetto, verifica nel blocco <thought> se quel concetto (norma, sentenza, principio) è già stato trattato nei moduli precedenti. Se nel prompt è presente un blocco <CONCETTI_GIA_TRATTATI>, consultalo OBBLIGATORIAMENTE. Se un concetto è già stato sviscerato in un modulo precedente, NON ripeterlo: usa la formula "Come già illustrato nel Modulo X, [richiamo di una riga]" e prosegui con materiale NUOVO e INEDITO. La ripetizione di interi paragrafi o concetti già scritti è un difetto grave che riduce drasticamente il valore didattico della lezione e va evitata con ogni mezzo.
 
 AGGIORNAMENTO NORMATIVO PRIORITARIO: Dai precedenza assoluta alle riforme e ai decreti legislativi del biennio 2024-2025 (es. D.Lgs. 139/2024 in materia fiscale, riforma Cartabia, ecc.) qualora incidano sulla materia. Il diritto vivente è composto sia dalla nomofilachia che dal dato testuale codicistico novellato.
@@ -385,7 +391,7 @@ export const LezioneController = {
 
             Metering.consume('tutorChats');
             Metering.consumeFreeLifetime('lezione'); // Segna la socratica come usata per sempre
-            this._addMessage('ai', this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
+            this._addMessage('ai', await this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
             this._speakIfEnabled(reply);
 
         } catch (err) {
@@ -498,7 +504,7 @@ export const LezioneController = {
 
             Metering.consume('tutorChats');
             Metering.consumeFreeLifetime('lezione'); // Segna la socratica come usata per sempre
-            this._addMessage('ai', this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
+            this._addMessage('ai', await this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
             this._speakIfEnabled(reply);
 
         } catch (err) {
@@ -606,7 +612,7 @@ export const LezioneController = {
 
             Metering.consume('tutorChats');
             Metering.consumeFreeLifetime('lectio'); // Segna la lectio come usata per sempre
-            this._addMessage('ai', this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
+            this._addMessage('ai', await this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
             this.currentModule = 1;
             this._updateProgressBar(1);
 
@@ -808,7 +814,7 @@ ${coveredBlock}`
             }
 
             Metering.consume('tutorChats');
-            this._addMessage('ai', this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
+            this._addMessage('ai', await this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
 
             // Analizza la risposta per mostrare il pulsante del modulo successivo o chiudere
             this._handleLectioResponse(reply);
@@ -920,7 +926,7 @@ ${coveredBlock}`
             var reply = data.choices[0].message.content.trim();
 
             Metering.consume('tutorChats');
-            this._addMessage('ai', this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
+            this._addMessage('ai', await this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
             this._speakIfEnabled(reply);
 
             // Auto-detect quale modulo sta trattando dalla risposta
@@ -1330,63 +1336,94 @@ ${coveredBlock}`
         if (el) el.remove();
     },
 
-    _checkHallucinations: function(text, ragSources) {
+    _checkHallucinations: async function(text, ragSources) {
         let alerts = [];
         
-        // --- CHECK 1: Citazioni non verificate nel RAG ---
-        if (ragSources && ragSources.length > 0) {
-            const sentenceRegex = /(?:Cass\.?|Cons\.? Stato|TAR|Consiglio di Stato|Cassazione)[^.]*?(?:n\.?|num\.?)\s*([0-9]+)\/(20[0-9]{2})/gi;
-            let match;
-            let unverified = [];
-            let mismatch = [];
-            const ragContent = JSON.stringify(ragSources);
+        // --- CHECK 1: Citazioni non verificate nel RAG (TIERED VERIFICATION) ---
+        // Livello 1: Controlla nel contesto RAG locale del modulo corrente
+        // Livello 2: Se non trovata, verifica nel DB globale prima di flaggare
+        const sentenceRegex = /(?:Cass\.?|Cons\.? Stato|TAR|Consiglio di Stato|Cassazione)[^.]*?(?:n\.?|num\.?)\s*([0-9]+)\/(20[0-9]{2})/gi;
+        let match;
+        let unverified = [];
+        let mismatch = [];
+        let globallyVerified = [];
+        
+        const citationsToCheck = [];
+        while ((match = sentenceRegex.exec(text)) !== null) {
+            citationsToCheck.push({
+                num: match[1],
+                year: match[2],
+                citationKey: match[1] + '/' + match[2],
+                fullMatch: match[0].substring(0, 60),
+                index: match.index,
+                matchLength: match[0].length
+            });
+        }
+        
+        for (const cit of citationsToCheck) {
+            // Estrai il contesto della citazione nel testo generato (±150 chars)
+            const ctxStart = Math.max(0, cit.index - 150);
+            const ctxEnd = Math.min(text.length, cit.index + cit.matchLength + 150);
+            const citationContext = text.substring(ctxStart, ctxEnd).toLowerCase();
             
-            while ((match = sentenceRegex.exec(text)) !== null) {
-                const num = match[1];
-                const year = match[2];
-                const citationKey = num + '/' + year;
-                
-                // Estrai il contesto della citazione nel testo generato (±150 chars)
-                const ctxStart = Math.max(0, match.index - 150);
-                const ctxEnd = Math.min(text.length, match.index + match[0].length + 150);
-                const citationContext = text.substring(ctxStart, ctxEnd).toLowerCase();
-                
-                // Cerca il chunk RAG che contiene questo numero
-                const matchingSource = ragSources.find(s => {
-                    const content = (s.fullContent || s.snippet || '').toLowerCase();
-                    return content.includes(citationKey) || content.includes('n. ' + num);
-                });
-                
-                if (!matchingSource) {
-                    // Numero non trovato nel RAG → allucinazione pura
-                    unverified.push(match[0].substring(0, 60));
-                } else {
-                    // Numero trovato → verifica associazione tematica
-                    // Estrai entità chiave dal contesto della citazione e dal chunk RAG
-                    const sourceContent = (matchingSource.fullContent || matchingSource.snippet || '').toLowerCase();
-                    const legalEntities = this._extractLegalEntities(citationContext);
-                    const ragEntities = this._extractLegalEntities(sourceContent);
-                    
-                    // Calcola overlap: almeno 2 entità in comune o 30% parole chiave
-                    const commonEntities = legalEntities.filter(e => ragEntities.includes(e));
-                    const contextWords = citationContext.split(/\s+/).filter(w => w.length > 4);
-                    const ragWords = new Set(sourceContent.split(/\s+/).filter(w => w.length > 4));
-                    const wordOverlap = contextWords.filter(w => ragWords.has(w)).length;
-                    const overlapRatio = contextWords.length > 0 ? wordOverlap / contextWords.length : 0;
-                    
-                    if (commonEntities.length < 2 && overlapRatio < 0.15) {
-                        // MISMATCH ASSOCIATIVO: il numero esiste ma parla di altro
-                        mismatch.push(match[0].substring(0, 60));
+            // LIVELLO 1: Cerca nel RAG locale
+            const matchingSource = (ragSources && ragSources.length > 0) ? ragSources.find(s => {
+                const content = (s.fullContent || s.snippet || '').toLowerCase();
+                return content.includes(cit.citationKey) || content.includes('n. ' + cit.num);
+            }) : null;
+            
+            if (!matchingSource) {
+                // Non trovata nel RAG locale → LIVELLO 2: Verifica globale nel DB
+                try {
+                    const verifyRes = await fetch('/api/proxy', {
+                        method: 'POST',
+                        headers: await _getAuthHeaders(),
+                        body: JSON.stringify({
+                            feature: 'verifyCitation',
+                            citationNumber: cit.citationKey
+                        })
+                    });
+                    const verifyData = await verifyRes.json();
+                    if (verifyData.found) {
+                        // ✅ Trovata nel DB globale — NON è allucinazione
+                        globallyVerified.push(cit.fullMatch);
+                        console.log(`[Lectio] ✅ Verifica Globale: ${cit.citationKey} → TROVATA nel DB (${verifyData.count} chunk)`);
+                        continue; // Non aggiungere a unverified
                     }
+                } catch(e) {
+                    console.warn('[Lectio] Verifica globale fallita:', e.message);
+                }
+                // Non trovata né localmente né globalmente → allucinazione
+                unverified.push(cit.fullMatch);
+            } else {
+                // Numero trovato nel RAG locale → verifica associazione tematica
+                const sourceContent = (matchingSource.fullContent || matchingSource.snippet || '').toLowerCase();
+                const legalEntities = this._extractLegalEntities(citationContext);
+                const ragEntities = this._extractLegalEntities(sourceContent);
+                
+                // Calcola overlap: almeno 2 entità in comune o 15% parole chiave
+                const commonEntities = legalEntities.filter(e => ragEntities.includes(e));
+                const contextWords = citationContext.split(/\s+/).filter(w => w.length > 4);
+                const ragWords = new Set(sourceContent.split(/\s+/).filter(w => w.length > 4));
+                const wordOverlap = contextWords.filter(w => ragWords.has(w)).length;
+                const overlapRatio = contextWords.length > 0 ? wordOverlap / contextWords.length : 0;
+                
+                if (commonEntities.length < 2 && overlapRatio < 0.15) {
+                    // MISMATCH ASSOCIATIVO: il numero esiste ma parla di altro
+                    mismatch.push(cit.fullMatch);
                 }
             }
-            
-            if (unverified.length > 0) {
-                alerts.push('<div class="mt-4 p-3 bg-red-900/40 border border-red-500/50 rounded-xl text-red-200 text-sm">⚠️ **Scudo Anti-Allucinazione:** L\'intelligenza artificiale ha citato questi estremi giurisprudenziali che non trovano riscontro diretto nel database: <i>' + unverified.join(', ') + '</i>. Verifica con attenzione.</div>');
-            }
-            if (mismatch.length > 0) {
-                alerts.push('<div class="mt-4 p-3 bg-orange-900/40 border border-orange-500/50 rounded-xl text-orange-200 text-sm">🔍 **Alert Associazione Dubbia:** Queste citazioni esistono nel database ma il contenuto del frammento potrebbe non corrispondere al principio attribuito: <i>' + mismatch.join(', ') + '</i>. Il principio citato nel testo potrebbe non essere supportato dal frammento RAG originale.</div>');
-            }
+        }
+        
+        // Banner verdi per citazioni verificate globalmente
+        if (globallyVerified.length > 0) {
+            alerts.push('<div class="mt-3 p-3 bg-green-900/40 border border-green-500/50 rounded-xl text-green-200 text-sm">✅ **Verifica Globale:** ' + globallyVerified.length + ' citazion' + (globallyVerified.length === 1 ? 'e' : 'i') + ' non nel contesto RAG di questo modulo ' + (globallyVerified.length === 1 ? 'è stata confermata' : 'sono state confermate') + ' nel database globale: <i>' + globallyVerified.join(', ') + '</i></div>');
+        }
+        if (unverified.length > 0) {
+            alerts.push('<div class="mt-4 p-3 bg-red-900/40 border border-red-500/50 rounded-xl text-red-200 text-sm">⚠️ **Scudo Anti-Allucinazione:** L\'intelligenza artificiale ha citato questi estremi giurisprudenziali che non trovano riscontro diretto nel database: <i>' + unverified.join(', ') + '</i>. Verifica con attenzione.</div>');
+        }
+        if (mismatch.length > 0) {
+            alerts.push('<div class="mt-4 p-3 bg-orange-900/40 border border-orange-500/50 rounded-xl text-orange-200 text-sm">🔍 **Alert Associazione Dubbia:** Queste citazioni esistono nel database ma il contenuto del frammento potrebbe non corrispondere al principio attribuito: <i>' + mismatch.join(', ') + '</i>. Il principio citato nel testo potrebbe non essere supportato dal frammento RAG originale.</div>');
         }
         
         // --- CHECK 2: Perifrasi mascheranti (vague formulas without concrete data) ---

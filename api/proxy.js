@@ -110,6 +110,45 @@ function normalizeMateria(inputMateria) {
     return inputMateria.replace(/\b\w/g, l => l.toUpperCase());
 }
 
+// --- QUERY EXPANSION (Multi-Query RAG) ---
+// Decompone titoli complessi in sotto-query atomiche usando Gemini Flash.
+// Es: "Contratto simulato e in frode alla legge, con rif. al contratto di società"
+//   → ["simulazione contrattuale art 1414 cc", "frode alla legge art 1344 cc", ...]
+async function expandQuery(query, materia, googleKey) {
+    // Solo per query lunghe (titoli di lezione complessi)
+    if (!query || query.length < 60) return [query];
+    
+    try {
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${googleKey}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: `Sei un assistente per la ricerca giuridica italiana. Dato questo argomento di ${materia || 'diritto'}, scomponilo in 4-5 sotto-query atomiche di ricerca per un database vettoriale di giurisprudenza e normativa italiana. Ogni sotto-query deve essere breve (max 12 parole) e focalizzata su UN singolo istituto giuridico, norma o concetto chiave. Includi articoli di legge rilevanti quando possibile.
+
+Argomento: "${query}"
+
+Rispondi SOLO con un JSON array di stringhe. Nessun altro testo, nessun markdown.` }] }],
+                    generationConfig: { temperature: 0, maxOutputTokens: 300 }
+                })
+            }
+        );
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        // Pulisci markdown fence se presente
+        const clean = text.replace(/```json?\s*/g, '').replace(/```/g, '').trim();
+        const queries = JSON.parse(clean);
+        if (Array.isArray(queries) && queries.length >= 2 && queries.length <= 6) {
+            console.log(`[RAG] 🔀 Query Expansion: "${query.substring(0,60)}..." → ${queries.length} sotto-query: ${JSON.stringify(queries)}`);
+            return queries.slice(0, 5);
+        }
+    } catch (e) {
+        console.warn(`[RAG] ⚠️ Query Expansion fallita, uso query originale: ${e.message}`);
+    }
+    return [query];
+}
+
 // --- FUNZIONE RAG (RETRIEVAL-AUGMENTED GENERATION) ---
 // Ritorna { contextText, sources } — contextText per il prompt, sources per il frontend
 // USA: match_documents_hybrid RPC (vector 70% + full-text 30%, con metadata filtering)
@@ -123,22 +162,36 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
         return null;
     }
     try {
-        // 1. Genera l'embedding della query utente tramite Gemini
+        // 1. QUERY EXPANSION: decomponi titoli complessi in sotto-query atomiche
+        const subQueries = await expandQuery(userMessageText, materiaFilter, googleKey);
+        
+        // 2. Genera embedding per query principale + sotto-query (in parallelo)
         const embedUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key=${googleKey}`;
-        const embedRes = await fetch(embedUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model: 'models/gemini-embedding-2',
-                content: { parts: [{ text: materiaFilter ? `${normalizeMateria(materiaFilter)}: ${userMessageText}` : userMessageText }] },
-                outputDimensionality: 768
-            })
-        });
-        const embedData = await embedRes.json();
-        const vector = embedData.embedding?.values;
-        if (!vector) return null;
+        const materiaPrefix = materiaFilter ? `${normalizeMateria(materiaFilter)}: ` : '';
+        
+        const allEmbedRequests = subQueries.map(sq =>
+            fetch(embedUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'models/gemini-embedding-2',
+                    content: { parts: [{ text: materiaPrefix + sq }] },
+                    outputDimensionality: 768
+                })
+            }).then(r => r.json()).catch(() => null)
+        );
+        
+        const embedResults = await Promise.all(allEmbedRequests);
+        const vectors = embedResults
+            .filter(r => r?.embedding?.values)
+            .map((r, i) => ({ vector: r.embedding.values, query: subQueries[i] }));
+        
+        if (vectors.length === 0) return null;
+        const primaryVector = vectors[0].vector; // Primo vettore = query principale (o prima sotto-query)
+        
+        console.log(`[RAG] 📐 Embedding generati: ${vectors.length}/${subQueries.length} (${subQueries.length > 1 ? 'multi-query' : 'single'})`);
 
-        // 2. HYBRID SEARCH: vettore + full-text + metadata filtering
+        // 3. HYBRID SEARCH: vettore + full-text + metadata filtering
         const hybridUrl = `${process.env.SUPABASE_URL}/rest/v1/rpc/match_documents_hybrid`;
         const legacyUrl = `${process.env.SUPABASE_URL}/rest/v1/rpc/match_rag_chunks`;
         const rpcHeaders = {
@@ -147,36 +200,40 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
             'Content-Type': 'application/json'
         };
 
-        // Due ricerche ibride parallele:
-        // A) Broad search — trova i migliori match globali (vector+keyword)
-        // B) Premium search — garantisce fonti autorevoli (SS.UU., Massimari, Riviste)
+        // Multi-query retrieval parallelo:
+        // A) Broad search per OGNI sotto-query → massima copertura tematica
+        // B) Premium search (con vettore primario) → garanzia fonti autorevoli
         let matches = [];
         let usedHybrid = false;
         const normalizedMateria = materiaFilter ? normalizeMateria(materiaFilter) : null;
         if (normalizedMateria) console.log(`[RAG] 🎯 Filtro materia attivo: ${normalizedMateria}`);
 
         try {
-            const allResponses = await Promise.all([
-                // A) Broad: TIER 1 (VIP) — il recinto dorato
+            // A) Broad searches: una per ogni sotto-query vettore (TIER 1 VIP)
+            const broadSearches = vectors.map(v =>
                 fetch(hybridUrl, {
                     method: 'POST',
                     headers: rpcHeaders,
                     body: JSON.stringify({
-                        query_embedding: vector,
-                        query_text: userMessageText,
-                        match_count: 12,
-                        match_threshold: 0.60,
+                        query_embedding: v.vector,
+                        query_text: v.query,
+                        match_count: Math.ceil(12 / vectors.length) + 2, // Distribuisci match_count
+                        match_threshold: 0.58, // Soglia leggermente più bassa per sotto-query atomiche
                         filter_tier: 1,  // SOLO VIP
                         ...(normalizedMateria ? { filter_materia: normalizedMateria } : {})
                     })
-                }),
-                // B) Premium: solo fonti di alta autorità VIP, soglia bassa
+                }).catch(() => null)
+            );
+            
+            const allResponses = await Promise.all([
+                ...broadSearches,
+                // B) Premium: solo fonti di alta autorità VIP, soglia bassa (usa vettore primario)
                 ...['teoria_massimario', 'nomofilachia_ssuu', 'sentenza_ssuu', 'massimario_cassazione'].map(tipo =>
                     fetch(hybridUrl, {
                         method: 'POST',
                         headers: rpcHeaders,
                         body: JSON.stringify({
-                            query_embedding: vector,
+                            query_embedding: primaryVector,
                             query_text: userMessageText,
                             match_count: 2,
                             match_threshold: 0.76,
@@ -187,19 +244,22 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                 )
             ]);
 
-            const broadRes = allResponses[0];
-            const premiumResponses = allResponses.slice(1); // 4 risposte premium
+            // Le prime N risposte sono le broad searches (una per sotto-query)
+            const broadResponses = allResponses.slice(0, vectors.length);
+            const premiumResponses = allResponses.slice(vectors.length); // 4 risposte premium
 
-            if (!broadRes.ok) throw new Error(`Hybrid RPC error ${broadRes.status}`);
-            
-            const broadMatches = await broadRes.json();
+            // Parsa tutte le broad responses
+            const broadResults = await Promise.all(
+                broadResponses.filter(r => r && r.ok).map(r => r.json())
+            );
             const premiumResults = await Promise.all(
                 premiumResponses.filter(r => r && r.ok).map(r => r.json())
             );
             
             // Unisci e de-duplica
             const seen = new Set();
-            for (const m of [...broadMatches, ...premiumResults.flat()]) {
+            const allResults = [...broadResults.flat(), ...premiumResults.flat()];
+            for (const m of allResults) {
                 if (!seen.has(m.id)) {
                     seen.add(m.id);
                     m.similarity = m.similarity || 0;
@@ -208,7 +268,7 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                 }
             }
             usedHybrid = true;
-            console.log(`[RAG] 🔀 PHASE 1 (VIP): Broad=${broadMatches.length}, Premium=${premiumResults.flat().length}, Merged=${matches.length}`);
+            console.log(`[RAG] 🔀 PHASE 1 (VIP): Broad=${broadResults.flat().length} (da ${vectors.length} query), Premium=${premiumResults.flat().length}, Merged=${matches.length}`);
 
             // ── WATERFALL FASE 2.5: Segnale di Evoluzione Recente (Tier 2) ──
             // Se il tier 1 ha buoni risultati (score >= 0.85), cerchiamo anche
@@ -222,7 +282,7 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                         method: 'POST',
                         headers: rpcHeaders,
                         body: JSON.stringify({
-                            query_embedding: vector,
+                            query_embedding: primaryVector,
                             query_text: userMessageText,
                             match_count: 2,
                             match_threshold: 0.80,
@@ -259,7 +319,7 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                         method: 'POST',
                         headers: rpcHeaders,
                         body: JSON.stringify({
-                            query_embedding: vector,
+                            query_embedding: primaryVector,
                             query_text: userMessageText,
                             match_count: 5,
                             match_threshold: 0.60,
@@ -292,7 +352,7 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                 method: 'POST',
                 headers: rpcHeaders,
                 body: JSON.stringify({
-                    query_embedding: vector,
+                    query_embedding: primaryVector,
                     match_count: 10,
                     match_threshold: 0.55
                 })
@@ -520,6 +580,71 @@ export default async function handler(req, res) {
     }
 
     let ragSources = []; // Fonti RAG trovate, da restituire al frontend
+
+    // --- HANDLER VELOCE: Verifica Citazione Globale ---
+    // Controlla se un numero di sentenza esiste nel DB globale (per Tiered Verification)
+    if (req.body.feature === 'verifyCitation') {
+        const citNum = req.body.citationNumber; // es. "35823/2023"
+        if (!citNum || typeof citNum !== 'string') {
+            return res.status(400).json({ error: 'citationNumber mancante o non valido' });
+        }
+        
+        const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
+        if (!process.env.SUPABASE_URL || !supabaseKey) {
+            return res.status(500).json({ error: 'Configurazione Supabase mancante', found: false });
+        }
+        
+        try {
+            // Estrai numero e anno
+            const parts = citNum.match(/(\d+)\s*[\/\-]\s*(20\d{2})/);
+            if (!parts) return res.status(200).json({ found: false, reason: 'formato non valido' });
+            
+            const sentNum = parts[1];
+            const sentYear = parts[2];
+            const searchKey = `${sentNum}/${sentYear}`;
+            
+            // Step 1: Cerca nel titolo (veloce, campo corto)
+            const titoloRes = await fetch(
+                `${process.env.SUPABASE_URL}/rest/v1/rag_chunks?titolo=ilike.*${sentNum}*&select=id,titolo,content&limit=3`,
+                {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`
+                    }
+                }
+            );
+            let results = titoloRes.ok ? await titoloRes.json() : [];
+            
+            // Step 2: Se non trovata nel titolo, cerca nel content (più lento)
+            if (results.length === 0) {
+                const contentRes = await fetch(
+                    `${process.env.SUPABASE_URL}/rest/v1/rag_chunks?content=ilike.*${searchKey}*&select=id,titolo,content&limit=3`,
+                    {
+                        headers: {
+                            'apikey': supabaseKey,
+                            'Authorization': `Bearer ${supabaseKey}`
+                        }
+                    }
+                );
+                results = contentRes.ok ? await contentRes.json() : [];
+            }
+            
+            console.log(`[Verify] 🔍 Citazione ${searchKey}: ${results.length > 0 ? '✅ TROVATA' : '❌ NON trovata'} (${results.length} chunk)`);
+            
+            return res.status(200).json({
+                found: results.length > 0,
+                count: results.length,
+                snippets: results.map(r => ({
+                    titolo: r.titolo || '',
+                    excerpt: (r.content || '').substring(0, 300)
+                }))
+            });
+        } catch (verifyErr) {
+            console.error(`[Verify] Errore verifica citazione: ${verifyErr.message}`);
+            return res.status(200).json({ found: false, error: verifyErr.message });
+        }
+    }
+
     try {
         const provider = req.body.provider || 'openai'; // google | anthropic | openai
         const useRAG = req.body.useRAG === true;
