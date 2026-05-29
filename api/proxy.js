@@ -603,9 +603,9 @@ export default async function handler(req, res) {
             const sentYear = parts[2];
             const searchKey = `${sentNum}/${sentYear}`;
             
-            // Step 1: Cerca nel titolo (veloce, campo corto)
+            // Step 1: Cerca nel titolo (veloce) — usa and() per AND sulla stessa colonna
             const titoloRes = await fetch(
-                `${process.env.SUPABASE_URL}/rest/v1/rag_chunks?titolo=ilike.*${sentNum}*&select=id,titolo,content&limit=3`,
+                `${process.env.SUPABASE_URL}/rest/v1/rag_chunks?and=(titolo.ilike.*${sentNum}*,titolo.ilike.*${sentYear}*)&select=id,titolo,content&limit=3`,
                 {
                     headers: {
                         'apikey': supabaseKey,
@@ -615,10 +615,10 @@ export default async function handler(req, res) {
             );
             let results = titoloRes.ok ? await titoloRes.json() : [];
             
-            // Step 2: Se non trovata nel titolo, cerca nel content (più lento)
+            // Step 2: Se non trovata nel titolo, cerca nel content con and()
             if (results.length === 0) {
                 const contentRes = await fetch(
-                    `${process.env.SUPABASE_URL}/rest/v1/rag_chunks?content=ilike.*${searchKey}*&select=id,titolo,content&limit=3`,
+                    `${process.env.SUPABASE_URL}/rest/v1/rag_chunks?and=(content.ilike.*${sentNum}*,content.ilike.*${sentYear}*)&select=id,titolo,content&limit=3`,
                     {
                         headers: {
                             'apikey': supabaseKey,
