@@ -1057,9 +1057,19 @@ ${coveredBlock}`
         var container = document.getElementById('lezione-messages');
         if (!container) return;
 
-        var formatted = escapeHtml(content)
+        // Estrai banner di verifica PRIMA dell'escape HTML (vengono aggiunti da _checkHallucinations)
+        var banners = [];
+        var cleanContent = content.replace(/<div\s+class="[^"]*bg-(green|red|orange|yellow)-900\/40[^"]*"[^>]*>[\s\S]*?<\/div>/gi, function(match) {
+            banners.push(match);
+            return '';
+        });
+
+        var formatted = escapeHtml(cleanContent)
             .replace(/&lt;thought&gt;([\s\S]*?)&lt;\/thought&gt;/gi, function(match, innerText) {
                 return '<THOUGHT_BLOCK>' + innerText + '</THOUGHT_BLOCK>';
+            })
+            .replace(/&lt;scaletta&gt;([\s\S]*?)&lt;\/scaletta&gt;/gi, function(match, innerText) {
+                return '<SCALETTA_BLOCK>' + innerText + '</SCALETTA_BLOCK>';
             });
 
         formatted = formatted
@@ -1070,7 +1080,18 @@ ${coveredBlock}`
         formatted = formatted.replace(/<THOUGHT_BLOCK>([\s\S]*?)<\/THOUGHT_BLOCK>/gi, function(match, innerText) {
             return `<details class="mt-2 mb-4 bg-gray-900/40 rounded-lg border border-gray-700/50 overflow-hidden shadow-sm">
                 <summary class="cursor-pointer px-4 py-2.5 text-xs font-medium text-amber-500/80 hover:text-amber-400 bg-gray-800/80 hover:bg-gray-700/80 transition-colors select-none flex items-center gap-2 outline-none">
-                    🧠 Vedi il ragionamento (RAG)
+                    🧠 Ragionamento interno
+                </summary>
+                <div class="p-4 text-xs text-gray-400 border-t border-gray-700/50 leading-relaxed italic opacity-90 bg-black/20">
+                    ${innerText}
+                </div>
+            </details>`;
+        });
+
+        formatted = formatted.replace(/<SCALETTA_BLOCK>([\s\S]*?)<\/SCALETTA_BLOCK>/gi, function(match, innerText) {
+            return `<details class="mt-2 mb-4 bg-gray-900/40 rounded-lg border border-gray-700/50 overflow-hidden shadow-sm">
+                <summary class="cursor-pointer px-4 py-2.5 text-xs font-medium text-blue-500/80 hover:text-blue-400 bg-gray-800/80 hover:bg-gray-700/80 transition-colors select-none flex items-center gap-2 outline-none">
+                    📋 Scaletta preparatoria
                 </summary>
                 <div class="p-4 text-xs text-gray-400 border-t border-gray-700/50 leading-relaxed italic opacity-90 bg-black/20">
                     ${innerText}
@@ -1108,6 +1129,7 @@ ${coveredBlock}`
                 </div>
                 <div class="bg-gray-800/80 border border-gray-700/50 text-gray-200 rounded-2xl rounded-tl-sm px-5 py-4 shadow-md relative leading-relaxed text-sm format-content">
                     ${formatted}
+                    ${banners.length > 0 ? banners.join('') : ''}
                     ${ttsBtn}
                 </div>
             </div>`;
@@ -1511,7 +1533,7 @@ ${coveredBlock}`
         }
         
         if (vagueCount >= 4) {
-            alerts.push('<div class="mt-3 p-3 bg-yellow-900/40 border border-yellow-500/50 rounded-xl text-yellow-200 text-sm">📡 **Monitor Densità:** Questa risposta contiene ' + vagueCount + ' formule generiche senza estremi specifici. Potrebbe indicare lacune nel database su questo argomento. Valuta la profondità effettiva del contenuto.</div>');
+            alerts.push('<div class="mt-3 p-3 bg-yellow-900/40 border border-yellow-500/50 rounded-xl text-yellow-200 text-sm">📡 **Monitor Densità:** Questa trattazione contiene ' + vagueCount + ' formule generiche senza estremi specifici. Valuta la profondità effettiva del contenuto.</div>');
         }
         
         // --- STATE TRACKING: Estrai concetti coperti da questo modulo ---
