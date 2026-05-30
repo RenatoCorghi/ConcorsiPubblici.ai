@@ -130,7 +130,7 @@ async function expandQuery(query, materia, googleKey) {
 Argomento: "${query}"
 
 Rispondi SOLO con un JSON array di stringhe. Nessun altro testo, nessun markdown.` }] }],
-                    generationConfig: { temperature: 0, maxOutputTokens: 300 }
+                    generationConfig: { temperature: 0, maxOutputTokens: 1024 }
                 })
             }
         );

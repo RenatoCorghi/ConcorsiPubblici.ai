@@ -1348,6 +1348,10 @@ ${coveredBlock}`
         let mismatch = [];
         let globallyVerified = [];
         
+        // VERITÀ DOGMATICHE CERTIFICATE: sentenze hardcoded nel system prompt
+        // NON sono nel DB Supabase → bypassano completamente la verifica
+        const dogmaticTruths = ['1898/2025', '9096/2025', '18084/2025', '5073/2023'];
+        
         const citationsToCheck = [];
         while ((match = sentenceRegex.exec(text)) !== null) {
             citationsToCheck.push({
@@ -1361,6 +1365,11 @@ ${coveredBlock}`
         }
         
         for (const cit of citationsToCheck) {
+            // LIVELLO 0: Bypass immediato per verità dogmatiche certificate
+            if (dogmaticTruths.includes(cit.citationKey)) {
+                globallyVerified.push(cit.fullMatch + ' ✓ certificata');
+                continue;
+            }
             // Estrai il contesto della citazione nel testo generato (±150 chars)
             const ctxStart = Math.max(0, cit.index - 150);
             const ctxEnd = Math.min(text.length, cit.index + cit.matchLength + 150);
