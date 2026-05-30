@@ -100,6 +100,34 @@ async function main() {
                     console.log(`   - Generazione VIP per: ${entry.name}...`);
                     try {
                         const text = fs.readFileSync(fullPath, 'utf8');
+
+                        // ═══ SAFETY GATE: Oscuramento e contenuto minimo ═══
+                        // Le sentenze "in fase di oscuramento" su Italgiure producono
+                        // PDF stub di ~5KB con solo boilerplate. Senza questo gate,
+                        // l'AI fabbricherà un'analisi giuridica completa usando il
+                        // numero corretto ma con contenuto totalmente inventato,
+                        // causando false associazioni nel database RAG.
+                        const OSCURAMENTO_PATTERNS = [
+                            /in fase di oscuramento/i,
+                            /sentenza richiesta.*oscuramento/i,
+                            /provvedimento.*non.*disponibile/i,
+                            /testo.*non.*(?:ancora\s+)?disponibile/i,
+                            /documento.*non.*reperibile/i
+                        ];
+                        const isOscurato = OSCURAMENTO_PATTERNS.some(p => p.test(text));
+                        if (isOscurato) {
+                            console.warn(`   🚫 SKIP (sentenza oscurata): ${entry.name}`);
+                            continue;
+                        }
+
+                        const MIN_CONTENT_LENGTH = 1000;
+                        const strippedText = text.replace(/\s+/g, ' ').trim();
+                        if (strippedText.length < MIN_CONTENT_LENGTH) {
+                            console.warn(`   ⚠️ SKIP (contenuto troppo breve: ${strippedText.length} chars): ${entry.name}`);
+                            continue;
+                        }
+                        // ═══ FINE SAFETY GATE ═══
+
                         let meta = {};
                         if (fs.existsSync(metaPath)) {
                             meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));

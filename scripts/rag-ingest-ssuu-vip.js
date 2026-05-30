@@ -81,6 +81,19 @@ async function main() {
         try {
             const content = fs.readFileSync(file, 'utf8');
             const fileName = path.basename(file);
+
+            // ═══ SAFETY GATE (Ingest): Blocca schede generate da sentenze oscurate ═══
+            // Se la scheda VIP è stata generata da un PDF oscurato, il contenuto
+            // sarà fabbricato. Blocchiamo schede troppo corte (< 1000 chars effettivi)
+            // o che contengono solo un tag [SCARTO_ASSOLUTO].
+            const stripped = content.replace(/\s+/g, ' ').trim();
+            if (stripped.length < 1000 || content.includes('[SCARTO_ASSOLUTO]')) {
+                console.log(`  ⚠️ SKIP ingest (contenuto troppo breve o scartato): ${fileName}`);
+                skipped++;
+                continue;
+            }
+            // ═══ FINE SAFETY GATE ═══
+
             const docUuid = generateUUID(fileName);
             
             // Titolo dalla prima riga

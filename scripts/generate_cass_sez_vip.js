@@ -132,6 +132,16 @@ async function main() {
         const outPath = path.join(OUTPUT_DIR, year, file);
 
         const content = fs.readFileSync(inPath, 'utf8');
+        // ═══ SAFETY GATE: Oscuramento ═══
+        if (/in fase di oscuramento|sentenza richiesta.*oscuramento|provvedimento.*non.*disponibile|testo.*non.*disponibile/i.test(content)) {
+            console.log(`[${i+1}/${toProcess.length}] ${year}/${file}... 🚫 SKIP (oscurato)`);
+            continue;
+        }
+        if (content.replace(/\s+/g, ' ').trim().length < 1000) {
+            console.log(`[${i+1}/${toProcess.length}] ${year}/${file}... ⚠️ SKIP (breve)`);
+            continue;
+        }
+        // ═══ FINE SAFETY GATE ═══
         const firstLine = content.split('\n')[0] || '';
 
         // Estrai numero/anno dalla prima riga per i metadati

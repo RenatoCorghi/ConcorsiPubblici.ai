@@ -364,9 +364,17 @@ async function main() {
         try {
             const rawText = fs.readFileSync(file, 'utf8');
 
+            // ═══ SAFETY GATE: Oscuramento ═══
+            if (/in fase di oscuramento|sentenza richiesta.*oscuramento|provvedimento.*non.*disponibile|testo.*non.*disponibile/i.test(rawText)) {
+                console.log(`   🚫 SKIP (sentenza oscurata)`);
+                discarded++;
+                continue;
+            }
+            // ═══ FINE SAFETY GATE ═══
+
             // --- 1. LOCAL PRE-FILTERS ---
-            if (rawText.length < 500) {
-                console.log(`   ⏭️  SCARTO AUTOMATICO: Testo troppo corto (<500 caratteri).`);
+            if (rawText.replace(/\s+/g, ' ').trim().length < 1000) {
+                console.log(`   ⏭️  SCARTO AUTOMATICO: Testo troppo corto (<1000 caratteri effettivi).`);
                 fs.mkdirSync(path.dirname(outputFilePath), { recursive: true });
                 fs.writeFileSync(outputFilePath, "[SCARTO_ASSOLUTO] (Pre-filtro locale: Testo troppo breve)", 'utf8');
                 discarded++;

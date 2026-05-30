@@ -169,6 +169,25 @@ async function main() {
                 console.log(`   - Generazione VIP per: ${entry.name}...`);
                 try {
                     const text = fs.readFileSync(fullPath, 'utf8');
+
+                    // ═══ SAFETY GATE: Oscuramento e contenuto minimo ═══
+                    const OSCURAMENTO_PATTERNS = [
+                        /in fase di oscuramento/i,
+                        /sentenza richiesta.*oscuramento/i,
+                        /provvedimento.*non.*disponibile/i,
+                        /testo.*non.*(?:ancora\s+)?disponibile/i,
+                        /documento.*non.*reperibile/i
+                    ];
+                    if (OSCURAMENTO_PATTERNS.some(p => p.test(text))) {
+                        console.warn(`   🚫 SKIP (sentenza oscurata): ${entry.name}`);
+                        continue;
+                    }
+                    const strippedText = text.replace(/\s+/g, ' ').trim();
+                    if (strippedText.length < 1000) {
+                        console.warn(`   ⚠️ SKIP (contenuto troppo breve: ${strippedText.length} chars): ${entry.name}`);
+                        continue;
+                    }
+                    // ═══ FINE SAFETY GATE ═══
                     
                     // Chiamata all'IA
                     const vipMarkdown = await generateVIP(text);

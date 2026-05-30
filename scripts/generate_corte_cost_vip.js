@@ -158,8 +158,16 @@ async function main() {
         const inputPath = path.join(INPUT_DIR, file);
         const content = fs.readFileSync(inputPath, 'utf8');
 
+        // ═══ SAFETY GATE: Oscuramento ═══
+        if (/in fase di oscuramento|sentenza richiesta.*oscuramento|provvedimento.*non.*disponibile|testo.*non.*disponibile/i.test(content)) {
+            console.log(`   🚫 [${i+1}/${files.length}] ${file} - sentenza oscurata, salto.`);
+            scarti++;
+            continue;
+        }
+        // ═══ FINE SAFETY GATE ═══
+
         // Pre-filtro: skip file troppo corti
-        if (content.length < 2000) {
+        if (content.replace(/\s+/g, ' ').trim().length < 1000) {
             console.log(`   ⏭️  [${i+1}/${files.length}] ${file} - troppo corto (${content.length} chars), salto.`);
             fs.writeFileSync(outputPath, "[SCARTO_ASSOLUTO] (Pre-filtro automatico: testo troppo corto)", 'utf8');
             scarti++;

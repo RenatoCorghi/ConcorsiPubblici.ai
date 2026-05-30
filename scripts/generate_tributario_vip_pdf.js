@@ -135,6 +135,18 @@ async function main() {
         }
 
         const content = fs.readFileSync(path.join(INPUT_DIR, f), 'utf8');
+        // ═══ SAFETY GATE: Oscuramento ═══
+        if (/in fase di oscuramento|sentenza richiesta.*oscuramento|provvedimento.*non.*disponibile|testo.*non.*disponibile/i.test(content)) {
+            console.log(`  [${i+1}/${files.length}] ${f.substring(0,40)}... 🚫 SKIP (oscurato)`);
+            scarti++;
+            continue;
+        }
+        if (content.replace(/\s+/g, ' ').trim().length < 1000) {
+            console.log(`  [${i+1}/${files.length}] ${f.substring(0,40)}... ⚠️ SKIP (breve)`);
+            scarti++;
+            continue;
+        }
+        // ═══ FINE SAFETY GATE ═══
         console.log(`  [${i+1}/${files.length}] ${f.substring(0,40)}... (${Math.round(content.length/1024)}KB)`);
 
         let success = false, retryCount = 0;

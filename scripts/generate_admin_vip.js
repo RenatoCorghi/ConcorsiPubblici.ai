@@ -118,6 +118,16 @@ async function main() {
         if (fs.existsSync(outputPath)) { skipped++; continue; }
 
         const content = fs.readFileSync(path.join(INPUT_DIR, file), 'utf8');
+        // ═══ SAFETY GATE: Oscuramento ═══
+        if (/in fase di oscuramento|sentenza richiesta.*oscuramento|provvedimento.*non.*disponibile|testo.*non.*disponibile/i.test(content)) {
+            console.log(`  [${i+1}] ${file}... 🚫 SKIP (oscurato)`);
+            continue;
+        }
+        if (content.replace(/\s+/g, ' ').trim().length < 1000) {
+            console.log(`  [${i+1}] ${file}... ⚠️ SKIP (contenuto breve)`);
+            continue;
+        }
+        // ═══ FINE SAFETY GATE ═══
         
         // Estrai metadati dal filename
         const match = file.match(/(CdS|TAR)_(\d{4})_(\d+)/);

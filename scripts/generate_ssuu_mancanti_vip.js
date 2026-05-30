@@ -95,8 +95,19 @@ async function main() {
             if (fs.existsSync(outPath)) continue; // già processato
             
             const content = fs.readFileSync(path.join(yearDir, f), 'utf8');
+            // ═══ SAFETY GATE: Oscuramento e contenuto minimo ═══
+            const isOscurato = /in fase di oscuramento|sentenza richiesta.*oscuramento|provvedimento.*non.*disponibile|testo.*non.*disponibile|documento.*non.*reperibile/i.test(content);
+            const strippedLen = content.replace(/\s+/g, ' ').trim().length;
+            if (isOscurato) {
+                console.warn(`   🚫 SKIP (sentenza oscurata): ${f}`);
+                continue;
+            }
+            if (strippedLen < 1000) {
+                console.warn(`   ⚠️ SKIP (contenuto troppo breve: ${strippedLen} chars): ${f}`);
+                continue;
+            }
             // Processa solo file con testo sufficiente e che non sono già schede VIP
-            if (content.length > 500 && !content.includes('## 1.')) {
+            if (!content.includes('## 1.')) {
                 toProcess.push({ year, file: f, size: content.length });
             }
         }
@@ -112,6 +123,11 @@ async function main() {
         const outputPath = path.join(OUTPUT_DIR, year, file);
 
         const content = fs.readFileSync(inputPath, 'utf8');
+        // ═══ SAFETY GATE (doppio check al processing) ═══
+        if (/in fase di oscuramento|sentenza richiesta.*oscuramento/i.test(content) || content.replace(/\s+/g, ' ').trim().length < 1000) {
+            console.log(`[${i+1}/${toProcess.length}] ${year}/${file}... 🚫 SKIP (oscurato/breve)`);
+            continue;
+        }
         process.stdout.write(`[${i+1}/${toProcess.length}] ${year}/${file}... `);
 
         let success = false;
