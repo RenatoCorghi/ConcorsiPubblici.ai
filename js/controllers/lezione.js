@@ -1440,15 +1440,20 @@ ${coveredBlock}`
             }
         }
         
+        // De-duplica gli array prima di costruire i banner
+        const uniqueVerified = [...new Set(globallyVerified)];
+        const uniqueUnverified = [...new Set(unverified)];
+        const uniqueMismatch = [...new Set(mismatch)];
+        
         // Banner verdi per citazioni verificate globalmente
-        if (globallyVerified.length > 0) {
-            alerts.push('<div class="mt-3 p-3 bg-green-900/40 border border-green-500/50 rounded-xl text-green-200 text-sm">✅ **Verifica Globale:** ' + globallyVerified.length + ' citazion' + (globallyVerified.length === 1 ? 'e' : 'i') + ' non nel contesto RAG di questo modulo ' + (globallyVerified.length === 1 ? 'è stata confermata' : 'sono state confermate') + ' nel database globale: <i>' + globallyVerified.join(', ') + '</i></div>');
+        if (uniqueVerified.length > 0) {
+            alerts.push('<div class="mt-3 p-3 bg-green-900/40 border border-green-500/50 rounded-xl text-green-200 text-sm">✅ **Verifica Globale:** ' + uniqueVerified.length + ' citazion' + (uniqueVerified.length === 1 ? 'e' : 'i') + ' non nel contesto RAG di questo modulo ' + (uniqueVerified.length === 1 ? 'è stata confermata' : 'sono state confermate') + ' nel database globale: <i>' + uniqueVerified.join(', ') + '</i></div>');
         }
-        if (unverified.length > 0) {
-            alerts.push('<div class="mt-4 p-3 bg-red-900/40 border border-red-500/50 rounded-xl text-red-200 text-sm">⚠️ **Scudo Anti-Allucinazione:** L\'intelligenza artificiale ha citato questi estremi giurisprudenziali che non trovano riscontro diretto nel database: <i>' + unverified.join(', ') + '</i>. Verifica con attenzione.</div>');
+        if (uniqueUnverified.length > 0) {
+            alerts.push('<div class="mt-4 p-3 bg-red-900/40 border border-red-500/50 rounded-xl text-red-200 text-sm">⚠️ **Scudo Anti-Allucinazione:** L\'intelligenza artificiale ha citato questi estremi giurisprudenziali che non trovano riscontro diretto nel database: <i>' + uniqueUnverified.join(', ') + '</i>. Verifica con attenzione.</div>');
         }
-        if (mismatch.length > 0) {
-            alerts.push('<div class="mt-4 p-3 bg-orange-900/40 border border-orange-500/50 rounded-xl text-orange-200 text-sm">🔍 **Alert Associazione Dubbia:** Queste citazioni esistono nel database ma il contenuto del frammento potrebbe non corrispondere al principio attribuito: <i>' + mismatch.join(', ') + '</i>. Il principio citato nel testo potrebbe non essere supportato dal frammento RAG originale.</div>');
+        if (uniqueMismatch.length > 0) {
+            alerts.push('<div class="mt-4 p-3 bg-orange-900/40 border border-orange-500/50 rounded-xl text-orange-200 text-sm">🔍 **Alert Associazione Dubbia:** Queste citazioni esistono nel database ma il contenuto del frammento potrebbe non corrispondere al principio attribuito: <i>' + uniqueMismatch.join(', ') + '</i>. Il principio citato nel testo potrebbe non essere supportato dal frammento RAG originale.</div>');
         }
         
         // --- CHECK 2: Perifrasi mascheranti (vague formulas without concrete data) ---
