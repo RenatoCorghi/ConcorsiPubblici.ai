@@ -119,26 +119,35 @@ async function expandQuery(query, materia, googleKey) {
     if (!query || query.length < 60) return [query];
     
     try {
+        const prompt = `Sei un Magistrato Ordinario e docente di diritto. Il tuo compito è ottimizzare l'estrazione RAG (Retrieval-Augmented Generation) per la generazione di una "lezione magistrale" su questa traccia:
+"${query}" (Materia: ${materia || 'Non specificata'}).
+
+Il database vettoriale su cui faremo la ricerca usa ricerca semantica. Scomponi la traccia in un massimo di 4 sotto-query distinte e ultra-focalizzate, scritte come se fossero massime giurisprudenziali. Se è semplice, forniscine una sola.
+
+REGOLE TASSATIVE:
+1. Restituisci SOLO un array JSON valido di stringhe.
+2. Formato esatto: ["sotto query 1", "sotto query 2"]
+3. Nessun markdown.`;
+
         const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${googleKey}`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    contents: [{ parts: [{ text: `Sei un assistente per la ricerca giuridica italiana. Dato questo argomento di ${materia || 'diritto'}, scomponilo in 4-5 sotto-query atomiche di ricerca per un database vettoriale di giurisprudenza e normativa italiana. Ogni sotto-query deve essere breve (max 12 parole) e focalizzata su UN singolo istituto giuridico, norma o concetto chiave. Includi articoli di legge rilevanti quando possibile.
-
-Argomento: "${query}"
-
-Rispondi SOLO con un JSON array di stringhe. Nessun altro testo, nessun markdown.` }] }],
-                    generationConfig: { temperature: 0, maxOutputTokens: 1024 }
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { 
+                        temperature: 0.2, 
+                        maxOutputTokens: 1024,
+                        responseMimeType: "application/json"
+                    }
                 })
             }
         );
         const data = await response.json();
         const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        // Pulisci markdown fence se presente
-        const clean = text.replace(/```json?\s*/g, '').replace(/```/g, '').trim();
-        const queries = JSON.parse(clean);
+        // Il JSON arriva già pulito grazie a responseMimeType
+        const queries = JSON.parse(text);
         if (Array.isArray(queries) && queries.length >= 2 && queries.length <= 6) {
             console.log(`[RAG] 🔀 Query Expansion: "${query.substring(0,60)}..." → ${queries.length} sotto-query: ${JSON.stringify(queries)}`);
             return queries.slice(0, 5);
