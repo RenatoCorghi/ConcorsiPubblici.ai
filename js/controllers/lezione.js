@@ -1369,15 +1369,38 @@ ${coveredBlock}`
         const dogmaticTruths = ['1898/2025', '9096/2025', '18084/2025', '5073/2023', '35823/2023'];
         
         const citationsToCheck = [];
+        const seenKeys = new Set();
         while ((match = sentenceRegex.exec(text)) !== null) {
-            citationsToCheck.push({
-                num: match[1],
-                year: match[2],
-                citationKey: match[1] + '/' + match[2],
-                fullMatch: match[0].substring(0, 60),
-                index: match.index,
-                matchLength: match[0].length
-            });
+            const key = match[1] + '/' + match[2];
+            if (!seenKeys.has(key)) {
+                seenKeys.add(key);
+                citationsToCheck.push({
+                    num: match[1],
+                    year: match[2],
+                    citationKey: key,
+                    fullMatch: match[0].substring(0, 60),
+                    index: match.index,
+                    matchLength: match[0].length
+                });
+            }
+        }
+        
+        // Pass 2: cattura citazioni concatenate "e n. 18084/2025", ", n. 5073/2023"
+        // che seguono una citazione primaria ma senza prefisso Cass./Cassazione
+        const chainedRegex = /(?:e|,|ed)\s+n\.?\s*([0-9]{3,})\/(20[0-9]{2})/gi;
+        while ((match = chainedRegex.exec(text)) !== null) {
+            const key = match[1] + '/' + match[2];
+            if (!seenKeys.has(key)) {
+                seenKeys.add(key);
+                citationsToCheck.push({
+                    num: match[1],
+                    year: match[2],
+                    citationKey: key,
+                    fullMatch: match[0].substring(0, 60),
+                    index: match.index,
+                    matchLength: match[0].length
+                });
+            }
         }
         
         for (const cit of citationsToCheck) {
