@@ -760,7 +760,7 @@ export const LezioneController = {
             chatSlice.forEach(msg => {
                 messages.push({
                     role: msg.role === 'ai' ? 'assistant' : 'user',
-                    content: msg.content
+                    content: this._stripShieldBanners(msg.content)
                 });
             });
 
@@ -894,7 +894,7 @@ ${coveredBlock}`
         chatSlice.forEach(msg => {
             messages.push({
                 role: msg.role === 'ai' ? 'assistant' : 'user',
-                content: msg.content
+                content: this._stripShieldBanners(msg.content)
             });
         });
 
@@ -1336,6 +1336,18 @@ ${coveredBlock}`
         if (el) el.remove();
     },
 
+    /**
+     * Rimuove i banner HTML dello Scudo Anti-Allucinazione dal testo
+     * prima di inviarlo all'LLM come contesto storico.
+     * Previene l'HTML History Poisoning: senza questo, il modello 
+     * copia i vecchi banner rossi/verdi nei moduli successivi.
+     */
+    _stripShieldBanners: function(text) {
+        if (!text || typeof text !== 'string') return text || '';
+        // Rimuovi tutti i <div class="mt-...">...</div> generati dallo scudo
+        return text.replace(/<div\s+class="mt-[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '').trim();
+    },
+
     _checkHallucinations: async function(text, ragSources) {
         let alerts = [];
         
@@ -1367,7 +1379,7 @@ ${coveredBlock}`
         for (const cit of citationsToCheck) {
             // LIVELLO 0: Bypass immediato per verità dogmatiche certificate
             if (dogmaticTruths.includes(cit.citationKey)) {
-                globallyVerified.push(cit.fullMatch + ' ✓ certificata');
+                globallyVerified.push('Cass. n. ' + cit.citationKey + ' (certificata)');
                 continue;
             }
             // Estrai il contesto della citazione nel testo generato (±150 chars)
@@ -1395,7 +1407,7 @@ ${coveredBlock}`
                     const verifyData = await verifyRes.json();
                     if (verifyData.found) {
                         // ✅ Trovata nel DB globale — NON è allucinazione
-                        globallyVerified.push(cit.fullMatch);
+                        globallyVerified.push('Cass. n. ' + cit.citationKey);
                         console.log(`[Lectio] ✅ Verifica Globale: ${cit.citationKey} → TROVATA nel DB (${verifyData.count} chunk)`);
                         continue; // Non aggiungere a unverified
                     }
@@ -1403,7 +1415,7 @@ ${coveredBlock}`
                     console.warn('[Lectio] Verifica globale fallita:', e.message);
                 }
                 // Non trovata né localmente né globalmente → allucinazione
-                unverified.push(cit.fullMatch);
+                unverified.push('Cass. n. ' + cit.citationKey);
             } else {
                 // Numero trovato nel RAG locale → verifica associazione tematica
                 const sourceContent = (matchingSource.fullContent || matchingSource.snippet || '').toLowerCase();
@@ -1419,7 +1431,7 @@ ${coveredBlock}`
                 
                 if (commonEntities.length < 2 && overlapRatio < 0.15) {
                     // MISMATCH ASSOCIATIVO: il numero esiste ma parla di altro
-                    mismatch.push(cit.fullMatch);
+                    mismatch.push('Cass. n. ' + cit.citationKey);
                 }
             }
         }
