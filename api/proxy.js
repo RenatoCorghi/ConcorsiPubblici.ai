@@ -110,6 +110,29 @@ function normalizeMateria(inputMateria) {
     return inputMateria.replace(/\b\w/g, l => l.toUpperCase());
 }
 
+// Mappa materia del chunk → famiglia canonica per matching soft
+// Es: "Giurisprudenza Civile" e "Diritto Processuale Civile" matchano con "Diritto Civile"
+function materiaFamily(materia) {
+    if (!materia) return null;
+    const s = materia.toLowerCase();
+    if (s.includes('civile') || s.includes('lavoro')) return 'civile';
+    if (s.includes('penale')) return 'penale';
+    if (s.includes('amministrativ')) return 'amministrativo';
+    if (s.includes('tributar')) return 'tributario';
+    if (s.includes('costituzional')) return 'costituzionale';
+    if (s.includes('massimario')) return 'civile'; // Massimario della Cassazione = prevalentemente civile
+    return null;
+}
+
+// Verifica se la materia del chunk è compatibile con il filtro richiesto
+function materiaMatches(chunkMateria, filterMateria) {
+    if (!filterMateria) return true;  // Nessun filtro → tutto passa
+    if (!chunkMateria) return true;   // Materia null → tieni (potrebbe essere cross-disciplinare)
+    if (chunkMateria === filterMateria) return true; // Match esatto
+    // Match per famiglia: "Giurisprudenza Civile" matcha con "Diritto Civile"
+    return materiaFamily(chunkMateria) === materiaFamily(filterMateria);
+}
+
 // --- QUERY EXPANSION (Multi-Query RAG) ---
 // Decompone titoli complessi in sotto-query atomiche usando Gemini Flash.
 // Es: "Contratto simulato e in frode alla legge, con rif. al contratto di società"
@@ -248,8 +271,9 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
             const seen = new Set();
             for (const m of allResults) {
                 if (!seen.has(m.id)) {
-                    // Filtro materia soft: preferisci la materia giusta, ma accetta anche null
-                    if (normalizedMateria && m.materia && m.materia !== normalizedMateria) continue;
+                    // Filtro materia soft: usa materiaMatches per accettare varianti
+                    // Es: "Giurisprudenza Civile" e "Diritto Processuale Civile" passano per "Diritto Civile"
+                    if (!materiaMatches(m.materia, normalizedMateria)) continue;
                     seen.add(m.id);
                     m.similarity = m.similarity || 0;
                     matches.push(m);
@@ -273,6 +297,8 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                 if (m.tipo === 'massimario_cassazione') m.boostedScore *= 1.30; // Massimari Cassazione
                 if (m.tipo === 'nomofilachia_ssuu') m.boostedScore *= 1.25;     // SS.UU. VIP
                 if (m.tipo === 'sentenza_ssuu') m.boostedScore *= 1.20;         // SS.UU. schede
+                // Boost per codici e testi unici (fondamento normativo, essenziali per la lezione)
+                if (m.tipo === 'codice') m.boostedScore *= 1.15;               // Codici e T.U.
                 // Boost per schede VIP strutturate (hand-crafted, alta densità semantica)
                 if (m.tipo === 'sentenza_sez_semplici_vip') m.boostedScore *= 1.10;
                 if (m.tipo === 'giurisprudenza_sez_semplici') m.boostedScore *= 1.10;

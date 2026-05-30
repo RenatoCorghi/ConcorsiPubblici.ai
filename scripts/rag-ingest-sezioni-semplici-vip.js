@@ -96,9 +96,9 @@ async function main() {
             const titolo = firstLine || fileName;
             
             // Materia
-            let materia = 'Giurisprudenza Civile';
+            let materia = 'Diritto Civile';
             if (fileName.startsWith('snpen') || content.includes('#SezioniSempliciPenali')) {
-                materia = 'Giurisprudenza Penale';
+                materia = 'Diritto Penale';
             }
 
             // Verifica se già esiste (idempotenza)

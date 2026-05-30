@@ -113,8 +113,8 @@ async function main() {
             const embedding = await getEmbedding(content.substring(0, 8000));
 
             // Materia
-            let materia = 'Giurisprudenza Civile';
-            if (filename.startsWith('snpen')) materia = 'Giurisprudenza Penale';
+            let materia = 'Diritto Civile';
+            if (filename.startsWith('snpen')) materia = 'Diritto Penale';
 
             // Inserisci chunk pulito
             const { error: chunkErr } = await supabase.from('rag_chunks').insert({

@@ -88,11 +88,11 @@ async function main() {
             const titolo = firstLine || fileName;
             
             // Materia
-            let materia = 'Giurisprudenza Civile';
+            let materia = 'Diritto Civile';
             if (fileName.startsWith('snpen') || content.includes('#SezioniUnitePenali')) {
-                materia = 'Giurisprudenza Penale';
+                materia = 'Diritto Penale';
             } else if (content.includes('Adunanza Plenaria')) {
-                materia = 'Diritto Amministrativo (AP)';
+                materia = 'Diritto Amministrativo';
             }
 
             // Verifica se già esiste (idempotenza)

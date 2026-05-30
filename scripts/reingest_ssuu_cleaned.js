@@ -92,8 +92,8 @@ async function main() {
             const firstLine = content.split('\n')[0].replace(/^#\s*/, '').trim();
             const titolo = firstLine || fileName;
 
-            let materia = 'Giurisprudenza Civile';
-            if (fileName.startsWith('snpen')) materia = 'Giurisprudenza Penale';
+            let materia = 'Diritto Civile';
+            if (fileName.startsWith('snpen')) materia = 'Diritto Penale';
 
             // 0. Assicura che il documento padre esista (upsert)
             await supabase.from('rag_documents').upsert({
