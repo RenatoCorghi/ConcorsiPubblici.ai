@@ -120,7 +120,7 @@ async function expandQuery(query, materia, googleKey) {
     
     try {
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${googleKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${googleKey}`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -603,39 +603,57 @@ export default async function handler(req, res) {
             const sentYear = parts[2];
             const searchKey = `${sentNum}/${sentYear}`;
             
-            // Step 1: Cerca nel titolo (veloce) — usa and() per AND sulla stessa colonna
-            const titoloRes = await fetch(
-                `${process.env.SUPABASE_URL}/rest/v1/rag_chunks?and=(titolo.ilike.*${sentNum}*,titolo.ilike.*${sentYear}*)&select=id,titolo,content&limit=3`,
+            // STRATEGIA: Ricerca vettoriale via RPC (ILIKE/FTS causano timeout su Supabase)
+            // 1. Genera embedding per la citazione
+            const googleKey = process.env.GOOGLE_AI_KEY || process.env.GEMINI_API_KEY;
+            const embedRes = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key=${googleKey}`,
                 {
-                    headers: {
-                        'apikey': supabaseKey,
-                        'Authorization': `Bearer ${supabaseKey}`
-                    }
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'models/gemini-embedding-2',
+                        content: { parts: [{ text: `sentenza cassazione n. ${sentNum} ${sentYear}` }] },
+                        outputDimensionality: 768
+                    })
                 }
             );
-            let results = titoloRes.ok ? await titoloRes.json() : [];
+            const embedData = await embedRes.json();
+            const vector = embedData.embedding?.values;
+            if (!vector) return res.status(200).json({ found: false, reason: 'embedding fallito' });
             
-            // Step 2: Se non trovata nel titolo, cerca nel content con and()
-            if (results.length === 0) {
-                const contentRes = await fetch(
-                    `${process.env.SUPABASE_URL}/rest/v1/rag_chunks?and=(content.ilike.*${sentNum}*,content.ilike.*${sentYear}*)&select=id,titolo,content&limit=3`,
-                    {
-                        headers: {
-                            'apikey': supabaseKey,
-                            'Authorization': `Bearer ${supabaseKey}`
-                        }
-                    }
-                );
-                results = contentRes.ok ? await contentRes.json() : [];
-            }
+            // 2. Ricerca ibrida nel DB — soglia bassa per massima copertura
+            const hybridUrl = `${process.env.SUPABASE_URL}/rest/v1/rpc/match_documents_hybrid`;
+            const rpcHeaders = {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json'
+            };
+            const searchRes = await fetch(hybridUrl, {
+                method: 'POST',
+                headers: rpcHeaders,
+                body: JSON.stringify({
+                    query_embedding: vector,
+                    query_text: `${sentNum} ${sentYear}`,
+                    match_count: 10,
+                    match_threshold: 0.40
+                })
+            });
+            const matches = searchRes.ok ? await searchRes.json() : [];
             
-            console.log(`[Verify] 🔍 Citazione ${searchKey}: ${results.length > 0 ? '✅ TROVATA' : '❌ NON trovata'} (${results.length} chunk)`);
+            // 3. Filtra: il numero deve comparire nel content del chunk
+            const verified = matches.filter(m => {
+                const content = (m.content || '').toLowerCase();
+                return content.includes(sentNum) && content.includes(sentYear);
+            });
+            
+            console.log(`[Verify] 🔍 Citazione ${searchKey}: ${verified.length > 0 ? '✅ TROVATA' : '❌ NON trovata'} (${matches.length} candidati, ${verified.length} confermati)`);
             
             return res.status(200).json({
-                found: results.length > 0,
-                count: results.length,
-                snippets: results.map(r => ({
-                    titolo: r.titolo || '',
+                found: verified.length > 0,
+                count: verified.length,
+                snippets: verified.slice(0, 3).map(r => ({
+                    document_id: r.document_id || '',
                     excerpt: (r.content || '').substring(0, 300)
                 }))
             });
