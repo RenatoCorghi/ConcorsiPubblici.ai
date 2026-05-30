@@ -89,10 +89,18 @@ export function renderBriefing() {
                         <i data-lucide="timer" class="w-4 h-4"></i>
                         Prova Veloce (30 min)
                     </button>
+                    <button onclick="app.generateModelEssay()" id="btn-svolgimento-modello"
+                        class="px-6 py-3 bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 border border-violet-500/40 text-violet-300 hover:text-white hover:border-violet-400 rounded-xl font-bold transition flex items-center gap-2 hover:scale-105 group">
+                        <i data-lucide="file-text" class="w-4 h-4 group-hover:scale-110 transition-transform"></i>
+                        📝 Svolgimento Modello AI
+                    </button>
                 ` : `
                     <div class="text-gray-500 text-sm animate-pulse">Preparazione del briefing in corso...</div>
                 `}
             </div>
+
+            <!-- Model Essay (appare quando generato) -->
+            ${AppState.modelEssay ? renderModelEssay(AppState.modelEssay) : ''}
         </div>
     `;
 }
@@ -428,4 +436,88 @@ function renderSectionContent(section) {
         default:
             return '';
     }
+}
+
+function renderModelEssay(modelData) {
+    if (modelData.loading) {
+        return `
+            <div class="mt-8 fade-in">
+                <div class="bg-gray-900/80 border border-violet-500/30 rounded-2xl p-8 shadow-xl shadow-violet-500/10">
+                    <div class="flex flex-col items-center justify-center py-12 space-y-6">
+                        <div class="relative w-20 h-20 flex items-center justify-center">
+                            <div class="absolute inset-0 rounded-full border-4 border-violet-500/20 border-t-violet-500 animate-spin" style="animation-duration: 2s;"></div>
+                            <i data-lucide="file-text" class="w-8 h-8 text-violet-400 relative z-10 animate-pulse"></i>
+                        </div>
+                        <div class="text-center space-y-2">
+                            <h3 class="text-xl font-bold font-display text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400 animate-pulse">
+                                Stesura dello svolgimento modello...
+                            </h3>
+                            <p class="text-gray-500 text-sm max-w-sm">Il candidato virtuale sta redigendo il tema in prosa continua. Tempo stimato: 45–90 secondi.</p>
+                        </div>
+                        <div class="w-48 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                            <div class="h-full w-1/2 bg-gradient-to-r from-transparent via-violet-500 to-transparent animate-scan"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    if (modelData.error) {
+        return `
+            <div class="mt-8 fade-in">
+                <div class="bg-red-950/30 border border-red-800/50 rounded-2xl p-6 text-center">
+                    <i data-lucide="alert-triangle" class="w-8 h-8 text-red-400 mx-auto mb-3"></i>
+                    <h3 class="text-lg font-bold text-red-300 mb-2">Errore nella generazione</h3>
+                    <p class="text-red-400/70 text-sm mb-4">${escapeHtml(modelData.error)}</p>
+                    <button onclick="app.generateModelEssay()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition font-medium text-sm">Riprova</button>
+                </div>
+            </div>`;
+    }
+
+    const ragCount = modelData.rag_sources ? modelData.rag_sources.length : 0;
+
+    return `
+        <div class="mt-8 fade-in" id="model-essay-section">
+            <div class="bg-gray-900/80 border border-violet-500/30 rounded-2xl overflow-hidden shadow-xl shadow-violet-500/10">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 border-b border-violet-500/20 px-6 py-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center">
+                                <i data-lucide="file-text" class="w-5 h-5 text-violet-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-white font-display">Svolgimento Modello AI</h3>
+                                <p class="text-xs text-violet-300/60">Simulazione di un elaborato perfetto in stile concorsuale</p>
+                            </div>
+                        </div>
+                        ${ragCount > 0 ? `
+                            <div class="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                                <i data-lucide="database" class="w-3 h-3 text-emerald-400"></i>
+                                <span class="text-xs font-bold text-emerald-300">${ragCount} fonti RAG</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                <!-- Essay Body — stile foglio protocollo -->
+                <div class="px-8 py-8 md:px-12 md:py-10">
+                    <div class="prose prose-lg prose-invert max-w-none
+                        text-gray-200 leading-[1.95] tracking-wide
+                        font-serif whitespace-pre-wrap
+                        [&>p]:mb-6 [&>p]:text-justify [&>p]:indent-8"
+                        style="font-family: 'Georgia', 'Palatino Linotype', 'Times New Roman', serif; font-size: 1.05rem;">
+                        ${escapeHtml(modelData.essay)}
+                    </div>
+                </div>
+                <!-- Footer -->
+                <div class="border-t border-gray-800 px-6 py-3 flex items-center justify-between bg-gray-950/50">
+                    <span class="text-xs text-gray-600">
+                        ${modelData.essay ? modelData.essay.split(/\s+/).length : 0} parole · Stile atarassico · Prosa continua
+                    </span>
+                    <button onclick="app.generateModelEssay()" class="text-xs text-violet-400 hover:text-violet-300 transition flex items-center gap-1">
+                        <i data-lucide="refresh-cw" class="w-3 h-3"></i> Rigenera
+                    </button>
+                </div>
+            </div>
+        </div>`;
 }

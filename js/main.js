@@ -345,6 +345,60 @@ export const app = {
         AppState.lezioneFromTraccia = false;
         navigateToRoute('briefing');
     },
+
+    // --- Svolgimento Modello AI ---
+    generateModelEssay: async function() {
+        const traccia = AppState.currentSimulationTask;
+        if (!traccia) {
+            showToast("Nessuna traccia selezionata.", "warning");
+            return;
+        }
+
+        // Gate: registrazione obbligatoria
+        if (Metering.requireRegistration('Svolgimento Modello AI')) return;
+
+        // Gate: metering aiCalls
+        if (!Metering.canUse('aiCalls')) {
+            return Metering.showPaywall('aiCalls');
+        }
+
+        // Imposta stato loading
+        AppState.modelEssay = { loading: true };
+        renderView();
+
+        try {
+            const result = await apiService.generateModelEssay(
+                traccia.testo,
+                traccia.materia,
+                traccia
+            );
+
+            if (result.success) {
+                Metering.consume('aiCalls');
+                AppState.modelEssay = {
+                    essay: result.essay,
+                    rag_sources: result.rag_sources || []
+                };
+                showToast("Svolgimento modello generato con successo!", "success");
+            } else {
+                AppState.modelEssay = { error: result.error || 'Errore sconosciuto.' };
+                showToast("Errore nella generazione dello svolgimento.", "error");
+            }
+        } catch (e) {
+            console.error("[Model Essay Error]", e);
+            AppState.modelEssay = { error: e.message || 'Errore di connessione.' };
+            showToast("Errore di connessione.", "error");
+        }
+
+        renderView();
+
+        // Scrolla al tema generato
+        setTimeout(() => {
+            const el = document.getElementById('model-essay-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (window.lucide) lucide.createIcons();
+        }, 200);
+    },
     
     // --- Generazione Tracce AI ---
     confirmGenerateAiTrace: async function() {

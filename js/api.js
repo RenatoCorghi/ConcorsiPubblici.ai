@@ -30,6 +30,7 @@ export const apiService = {
     // --- Evaluation ---
     evaluateEssay: evaluationApi.evaluateEssay,
     generateBriefing: evaluationApi.generateBriefing,
+    generateModelEssay: evaluationApi.generateModelEssay,
     
     // --- Orale ---
     evaluateOrale: oraleApi.evaluateOrale,

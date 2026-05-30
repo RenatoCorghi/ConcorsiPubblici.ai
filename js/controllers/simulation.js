@@ -47,6 +47,7 @@ export const SimulationController = {
 
         AppState.currentSimulationTask = traccia;
         AppState.currentBriefing = { loading: true };
+        AppState.modelEssay = null;
         navigateToRoute('briefing');
 
         // Genera il briefing AI in background
