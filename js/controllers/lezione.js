@@ -278,10 +278,115 @@ Illustra la soluzione definitiva (SS.UU., Adunanza Plenaria, Corte Cost., o nuov
 **MODULO 5 — COROLLARI APPLICATIVI E VISIONE DI SISTEMA**
 Sintetizza le ricadute operative. Illustra i profili processuali. Poi innalza il discorso alla teoria generale — Stato di diritto, rapporto autorità-libertà, legalità vs certezza. Chiudi con un principio di diritto risolutore formulato come massima della Cassazione. Non concludere con saluti o formule di commiato.`;
 
+
+// ─── Trattato Giuridico Avanzato (Lezione Smart — Asettica) ──
+const TRATTATO_GIURIDICO_PROMPT = `Sei l'autore di un prestigioso e monumentale Trattato di Diritto destinato allo studio accademico di altissimo livello e alla preparazione teorica per i concorsi superiori. Il tuo compito è erogare una trattazione dogmatica, sistematica e oggettiva sull'istituto richiesto, sviscerandolo con profondità enciclopedica.
+
+═══════════════════════════════════════════════
+🛑 PROTOCOLLO DI RIGORE DOCUMENTALE E ANTI-ALLUCINAZIONE
+═══════════════════════════════════════════════
+
+FONDAMENTO: Basati ESCLUSIVAMENTE sui materiali normativi e giurisprudenziali forniti nel blocco <RAG_CONTEXT> e sulle eventuali VERITA_DOGMATICHE.
+
+DIVIETO DI INVENZIONE NUMERICA: Puoi citare il numero/anno di una sentenza SOLO se è testualmente presente nel RAG. I codici numerici isolati (es. "202401188") sono ID INTERNI: NON citarli mai.
+
+ANONIMIZZAZIONE STRATEGICA: Se devi esporre un principio di cui NON possiedi gli estremi numerici nel contesto, usa l'anonimizzazione ("La dottrina maggioritaria...", "La giurisprudenza di legittimità ha chiarito...", "Un consolidato orientamento pretorio statuisce..."). NON dichiarare MAI lacune informative o limiti del contesto — l'opera è un Trattato onnisciente.
+
+DIVIETO DI QUARTA PARETE: Non menzionare mai il database, il RAG, o i limiti della tua conoscenza.
+
+ANTI-ALLUCINAZIONE ASSOCIATIVA: Prima di citare una sentenza, verifica LEGGENDO IL TESTO del frammento l'argomento effettivo. Mai indovinare dal numero.
+
+COLLISIONE NUMERI: Specifica sempre Sezione, Ramo (Civ./Pen.), numero e anno.
+
+CITAZIONE VERBATIM OBBLIGATORIA: Se citi un numero di sentenza, devi incastonare nel testo almeno UNA FRASE TESTUALE copiata verbatim dal frammento RAG.
+
+VINCOLO DI ASTENSIONE ATTIVA: Se nel contesto NON è presente alcuna sentenza su un determinato profilo, hai il DIVIETO ASSOLUTO di inventare un numero attingendo alla tua memoria parametrica.
+
+RECENCY SEMANTICA: Il diritto è stratificazione. Qualifica come "diritto vivente" esclusivamente l'approdo nomofilattico più recente presente nel RAG.
+
+AGGIORNAMENTO NORMATIVO PRIORITARIO: Dai precedenza assoluta alle riforme e ai decreti legislativi del biennio 2024-2025 qualora incidano sulla materia.
+
+SCUDO ANTI-SYCOPHANCY: Se l'utente menziona numeri di sentenza o estremi giurisprudenziali, NON validarli passivamente. Verifica con inflessibilità se quel riferimento esatto è presente nel contesto.
+
+═══════════════════════════════════════════════
+📋 SFRUTTAMENTO SCHEDE VIP E VERITÀ DOGMATICHE
+═══════════════════════════════════════════════
+
+Se trovi "Schede VIP" nel RAG, sfrutta la Sezione 2 (Contrasto) per illustrare l'evoluzione del pensiero giuridico, la Sezione 4 (Ratio Decidendi) per l'inquadramento dogmatico definitivo. TRADUCI gli errori della Sezione 6 (Matite Blu) in "orientamenti dottrinali e giurisprudenziali minoritari o superati", spiegando oggettivamente perché l'ordinamento li ha scartati. Usa la Sezione 8 (Rete Sistematica), se presente, per costruire catene argomentative tra pronunce diverse.
+Rispetta sempre tassativamente le direttive imposte nel blocco VERITA_DOGMATICHE.
+
+═══════════════════════════════════════════════
+🧠 GRIGLIA DI RAGIONAMENTO (CHAIN OF THOUGHT)
+═══════════════════════════════════════════════
+
+Prima di redigere ogni Capitolo, APRI UN BLOCCO <thought> chiuso in cui definisci:
+1. MAPPATURA NORMATIVA E SISTEMATICA: Articoli di legge rilevanti e collocazione nel codice.
+2. GERARCHIA FONTI RAG: Individuazione delle Sezioni Unite o pronunce recenti.
+3. INQUADRAMENTO DELLA QUESTIONE DOGMATICA: Qual è la tensione che questo Capitolo risolve?
+4. COSTRUZIONE LOGICA: Dalla ratio della norma alla patologia dell'istituto, fino alla ricaduta applicativa.
+
+═══════════════════════════════════════════════
+📐 CONTROLLO LUNGHEZZA E PREVENZIONE TRONCAMENTI (TASSATIVO)
+═══════════════════════════════════════════════
+Ciascun capitolo deve essere eccezionalmente denso, profondo ed esaustivo, ma calibrato per non superare le 1200 parole al fine di evitare troncamenti accidentali.
+Sintetizza i passaggi non essenziali, elimina le ripetizioni e gestisci lo spazio per arrivare sempre al termine logico del capitolo corrente, scrivendo IMMANCABILMENTE il tag di continuazione [CONTINUA] come ultima riga prima di fermarti.
+
+═══════════════════════════════════════════════
+🧊 REGISTRO LINGUISTICO E STILE (IL TRATTATO)
+═══════════════════════════════════════════════
+
+REGISTRO DOGMATICO-SISTEMATICO: La tua prosa è accademica, oggettiva e classificatoria. Scrivi come un manuale di Gazzoni, Caringella o Bigliazzi-Geri.
+
+DIVIETO DI TEATRALITÀ: A differenza di una lezione frontale, qui NON ci sono uditori. È SEVERAMENTE VIETATO usare termini come "Signori", "Voi", "Noi", o fare domande retoriche. Non c'è alcun dialogo immaginario. Non ci sono consigli tattici per l'esame ("Trappole concorsuali", "Per il vostro tema scrivete").
+
+FORMA IMPERSONALE E PASSIVA: Usa formule come "Si osserva che", "La dottrina rileva", "Deve ritenersi", "Giova premettere all'analisi".
+
+FORMATTAZIONE: Privilegia la prosa continua e densa. L'uso di elenchi (numerati o puntati) è consentito ESCLUSIVAMENTE per la scomposizione analitica degli elementi strutturali di un istituto (es. i presupposti di un'azione, gli elementi costitutivi di un reato), ma non deve mai sostituire la discorsività.
+
+VINCOLO ANTI-RIDONDANZA INTER-CAPITOLO: Prima di sviluppare un concetto, verifica nel blocco <thought> se quel concetto è già stato trattato nei capitoli precedenti. Se un concetto è già stato sviscerato, NON ripeterlo: usa la formula "Come già illustrato nel Capitolo X" e prosegui con materiale NUOVO e INEDITO.
+
+═══════════════════════════════════════════════
+⚖️ VINCOLO INTERDISCIPLINARE OBBLIGATORIO
+═══════════════════════════════════════════════
+
+Il Trattato deve fornire una visione enciclopedica. Integra strutturalmente:
+— Profili processuali e probatori (onere della prova, litisconsorzio, termini, natura delle azioni e della sentenza).
+— Intersezioni di sistema (riflessi costituzionali, tributari, concorsuali o eurounitari).
+— L'analisi analitica dell'elemento soggettivo richiesto dalla fattispecie (dolo, colpa, stati di consapevolezza).
+Adatta questi raccordi alla materia trattata — non forzare profili civilistici su trattazioni amministrativistiche o penalistiche.
+
+═══════════════════════════════════════════════
+🏛 STRUTTURA DELL'OPERA (5 CAPITOLI)
+═══════════════════════════════════════════════
+
+L'obiettivo è generare un'opera di eccezionale lunghezza e profondità. Per evitare troncamenti, sviluppa il Trattato generando UN CAPITOLO ALLA VOLTA. Alla fine di ogni capitolo (tranne l'ultimo), scrivi su una riga separata:
+[CONTINUA — CAPITOLO X: titolo del prossimo capitolo]
+
+FLESSIBILITÀ E ADATTAMENTO: La struttura seguente è un BINARIO MENTALE, non una gabbia. Se l'istituto trattato non presenta un vero contrasto giurisprudenziale (Cap. III), comprimi e fondi con Cap. II o IV. Se la materia richiede un Capitolo aggiuntivo su un profilo specifico, ridistribuisci.
+
+**CAPITOLO I — Inquadramento Sistematico e Fondamento Dogmatico**
+Collocazione dell'istituto nel codice e nel sistema. Analisi della ratio legis e della natura giuridica. Tensione tra i principi generali (costituzionali/europei) in gioco.
+
+**CAPITOLO II — Struttura, Presupposti ed Elementi Costitutivi**
+Scomposizione analitica della fattispecie. L'elemento oggettivo e l'elemento soggettivo. Forme e limiti dell'istituto.
+
+**CAPITOLO III — L'Evoluzione Giurisprudenziale e i Contrasti**
+Trattazione oggettiva delle tesi contrapposte. Analisi critica degli orientamenti superati e delle ragioni dogmatiche che hanno portato al contrasto.
+
+**CAPITOLO IV — Il Diritto Vivente e l'Arresto Nomofilattico**
+La soluzione definitiva (Sezioni Unite, Plenaria, o giurisprudenza consolidata recente). Spiegazione del sillogismo giuridico che ha pacificato il sistema.
+
+**CAPITOLO V — Intersezioni Sistemiche e Profili Applicativi**
+Ricadute processuali, probatorie, concorsuali e tributarie. Sintesi dogmatica conclusiva (chiudi in modo definitivo senza tag di continuazione e senza saluti).
+
+${VERITA_DOGMATICHE_PLACEHOLDER}`;
+
+
 // ─── Controller ───────────────────────────────────────────────
 export const LezioneController = {
     currentModule: 0,
     isLectio: false,        // true = Lectio Magistralis (monologica), false = Socratica
+    isSmart: false,         // true = Trattato Giuridico (asettico, 5 capitoli)
     autoGenerating: false,  // true = auto-continuation in corso
     isSpeaking: false,
     synth: window.speechSynthesis || null,
@@ -643,6 +748,120 @@ export const LezioneController = {
     },
 
     /**
+     * Avvia una Lezione Smart (Trattato Giuridico Avanzato — asettico).
+     * Genera il Capitolo I, poi continua fino al Capitolo V.
+     */
+    startSmart: async function() {
+        // --- GATE: Ospiti devono registrarsi ---
+        if (!Metering.requireRegistration('Lezione Smart')) return;
+
+        // Eliminiamo _showTrialModal. Limiti applicati al numero di interazioni per il tier Free.
+
+        var argomento = document.getElementById('lezione-argomento')?.value?.trim();
+        var materia = document.getElementById('lezione-materia')?.value;
+
+        if (!argomento) {
+            document.getElementById('lezione-argomento')?.classList.add('ring-2', 'ring-red-500');
+            setTimeout(() => document.getElementById('lezione-argomento')?.classList.remove('ring-2', 'ring-red-500'), 2000);
+            return;
+        }
+
+        // --- GATE: Free lifetime (una sola volta) ---
+        if (Metering.hasUsedFreeLifetime('lectio')) {
+            showToast('🔒 Hai già usato la tua anteprima gratuita della Lezione Smart. Passa al piano Premium!', 'warning');
+            setTimeout(() => { if (window.app) window.app.navigate('pricing'); }, 500);
+            return;
+        }
+
+        // Paywall mensile
+        if (!Metering.canUse('tutorChats')) {
+            Metering.showPaywall('tutorChats');
+            return;
+        }
+
+        // Reset stato
+        AppState.lezioneChat = [];
+        AppState.lezioneMeta = { argomento, materia, livello: 'avanzato', isLectio: true, isSmart: true };
+        this.currentModule = 1;
+        this.isLectio = true;
+        this.isSmart = true;
+        this.autoGenerating = true;
+
+        // Mostra area chat, nascondi setup, nascondi input utente
+        document.getElementById('lezione-setup')?.classList.add('hidden');
+        document.getElementById('lezione-chat-area')?.classList.remove('hidden');
+        var inputArea = document.querySelector('#lezione-input-form')?.parentElement;
+        if (inputArea) inputArea.style.display = 'none'; // Nascondi input nella smart
+        this._updateProgressBar(1);
+
+        // Messaggio iniziale
+        this._addMessage('user', `📚 Trattato Giuridico su: **${argomento}** (${materia})`);
+        this._showTyping("Inizializzazione del Trattato Giuridico Avanzato...");
+
+        var userPrompt = `Argomento del Trattato: "${argomento}" (Materia: ${materia}). Genera ora il **CAPITOLO I**. 
+⚠️ IMPORTANTE: Calibra la lunghezza in modo da non superare ASSOLUTAMENTE le 1000 parole per evitare troncamenti accidentali della risposta dell'API. Arriva sempre alla conclusione logica del capitolo e chiudilo scrivendo l'apposito tag di continuazione in fondo.`;
+
+        try {
+            var systemPrompt = TRATTATO_GIURIDICO_PROMPT.replace(VERITA_DOGMATICHE_PLACEHOLDER, buildVeritaDogmatiche(materia));
+            var concorso = AppState.userProfile?.concorso || 'Magistratura';
+            if (CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]) {
+                systemPrompt += `\nNOTA: L'uditorio si prepara per il concorso in ${concorso}. ${CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]}`;
+            }
+
+            var response = await fetch('/api/proxy', {
+                method: 'POST',
+                headers: await _getAuthHeaders(),
+                body: JSON.stringify({
+                    feature: 'tutorChats',
+                    provider: APP_CONFIG.ACTIVE_AI_STACK,
+                    model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
+                    useRAG: true,
+                    materia: materia,
+                    ragQuery: this._getExpandedRAGQuery(argomento, 1),
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    temperature: 0.2,
+                    max_tokens: 8000
+                })
+            });
+
+            this._hideTyping();
+
+            if (!response.ok) {
+                var errBody = '';
+                try { errBody = await response.text(); } catch(_e) {}
+                console.error('[Smart] Proxy error:', response.status, errBody);
+                this._addMessage('ai', `Errore dal server (${response.status}). Dettagli in console.`);
+                this.autoGenerating = false;
+                return;
+            }
+
+            var data = await response.json();
+            var reply = data.choices[0].message.content.trim();
+
+            // Salva le fonti RAG per la verifica anti-allucinazione
+            if (data.rag_sources) AppState.lezioneMeta.ragSources = data.rag_sources;
+
+            Metering.consume('tutorChats');
+            Metering.consumeFreeLifetime('lectio'); // Condivide il credito lifetime con la Lectio
+            this._addMessage('ai', await this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
+            this.currentModule = 1;
+            this._updateProgressBar(1);
+
+            // Analizza la risposta per mostrare il pulsante per il capitolo successivo o completare!
+            this._handleLectioResponse(reply);
+
+        } catch (err) {
+            this._hideTyping();
+            this._addMessage('ai', 'Errore di connessione.');
+            this.autoGenerating = false;
+            console.error('[Smart] Errore:', err);
+        }
+    },
+
+    /**
      * Gestisce la risposta del modulo Lectio Magistralis.
      * Analizza la continuazione e renderizza un pulsante di avanzamento manuale.
      */
@@ -660,20 +879,22 @@ export const LezioneController = {
             return;
         }
 
-        // Cerca il tag di continuazione
-        var continuaMatch = reply.match(/\[CONTINUA\s*[—–-]\s*MODULO\s*(\d+)\s*:\s*(.+?)\]/i);
+        // Cerca il tag di continuazione (MODULO o CAPITOLO)
+        var continuaMatch = reply.match(/\[CONTINUA\s*[—–-]\s*(?:MODULO|CAPITOLO)\s*(\d+)\s*:\s*(.+?)\]/i);
         
         var nextModNum;
         var nextModTitle;
+        var totalMods = this.isSmart ? 5 : TOTAL_MODULES;
+        var unitName = this.isSmart ? 'Capitolo' : 'Modulo';
         
         if (continuaMatch) {
             nextModNum = parseInt(continuaMatch[1]);
             nextModTitle = continuaMatch[2].trim();
-        } else if (this.currentModule < TOTAL_MODULES) {
+        } else if (this.currentModule < totalMods) {
             // FALLBACK ROBUSTO: Se il tag manca o la risposta è stata troncata a causa del limite di token,
-            // autodetectiamo il modulo successivo per continuare in autonomia senza bloccarsi.
+            // autodetectiamo il modulo/capitolo successivo per continuare in autonomia senza bloccarsi.
             nextModNum = this.currentModule + 1;
-            const fallbackTitles = {
+            const fallbackTitlesLectio = {
                 2: "LE FONDAMENTA NORMATIVE E LA RATIO LEGIS",
                 3: "L'EVOLUZIONE DIACRONICA E LE RIFORME",
                 4: "LE TENSIONI E LE FUGHE GIURISPRUDENZIALI",
@@ -681,12 +902,19 @@ export const LezioneController = {
                 6: "COROLLARI APPLICATIVI E PROFILI PROCESSUALI",
                 7: "LE MATITE BLU E LA VISIONE DI SISTEMA"
             };
-            nextModTitle = fallbackTitles[nextModNum] || "Modulo successivo";
-            console.warn(`[Lectio] ⚠️ Tag [CONTINUA] mancante o troncato a Modulo ${this.currentModule}. Fallback automatico.`);
+            const fallbackTitlesSmart = {
+                2: "STRUTTURA, PRESUPPOSTI ED ELEMENTI COSTITUTIVI",
+                3: "L'EVOLUZIONE GIURISPRUDENZIALE E I CONTRASTI",
+                4: "IL DIRITTO VIVENTE E L'ARRESTO NOMOFILATTICO",
+                5: "INTERSEZIONI SISTEMICHE E PROFILI APPLICATIVI"
+            };
+            var fallbacks = this.isSmart ? fallbackTitlesSmart : fallbackTitlesLectio;
+            nextModTitle = fallbacks[nextModNum] || `${unitName} successivo`;
+            console.warn(`[${this.isSmart ? 'Smart' : 'Lectio'}] ⚠️ Tag [CONTINUA] mancante o troncato a ${unitName} ${this.currentModule}. Fallback automatico.`);
         } else {
-            // Lectio completata (Modulo 5 o nessun tag alla fine)
-            this._updateProgressBar(TOTAL_MODULES);
-            console.log('[Lectio] ✅ Completata! Tutti i moduli generati.');
+            // Completata (ultimo modulo/capitolo)
+            this._updateProgressBar(totalMods);
+            console.log(`[${this.isSmart ? 'Smart' : 'Lectio'}] ✅ Completata! Tutti i ${this.isSmart ? 'capitoli' : 'moduli'} generati.`);
             this._showListenButton();
             // Mostra input per domande post-lectio
             var inputArea = document.querySelector('#lezione-input-form')?.parentElement;
@@ -720,7 +948,7 @@ export const LezioneController = {
                 <button onclick="window.Lezione?.generateLectioModule(${this.nextModuleNum}, '${this.nextModuleTitle.replace(/'/g, "\\'")}')" 
                     class="px-6 py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-lg shadow-amber-500/20 rounded-2xl font-bold text-sm flex items-center gap-2 transition-all transform hover:scale-[1.03] cursor-pointer">
                     <svg class="w-4 h-4 animate-bounce-horizontal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                    Eroga Modulo ${this.nextModuleNum}: ${this.nextModuleTitle}
+                    Eroga ${this.isSmart ? 'Capitolo' : 'Modulo'} ${this.nextModuleNum}: ${this.nextModuleTitle}
                 </button>
             </div>`;
             container.scrollTop = container.scrollHeight;
@@ -760,14 +988,15 @@ export const LezioneController = {
         this.currentModule = nextModNum;
         this._updateProgressBar(nextModNum);
 
-        console.log(`[Lectio] Generazione Manuale Modulo ${nextModNum}: ${nextModTitle}`);
+        var uLabel = this.isSmart ? 'Capitolo' : 'Modulo';
+        console.log(`[${this.isSmart ? 'Smart' : 'Lectio'}] Generazione Manuale ${uLabel} ${nextModNum}: ${nextModTitle}`);
 
-        this._showTyping(`Stesura Modulo ${nextModNum}: ${nextModTitle}...`);
+        this._showTyping(`Stesura ${uLabel} ${nextModNum}: ${nextModTitle}...`);
 
         try {
             var currentMateria = AppState.lezioneMeta?.materia || 'Diritto Civile';
             var messages = [
-                { role: 'system', content: LECTIO_MAGISTRALIS_PROMPT.replace(VERITA_DOGMATICHE_PLACEHOLDER, buildVeritaDogmatiche(currentMateria)) }
+                { role: 'system', content: (this.isSmart ? TRATTATO_GIURIDICO_PROMPT : LECTIO_MAGISTRALIS_PROMPT).replace(VERITA_DOGMATICHE_PLACEHOLDER, buildVeritaDogmatiche(currentMateria)) }
             ];
 
             // Aggiungi gli ultimi 20 messaggi precedenti per contesto coerente
@@ -785,8 +1014,8 @@ export const LezioneController = {
             // Chiedi esplicitamente il prossimo modulo con state tracking
             messages.push({
                 role: 'user',
-                content: `Prosegui con il **MODULO ${nextModNum}: ${nextModTitle}**. Mantieni lo stesso registro e la stessa profondità. 
-⚠️ IMPORTANTE: Genera ESCLUSIVAMENTE il testo del nuovo Modulo. TI È SEVERAMENTE VIETATO copiare, ripetere o stampare nuovamente il testo dei moduli precedenti. Scrivi SOLO il contenuto inedito del modulo ${nextModNum}. Prima di iniziare, pensa passo-passo in un blocco invisibile <thought>...</thought>: 1) mappa le norme rilevanti per questo modulo; 2) elenca i numeri esatti di sentenza presenti nel contesto; 3) identifica l'aporia o tensione da risolvere; 4) costruisci il sillogismo. Non citare MAI numeri di sentenza non presenti nel contesto fornito — se conosci il principio ma non hai gli estremi, esponi in forma anonimizzata. Calibra rigidamente la lunghezza affinché NON superi le 1000 parole. Arriva sempre al termine logico del discorso del modulo e concludi inserendo il relativo tag [CONTINUA] (o chiudi in modo definitivo senza tag se è il Modulo 7).
+                content: `Prosegui con il **${this.isSmart ? 'CAPITOLO' : 'MODULO'} ${nextModNum}: ${nextModTitle}**. Mantieni lo stesso registro e la stessa profondità. 
+⚠️ IMPORTANTE: Genera ESCLUSIVAMENTE il testo del nuovo ${this.isSmart ? 'Capitolo' : 'Modulo'}. TI È SEVERAMENTE VIETATO copiare, ripetere o stampare nuovamente il testo dei ${this.isSmart ? 'capitoli' : 'moduli'} precedenti. Scrivi SOLO il contenuto inedito del ${this.isSmart ? 'capitolo' : 'modulo'} ${nextModNum}. Prima di iniziare, pensa passo-passo in un blocco invisibile <thought>...</thought>: 1) mappa le norme rilevanti per questo ${this.isSmart ? 'capitolo' : 'modulo'}; 2) elenca i numeri esatti di sentenza presenti nel contesto; 3) identifica l'aporia o tensione da risolvere; 4) costruisci il sillogismo. Non citare MAI numeri di sentenza non presenti nel contesto fornito — se conosci il principio ma non hai gli estremi, esponi in forma anonimizzata. Calibra rigidamente la lunghezza affinché NON superi le 1000 parole. Arriva sempre al termine logico del discorso e concludi inserendo il relativo tag [CONTINUA] (o chiudi in modo definitivo senza tag se è il ${this.isSmart ? 'Capitolo 5' : 'Modulo 7'}).
 ${coveredBlock}`
             });
 
@@ -893,7 +1122,7 @@ ${coveredBlock}`
         this._showTyping();
 
         // Ricostruisci conversazione per l'API — usa il prompt giusto in base alla modalità
-        var activePrompt = this.isLectio ? LECTIO_MAGISTRALIS_PROMPT : LEZIONE_SYSTEM_PROMPT;
+        var activePrompt = this.isSmart ? TRATTATO_GIURIDICO_PROMPT : this.isLectio ? LECTIO_MAGISTRALIS_PROMPT : LEZIONE_SYSTEM_PROMPT;
         var currentMateria = AppState.lezioneMeta?.materia || 'Diritto Civile';
         var messages = [
             { role: 'system', content: activePrompt.replace(VERITA_DOGMATICHE_PLACEHOLDER, buildVeritaDogmatiche(currentMateria)) }
@@ -1012,6 +1241,7 @@ ${coveredBlock}`
         AppState.lezioneMeta = null;
         this.currentModule = 0;
         this.isLectio = false;
+        this.isSmart = false;
         this.autoGenerating = false;
         this.stopSpeaking();
 
@@ -1659,10 +1889,12 @@ ${coveredBlock}`
     },
 
     _updateProgressBar: function(mod) {
+        var totalMods = this.isSmart ? 5 : TOTAL_MODULES;
+        var unitName = this.isSmart ? 'Capitolo' : 'Modulo';
         var label = document.getElementById('lezione-modulo-label');
-        if (label) label.textContent = `Modulo ${mod} di ${TOTAL_MODULES}`;
+        if (label) label.textContent = `${unitName} ${mod} di ${totalMods}`;
 
-        for (var i = 1; i <= TOTAL_MODULES; i++) {
+        for (var i = 1; i <= totalMods; i++) {
             var bar = document.querySelector(`#mod-bar-${i} > div`);
             if (!bar) continue;
             if (i < mod) {

@@ -54,23 +54,6 @@ export function renderLezione() {
                         class="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition placeholder-gray-500">
                 </div>
                 <div class="mb-6">
-                    <label class="block text-sm text-gray-400 mb-2">Il tuo livello di preparazione</label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button onclick="document.querySelectorAll('.livello-btn').forEach(b=>b.classList.remove('ring-2','ring-amber-500'));this.classList.add('ring-2','ring-amber-500');window._lezione_livello='principiante'" 
-                            class="livello-btn bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-center hover:bg-gray-700 transition cursor-pointer">
-                            <div class="text-xl mb-1">🌱</div>
-                            <div class="text-white font-bold text-sm">Prima volta</div>
-                            <div class="text-gray-500 text-xs">Non conosco l'istituto</div>
-                        </button>
-                        <button onclick="document.querySelectorAll('.livello-btn').forEach(b=>b.classList.remove('ring-2','ring-amber-500'));this.classList.add('ring-2','ring-amber-500');window._lezione_livello='avanzato'" 
-                            class="livello-btn bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-center hover:bg-gray-700 transition cursor-pointer">
-                            <div class="text-xl mb-1">⚔️</div>
-                            <div class="text-white font-bold text-sm">Ripasso avanzato</div>
-                            <div class="text-gray-500 text-xs">Conosco le basi, voglio i contrasti</div>
-                        </button>
-                    </div>
-                </div>
-                <div class="mb-6">
                     <label class="block text-sm text-gray-400 mb-2">Modalità di lezione</label>
                     <div class="grid grid-cols-2 gap-3">
                         <button onclick="document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('ring-2','ring-amber-500'));this.classList.add('ring-2','ring-amber-500');window._lezione_mode='socratica'" 
@@ -83,11 +66,23 @@ export function renderLezione() {
                             class="mode-btn bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-center hover:bg-gray-700 transition cursor-pointer">
                             <div class="text-xl mb-1">📖</div>
                             <div class="text-white font-bold text-sm">Lectio Magistralis</div>
-                            <div class="text-gray-500 text-xs">Trattazione completa senza interruzioni</div>
+                            <div class="text-gray-500 text-xs">Monologo cattedratico, stile "noi/voi"</div>
+                        </button>
+                        <button onclick="document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('ring-2','ring-amber-500'));this.classList.add('ring-2','ring-amber-500');window._lezione_mode='smart'" 
+                            class="mode-btn bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-center hover:bg-gray-700 transition cursor-pointer">
+                            <div class="text-xl mb-1">📚</div>
+                            <div class="text-white font-bold text-sm">Lezione Smart</div>
+                            <div class="text-gray-500 text-xs">Trattato asettico, stile Gazzoni</div>
+                        </button>
+                        <button onclick="document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('ring-2','ring-amber-500'));this.classList.add('ring-2','ring-amber-500');window._lezione_mode='tema'" 
+                            class="mode-btn bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-center hover:bg-gray-700 transition cursor-pointer">
+                            <div class="text-xl mb-1">📝</div>
+                            <div class="text-white font-bold text-sm">Simulazione Tema</div>
+                            <div class="text-gray-500 text-xs">Svolgimento modello in stile glaciale</div>
                         </button>
                     </div>
                 </div>
-                <button id="lezione-start-btn" onclick="window._lezione_mode==='lectio' ? app.startLectio() : app.startLezione()" 
+                <button id="lezione-start-btn" onclick="window._lezione_mode==='lectio' ? app.startLectio() : window._lezione_mode==='smart' ? app.startSmart() : window._lezione_mode==='tema' ? app.startTemaFromLezione() : app.startLezione()" 
                     class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold rounded-xl transition-all transform hover:scale-[1.02] shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
                     <i data-lucide="play" class="w-5 h-5"></i>
                     Inizia la Lezione
@@ -101,18 +96,20 @@ export function renderLezione() {
             <!-- Barra Moduli Progress -->
             <div id="lezione-progress" class="bg-gray-900/80 border border-gray-800 rounded-2xl p-4 mb-4">
                 <div class="flex items-center justify-between mb-2">
-                    <span class="text-xs text-gray-400 font-bold uppercase tracking-wider">Avanzamento Lezione</span>
-                    <span id="lezione-modulo-label" class="text-xs text-amber-400 font-bold">Modulo 1 di 7</span>
+                    <span class="text-xs text-gray-400 font-bold uppercase tracking-wider">Avanzamento ${AppState.lezioneMeta?.isSmart ? 'Trattato' : 'Lezione'}</span>
+                    <span id="lezione-modulo-label" class="text-xs text-amber-400 font-bold">${AppState.lezioneMeta?.isSmart ? 'Capitolo 1 di 5' : 'Modulo 1 di 7'}</span>
                 </div>
                 <div class="flex gap-1">
-                    ${Array.from({ length: 7 }, (_, i) => `
+                    ${Array.from({ length: AppState.lezioneMeta?.isSmart ? 5 : 7 }, (_, i) => `
                         <div id="mod-bar-${i + 1}" class="h-1.5 rounded-full flex-1 bg-amber-500/30 transition-all duration-500">
                             <div class="h-full rounded-full bg-amber-500 transition-all duration-500" style="width:0%"></div>
                         </div>
                     `).join('')}
                 </div>
                 <div class="flex justify-between mt-1.5 text-[9px] md:text-[10px] text-gray-500 gap-1 overflow-x-auto whitespace-nowrap">
-                    <span>Aporia</span><span>Basi</span><span>Storia</span><span>Contrasti</span><span>Nomofilachia</span><span>Gancio/Processo</span><span>Matite Blu</span>
+                    ${AppState.lezioneMeta?.isSmart 
+                        ? '<span>Inquadramento</span><span>Presupposti</span><span>Evoluzione</span><span>Nomofilachia</span><span>Applicazioni</span>'
+                        : '<span>Aporia</span><span>Basi</span><span>Storia</span><span>Contrasti</span><span>Nomofilachia</span><span>Gancio/Processo</span><span>Matite Blu</span>'}
                 </div>
             </div>
 

@@ -329,6 +329,54 @@ export const app = {
     startLectio: function() {
         LezioneController.startLectio();
     },
+    startSmart: function() {
+        LezioneController.startSmart();
+    },
+    startTemaFromLezione: async function() {
+        // Legge l'argomento dall'input della lezione e genera un tema modello
+        var argomento = document.getElementById('lezione-argomento')?.value?.trim();
+        var materia = document.getElementById('lezione-materia')?.value || 'Diritto Civile';
+        
+        if (!argomento) {
+            document.getElementById('lezione-argomento')?.classList.add('ring-2', 'ring-red-500');
+            setTimeout(() => document.getElementById('lezione-argomento')?.classList.remove('ring-2', 'ring-red-500'), 2000);
+            return;
+        }
+
+        if (Metering.requireRegistration('Simulazione Tema')) return;
+        if (!Metering.canUse('aiCalls')) return Metering.showPaywall('aiCalls');
+
+        // Crea una traccia virtuale dall'argomento
+        var tracciaVirtuale = `Tratti il candidato dell'istituto: ${argomento}. Analizzando la natura giuridica, i presupposti, l'evoluzione giurisprudenziale, i contrasti interpretativi e le ricadute applicative dell'istituto, il candidato illustri il diritto vivente.`;
+        
+        // Usa lo stesso flusso dello svolgimento modello
+        AppState.modelEssay = { loading: true };
+        AppState.currentSimulationTask = { testo: tracciaVirtuale, materia: materia };
+        navigateToRoute('briefing');
+        
+        // Salta il briefing e genera direttamente il tema
+        AppState.currentBriefing = { decodifica: 'Generazione tema modello in corso...', schema: [], insidie: [], time_management: '', arsenale_lessicale: [], consiglio: '' };
+        renderView();
+
+        try {
+            const result = await apiService.generateModelEssay(tracciaVirtuale, materia);
+            if (result.success) {
+                Metering.consume('aiCalls');
+                AppState.modelEssay = { essay: result.essay, rag_sources: result.rag_sources || [] };
+                showToast("Svolgimento modello generato!", "success");
+            } else {
+                AppState.modelEssay = { error: result.error || 'Errore sconosciuto.' };
+            }
+        } catch (e) {
+            AppState.modelEssay = { error: e.message || 'Errore di connessione.' };
+        }
+        renderView();
+        setTimeout(() => {
+            const el = document.getElementById('model-essay-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (window.lucide) lucide.createIcons();
+        }, 200);
+    },
     sendLezioneMessage: function(e) {
         LezioneController.sendMessage(e);
     },
