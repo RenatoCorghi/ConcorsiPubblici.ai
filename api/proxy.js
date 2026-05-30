@@ -209,161 +209,44 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
         if (normalizedMateria) console.log(`[RAG] 🎯 Filtro materia attivo: ${normalizedMateria}`);
 
         try {
-            // A) Broad searches: una per ogni sotto-query vettore (TIER 1 VIP)
-            const broadSearches = vectors.map(v =>
-                fetch(hybridUrl, {
+            // Multi-query retrieval: una chiamata match_rag_chunks per ogni sotto-query
+            // match_rag_chunks funziona (testata), match_documents_hybrid dà timeout su Supabase free tier
+            const searchPromises = vectors.map(v =>
+                fetch(legacyUrl, {
                     method: 'POST',
                     headers: rpcHeaders,
                     body: JSON.stringify({
                         query_embedding: v.vector,
-                        query_text: v.query,
-                        match_count: Math.ceil(12 / vectors.length) + 2, // Distribuisci match_count
-                        match_threshold: 0.58, // Soglia leggermente più bassa per sotto-query atomiche
-                        filter_tier: 1,  // SOLO VIP
-                        ...(normalizedMateria ? { filter_materia: normalizedMateria } : {})
+                        match_count: Math.ceil(15 / vectors.length) + 3,
+                        match_threshold: 0.55
                     })
                 }).catch(() => null)
             );
             
-            const allResponses = await Promise.all([
-                ...broadSearches,
-                // B) Premium: solo fonti di alta autorità VIP, soglia bassa (usa vettore primario)
-                ...['teoria_massimario', 'nomofilachia_ssuu', 'sentenza_ssuu', 'massimario_cassazione'].map(tipo =>
-                    fetch(hybridUrl, {
-                        method: 'POST',
-                        headers: rpcHeaders,
-                        body: JSON.stringify({
-                            query_embedding: primaryVector,
-                            query_text: userMessageText,
-                            match_count: 2,
-                            match_threshold: 0.76,
-                            filter_tipo: tipo,
-                            filter_tier: 1  // SOLO VIP
-                        })
-                    })
-                )
-            ]);
-
-            // Le prime N risposte sono le broad searches (una per sotto-query)
-            const broadResponses = allResponses.slice(0, vectors.length);
-            const premiumResponses = allResponses.slice(vectors.length); // 4 risposte premium
-
-            // Parsa tutte le broad responses
-            const broadResults = await Promise.all(
-                broadResponses.filter(r => r && r.ok).map(r => r.json())
-            );
-            const premiumResults = await Promise.all(
-                premiumResponses.filter(r => r && r.ok).map(r => r.json())
-            );
+            const responses = await Promise.all(searchPromises);
+            const allResults = [];
+            for (const r of responses) {
+                if (r && r.ok) {
+                    const data = await r.json();
+                    allResults.push(...data);
+                }
+            }
             
-            // Unisci e de-duplica
+            // De-duplica e filtra per materia (lato JS, dato che match_rag_chunks non ha filtri)
             const seen = new Set();
-            const allResults = [...broadResults.flat(), ...premiumResults.flat()];
             for (const m of allResults) {
                 if (!seen.has(m.id)) {
+                    // Filtro materia soft: preferisci la materia giusta, ma accetta anche null
+                    if (normalizedMateria && m.materia && m.materia !== normalizedMateria) continue;
                     seen.add(m.id);
                     m.similarity = m.similarity || 0;
-                    m.keyword_score = m.keyword_score || 0;
                     matches.push(m);
                 }
             }
-            usedHybrid = true;
-            console.log(`[RAG] 🔀 PHASE 1 (VIP): Broad=${broadResults.flat().length} (da ${vectors.length} query), Premium=${premiumResults.flat().length}, Merged=${matches.length}`);
-
-            // ── WATERFALL FASE 2.5: Segnale di Evoluzione Recente (Tier 2) ──
-            // Se il tier 1 ha buoni risultati (score >= 0.85), cerchiamo anche
-            // nelle sezioni semplici recenti (2024+) per segnali di evoluzione.
-            const topVipScore = matches.length > 0 ? Math.max(...matches.map(m => m.similarity || 0)) : 0;
-            
-            if (topVipScore >= 0.85 && matches.length >= 3) {
-                // Fase 2.5: VIP solido, ma cerchiamo evoluzione recente in tier 2
-                try {
-                    const recentRes = await fetch(hybridUrl, {
-                        method: 'POST',
-                        headers: rpcHeaders,
-                        body: JSON.stringify({
-                            query_embedding: primaryVector,
-                            query_text: userMessageText,
-                            match_count: 2,
-                            match_threshold: 0.80,
-                            filter_tier: 2,
-                            filter_anno_min: 2024,
-                            ...(normalizedMateria ? { filter_materia: normalizedMateria } : {})
-                        })
-                    });
-                    if (recentRes.ok) {
-                        const recentMatches = await recentRes.json();
-                        if (recentMatches.length > 0) {
-                            for (const m of recentMatches) {
-                                if (!seen.has(m.id)) {
-                                    seen.add(m.id);
-                                    m.similarity = m.similarity || 0;
-                                    m.keyword_score = m.keyword_score || 0;
-                                    m._isEvolutionSignal = true; // Flag speciale
-                                    matches.push(m);
-                                }
-                            }
-                            console.log(`[RAG] 📡 PHASE 2.5 (Evolution): ${recentMatches.length} segnali recenti da Tier 2 (2024+)`);
-                        }
-                    }
-                } catch (evoErr) {
-                    console.warn(`[RAG] ⚠️ Phase 2.5 fallita: ${evoErr.message}`);
-                }
-            } else if (matches.length < 3 || topVipScore < 0.85) {
-                // ── WATERFALL FASE 3: Fallback a Tier 2 ──
-                // Il VIP non copre bene l'argomento. Apriamo il recinto.
-                // NOTA: Limitiamo a 2022+ per evitare timeout su dataset enormi
-                // (181k penale + 56k NULL = sequential scan impossibile senza indice vettoriale)
-                try {
-                    const fallbackTier2Res = await fetch(hybridUrl, {
-                        method: 'POST',
-                        headers: rpcHeaders,
-                        body: JSON.stringify({
-                            query_embedding: primaryVector,
-                            query_text: userMessageText,
-                            match_count: 5,
-                            match_threshold: 0.60,
-                            filter_tier: 2,
-                            filter_anno_min: 2022,  // Limita per evitare timeout
-                            ...(normalizedMateria ? { filter_materia: normalizedMateria } : {})
-                        })
-                    });
-                    if (fallbackTier2Res.ok) {
-                        const tier2Matches = await fallbackTier2Res.json();
-                        for (const m of tier2Matches) {
-                            if (!seen.has(m.id)) {
-                                seen.add(m.id);
-                                m.similarity = m.similarity || 0;
-                                m.keyword_score = m.keyword_score || 0;
-                                m._isTier2Fallback = true; // Flag speciale
-                                matches.push(m);
-                            }
-                        }
-                        console.log(`[RAG] 📂 PHASE 3 (Fallback Tier 2, 2022+): ${tier2Matches.length} sentenze sez. semplici aggiunte`);
-                    }
-                } catch (fb2Err) {
-                    console.warn(`[RAG] ⚠️ Phase 3 fallita: ${fb2Err.message}`);
-                }
-            }
-        } catch (hybridErr) {
-            // FALLBACK: se la hybrid RPC non è deployata, usa la vecchia vector-only
-            console.warn(`[RAG] ⚠️ Hybrid RPC non disponibile (${hybridErr.message}), fallback a vector-only`);
-            const fallbackRes = await fetch(legacyUrl, {
-                method: 'POST',
-                headers: rpcHeaders,
-                body: JSON.stringify({
-                    query_embedding: primaryVector,
-                    match_count: 10,
-                    match_threshold: 0.55
-                })
-            });
-            if (!fallbackRes.ok) {
-                const errText = await fallbackRes.text();
-                console.error(`[RAG] RPC match_rag_chunks errore ${fallbackRes.status}: ${errText.substring(0, 200)}`);
-                return null;
-            }
-            matches = await fallbackRes.json();
-            console.log(`[RAG] 🔍 VECTOR-ONLY (fallback): ${matches.length} risultati`);
+            console.log(`[RAG] 🔍 match_rag_chunks: ${allResults.length} raw → ${matches.length} dopo filtro materia (${vectors.length} query)`);
+        } catch (searchErr) {
+            console.error(`[RAG] ❌ Ricerca fallita: ${searchErr.message}`);
+            return null;
         }
         
         if (matches && matches.length > 0) {
