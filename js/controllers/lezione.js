@@ -1344,8 +1344,12 @@ ${coveredBlock}`
      */
     _stripShieldBanners: function(text) {
         if (!text || typeof text !== 'string') return text || '';
-        // Rimuovi tutti i <div class="mt-...">...</div> generati dallo scudo
-        return text.replace(/<div\s+class="mt-[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '').trim();
+        // Rimuovi TUTTI i banner dello scudo (verde/rosso/arancione/giallo)
+        // Pattern: <div class="mt-X p-X bg-COLOR-900/40 ...">...contenuto...</div>
+        return text
+            .replace(/<div\s+class="[^"]*bg-(green|red|orange|yellow)-900\/40[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
+            .replace(/<div\s+class="[^"]*bg-(green|red|orange|yellow)-900[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '')
+            .trim();
     },
 
     _checkHallucinations: async function(text, ragSources) {
@@ -1362,7 +1366,7 @@ ${coveredBlock}`
         
         // VERITÀ DOGMATICHE CERTIFICATE: sentenze hardcoded nel system prompt
         // NON sono nel DB Supabase → bypassano completamente la verifica
-        const dogmaticTruths = ['1898/2025', '9096/2025', '18084/2025', '5073/2023'];
+        const dogmaticTruths = ['1898/2025', '9096/2025', '18084/2025', '5073/2023', '35823/2023'];
         
         const citationsToCheck = [];
         while ((match = sentenceRegex.exec(text)) !== null) {
