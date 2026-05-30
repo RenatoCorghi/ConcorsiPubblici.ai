@@ -268,14 +268,16 @@ function renderBriefingContent(briefing) {
         type: 'steps'
     });
 
-    sections.push({
-        icon: 'book-open',
-        title: 'Riferimenti Giurisprudenziali e Regula Iuris',
-        color: 'text-amber-400',
-        bgColor: 'bg-amber-500/10 border-amber-500/20',
-        content: briefing.giurisprudenza || [],
-        type: 'references'
-    });
+    if (briefing.intersezioni_sistemiche) {
+        sections.push({
+            icon: 'git-branch',
+            title: 'Intersezioni Sistemiche — Il Quid Pluris',
+            color: 'text-amber-400',
+            bgColor: 'bg-amber-500/10 border-amber-500/20',
+            content: briefing.intersezioni_sistemiche,
+            type: 'paragraph'
+        });
+    }
 
     sections.push({
         icon: 'alert-triangle',
