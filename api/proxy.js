@@ -153,7 +153,7 @@ REGOLE TASSATIVE:
 3. Nessun markdown.`;
 
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${googleKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${googleKey}`,
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -162,19 +162,16 @@ REGOLE TASSATIVE:
                     generationConfig: { 
                         temperature: 0.2, 
                         maxOutputTokens: 2048,
-                        responseMimeType: "application/json",
-                        thinkingConfig: {
-                            thinkingBudget: 1024
-                        }
+                        responseMimeType: "application/json"
                     }
                 })
             }
         );
         const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
         // Il JSON arriva già pulito grazie a responseMimeType
         const queries = JSON.parse(text);
-        if (Array.isArray(queries) && queries.length >= 2 && queries.length <= 6) {
+        if (Array.isArray(queries) && queries.length >= 1 && queries.length <= 6) {
             console.log(`[RAG] 🔀 Query Expansion: "${query.substring(0,60)}..." → ${queries.length} sotto-query: ${JSON.stringify(queries)}`);
             return queries.slice(0, 5);
         }
@@ -213,7 +210,13 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                     content: { parts: [{ text: materiaPrefix + sq }] },
                     outputDimensionality: 768
                 })
-            }).then(r => r.json()).catch(() => null)
+            }).then(r => r.json()).then(data => {
+                if (data.error) console.error("[RAG] ❌ Embed Error:", data.error);
+                return data;
+            }).catch(err => {
+                console.error("[RAG] ❌ Embed Fetch Error:", err);
+                return null;
+            })
         );
         
         const embedResults = await Promise.all(allEmbedRequests);
@@ -244,26 +247,51 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
         if (normalizedMateria) console.log(`[RAG] 🎯 Filtro materia attivo: ${normalizedMateria}`);
 
         try {
-            // Multi-query retrieval: una chiamata match_rag_chunks per ogni sotto-query
-            // match_rag_chunks funziona (testata), match_documents_hybrid dà timeout su Supabase free tier
-            const searchPromises = vectors.map(v =>
-                fetch(legacyUrl, {
-                    method: 'POST',
-                    headers: rpcHeaders,
-                    body: JSON.stringify({
-                        query_embedding: v.vector,
-                        match_count: Math.ceil(15 / vectors.length) + 3,
-                        match_threshold: 0.55
-                    })
-                }).catch(() => null)
-            );
+            const searchPromises = vectors.map((v, idx) => {
+                const isVeryShort = subQueries[idx].length < 20;
+            
+                if (isVeryShort) {
+                    let ftsUrl = `${process.env.SUPABASE_URL}/rest/v1/rag_chunks?select=id,document_id,content,materia,tipo,rag_documents(titolo)&limit=15`;
+                    if (normalizedMateria) {
+                        ftsUrl += `&materia=eq.${encodeURIComponent(normalizedMateria)}`;
+                    }
+                    ftsUrl += `&content=ilike.*${encodeURIComponent(subQueries[idx])}*`;
+                    
+                    return fetch(ftsUrl, {
+                        method: 'GET',
+                        headers: rpcHeaders
+                    }).then(r => r.json()).then(data => {
+                        if (!Array.isArray(data)) return [];
+                        // Aggiungi una finta similarity per i risultati FTS così vengono presi in considerazione
+                        return data.map(m => ({
+                            ...m,
+                            similarity: 0.8,
+                            keyword_score: 1.0,
+                            hybrid_score: 0.9,
+                            titolo: m.rag_documents ? m.rag_documents.titolo : null
+                        }));
+                    }).catch(() => null);
+                } else {
+                    const hybridUrl = `${process.env.SUPABASE_URL}/rest/v1/rpc/match_documents_hybrid`;
+                    return fetch(hybridUrl, {
+                        method: 'POST',
+                        headers: rpcHeaders,
+                        body: JSON.stringify({
+                            query_embedding: v.vector,
+                            query_text: subQueries[idx],
+                            filter_materia: normalizedMateria,
+                            match_count: Math.ceil(15 / vectors.length) + 3,
+                            match_threshold: 0.40
+                        })
+                    }).then(r => r.json()).catch(() => null);
+                }
+            });
             
             const responses = await Promise.all(searchPromises);
             const allResults = [];
             for (const r of responses) {
-                if (r && r.ok) {
-                    const data = await r.json();
-                    allResults.push(...data);
+                if (Array.isArray(r)) {
+                    allResults.push(...r);
                 }
             }
             
@@ -350,13 +378,36 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
 
             // 4. Filtro post-retrieval per materia (safety net anti-contaminazione)
             // Se abbiamo richiesto una materia specifica, rimuovi i risultati di materie diverse
-            // TRANNE i risultati senza materia (materia null) e le fonti VIP cross-disciplinari
+            // Penalizza i chunk senza materia (potenziale contaminazione cross-branch)
             if (normalizedMateria && matches.length > 3) {
                 const materiaLower = normalizedMateria.toLowerCase();
                 const beforeFilter = matches.length;
+                
+                // Hard-block cross-branch contamination map
+                const INCOMPATIBLE_BRANCHES = {
+                    'penale': ['civile', 'processuale civile', 'giurisprudenza civile'],
+                    'civile': ['penale', 'processuale penale', 'giurisprudenza penale'],
+                    'processuale civile': ['penale', 'processuale penale'],
+                    'processuale penale': ['civile', 'processuale civile'],
+                };
+                const requestedBranch = materiaLower.replace('diritto ', '');
+                const incompatibleList = INCOMPATIBLE_BRANCHES[requestedBranch] || [];
+                
                 matches = matches.filter(m => {
-                    if (!m.materia) return true; // Nessuna materia → tieni (potrebbe essere cross-disciplinare)
+                    // Chunk senza materia: tieni ma penalizza (potrebbero essere cross-branch)
+                    if (!m.materia) {
+                        m.boostedScore *= 0.75;
+                        return true;
+                    }
                     const mLower = m.materia.toLowerCase();
+                    const mBranch = mLower.replace('diritto ', '');
+                    
+                    // Hard-block: se il chunk è di una materia INCOMPATIBILE, rimuovilo
+                    if (incompatibleList.some(inc => mBranch.includes(inc) || inc.includes(mBranch))) {
+                        console.log(`[RAG] ⛔ Cross-branch block: "${m.materia}" incompatibile con "${normalizedMateria}" — rimosso`);
+                        return false;
+                    }
+                    
                     // Match se la materia contiene la keyword (es. "Civile" in "Diritto Civile")
                     if (mLower.includes(materiaLower.replace('diritto ', '')) || materiaLower.includes(mLower.replace('diritto ', ''))) return true;
                     // Eccezione: tieni fonti VIP autorevoli anche se cross-materia (boostScore > 0.90)
@@ -403,13 +454,17 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                 contextText += `[Fonte ${i+1} (${(m.boostedScore*100).toFixed(1)}% match): ${label}]\n${cleanContent}\n\n`;
             });
             
-            console.log(`[RAG] Recuperati ${matches.length} chunk, top ${topMatches.length} dopo boost. Top: ${topMatches[0].tipo} (${(topMatches[0].boostedScore*100).toFixed(1)}%)`);
+            if (topMatches.length > 0) {
+                console.log(`[RAG] Recuperati ${matches.length} chunk, top ${topMatches.length} dopo boost. Top: ${topMatches[0].tipo} (${(topMatches[0].boostedScore*100).toFixed(1)}%)`);
+            } else {
+                console.log(`[RAG] Recuperati 0 chunk utili dopo boost.`);
+            }
             contextText += "</RAG_CONTEXT>\nISTRUZIONE: Usa questo contesto normativo per fondare le tue risposte. Cita SOLO articoli di legge e principi di diritto riportati testualmente. NON inventare numeri di sentenza. I codici lunghi tipo '202601187' sono ID interni, NON numeri di sentenza.\n";
             
             // Metadati delle fonti per il frontend (include fullContent per la verifica citazioni lato client)
             const sources = topMatches.map(m => ({
                 tipo: m.titolo || 'documento',
-                materia: m.materia || '',
+                materia: m.materia || 'Giurisprudenza',
                 similarity: m.similarity || 0,
                 snippet: (m.content || '').substring(0, 250),
                 fullContent: m.content || ''
@@ -708,7 +763,7 @@ export default async function handler(req, res) {
             
             // L'endpoint OpenAI di Google non supporta la stringa gemini-2.0-flash (dà 404 cieco).
             // L'endpoint Nativo invece la supporta benissimo. Usiamo il nativo.
-            let geminiModel = validation.payload.model || 'gemini-1.5-flash';
+            let geminiModel = validation.payload.model || 'gemini-3-flash-preview';
             fetchUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${googleKey}`;
             fetchHeaders = {
                 'Content-Type': 'application/json'
