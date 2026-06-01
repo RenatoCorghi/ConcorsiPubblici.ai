@@ -343,7 +343,7 @@ export const app = {
             return;
         }
 
-        if (Metering.requireRegistration('Simulazione Tema')) return;
+        if (!Metering.requireRegistration('Simulazione Tema')) return;
         if (!Metering.canUse('aiCalls')) return Metering.showPaywall('aiCalls');
 
         // Crea una traccia virtuale dall'argomento
@@ -403,7 +403,7 @@ export const app = {
         }
 
         // Gate: registrazione obbligatoria
-        if (Metering.requireRegistration('Svolgimento Modello AI')) return;
+        if (!Metering.requireRegistration('Svolgimento Modello AI')) return;
 
         // Gate: metering aiCalls
         if (!Metering.canUse('aiCalls')) {
