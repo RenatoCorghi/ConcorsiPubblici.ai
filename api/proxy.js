@@ -1,5 +1,194 @@
 import { createClient } from '@supabase/supabase-js';
 
+// --- TOPIC TAXONOMY (per enrichment query expansion) ---
+// Inline per compatibilità Vercel serverless (no filesystem access)
+const TOPIC_TAXONOMY = [
+  {
+    "materia": "Diritto Penale",
+    "topic": "reati contro la pubblica amministrazione",
+    "keywords": ["reati contro la PA", "reati dei pubblici ufficiali", "delitti contro la pubblica amministrazione", "reati contro la P.A.", "concorso reati PA"],
+    "sotto_query_forzate": [
+      "peculato art 314 c.p. peculato d'uso",
+      "concussione art 317 c.p. costrizione abuso qualità",
+      "corruzione per esercizio della funzione art 318 c.p.",
+      "corruzione propria art 319 c.p. atto contrario doveri ufficio",
+      "corruzione in atti giudiziari art 319-ter c.p.",
+      "induzione indebita dare promettere utilità art 319-quater c.p.",
+      "istigazione alla corruzione art 322 c.p.",
+      "abuso d'ufficio art 323 c.p. abolizione riforma Nordio 2024",
+      "traffico influenze illecite art 346-bis c.p.",
+      "concorso extraneus nel reato proprio pubblico ufficiale intraneus"
+    ]
+  },
+  {
+    "materia": "Diritto Penale",
+    "topic": "concorso di persone nel reato",
+    "keywords": ["concorso di persone", "concorso eventuale", "concorso nel reato", "partecipazione criminosa", "concorso morale"],
+    "sotto_query_forzate": [
+      "concorso di persone nel reato art 110 c.p. elementi strutturali",
+      "concorso morale istigazione determinazione agevolazione",
+      "concorso dell'extraneus nel reato proprio mutamento titolo art 117 c.p.",
+      "responsabilità concorsuale cooperazione colposa art 113 c.p.",
+      "desistenza volontaria recesso attivo nel concorso art 114 c.p.",
+      "concorso anomalo art 116 c.p. reato diverso prevedibilità"
+    ]
+  },
+  {
+    "materia": "Diritto Penale",
+    "topic": "concussione induzione corruzione",
+    "keywords": ["concussione", "induzione indebita", "differenza concussione corruzione", "Sezioni Unite Maldera"],
+    "sotto_query_forzate": [
+      "Sezioni Unite Maldera differenza concussione induzione indebita",
+      "concussione costrizione metus publicae potestatis art 317",
+      "induzione indebita vantaggio indebito art 319-quater",
+      "corruzione in atti giudiziari art 319-ter processo",
+      "concorso extraneus concussione corruzione qualifica soggettiva"
+    ]
+  },
+  {
+    "materia": "Diritto Penale",
+    "topic": "reati contro il patrimonio",
+    "keywords": ["reati contro il patrimonio", "delitti contro il patrimonio", "furto rapina estorsione", "reati patrimoniali"],
+    "sotto_query_forzate": [
+      "furto aggravato art 624-bis 625 c.p.",
+      "rapina propria impropria art 628 c.p.",
+      "estorsione art 629 c.p. vis compulsiva",
+      "truffa art 640 c.p. artifici raggiri",
+      "ricettazione art 648 c.p. riciclaggio art 648-bis",
+      "appropriazione indebita art 646 c.p.",
+      "sequestro di persona a scopo di estorsione art 630 c.p."
+    ]
+  },
+  {
+    "materia": "Diritto Penale",
+    "topic": "dolo colpa elemento soggettivo",
+    "keywords": ["dolo", "colpa", "elemento soggettivo", "imputabilità", "dolo eventuale colpa cosciente"],
+    "sotto_query_forzate": [
+      "dolo diretto intenzionale indiretto eventuale",
+      "dolo eventuale colpa cosciente Sezioni Unite Thyssen confine",
+      "colpa generica specifica colpa professionale medica",
+      "errore sul fatto errore sul divieto art 5 47 c.p.",
+      "imputabilità capacità intendere volere art 85 c.p."
+    ]
+  },
+  {
+    "materia": "Diritto Penale",
+    "topic": "tentativo",
+    "keywords": ["tentativo", "delitto tentato", "desistenza volontaria", "recesso attivo"],
+    "sotto_query_forzate": [
+      "tentativo art 56 c.p. idoneità univocità atti",
+      "desistenza volontaria recesso attivo art 56 comma 3 4",
+      "tentativo nel reato omissivo improprio",
+      "reato impossibile art 49 c.p.",
+      "tentativo nei reati di pericolo"
+    ]
+  },
+  {
+    "materia": "Diritto Penale",
+    "topic": "cause di giustificazione",
+    "keywords": ["cause di giustificazione", "scriminanti", "legittima difesa", "stato di necessità", "antigiuridicità"],
+    "sotto_query_forzate": [
+      "legittima difesa art 52 c.p. proporzionalità riforma domiciliare",
+      "stato di necessità art 54 c.p. pericolo attuale inevitabile",
+      "esercizio del diritto adempimento del dovere art 51 c.p.",
+      "consenso dell'avente diritto art 50 c.p.",
+      "eccesso colposo nelle scriminanti art 55 c.p.",
+      "cause di giustificazione putative art 59 c.p."
+    ]
+  },
+  {
+    "materia": "Diritto Civile",
+    "topic": "responsabilità civile",
+    "keywords": ["responsabilità civile", "danno ingiusto", "responsabilità extracontrattuale", "illecito civile", "art 2043"],
+    "sotto_query_forzate": [
+      "responsabilità extracontrattuale art 2043 c.c. ingiustizia del danno",
+      "nesso di causalità giuridica equivalenza adeguatezza art 1223 c.c.",
+      "responsabilità oggettiva custodia art 2051 attività pericolosa art 2050",
+      "danno non patrimoniale biologico morale esistenziale Sezioni Unite San Martino",
+      "responsabilità del produttore difettoso art 114-127 codice consumo",
+      "concorso del danneggiato art 1227 c.c."
+    ]
+  },
+  {
+    "materia": "Diritto Civile",
+    "topic": "contratto simulato frode alla legge",
+    "keywords": ["simulazione", "contratto simulato", "frode alla legge", "negozio indiretto", "interposizione fittizia"],
+    "sotto_query_forzate": [
+      "simulazione assoluta relativa art 1414 c.c. effetti tra parti terzi",
+      "interposizione fittizia reale di persona differenza",
+      "frode alla legge art 1344 c.c. norma imperativa elusa",
+      "negozio indiretto e negozio fiduciario distinzione",
+      "prova simulazione tra le parti e terzi creditori art 1417 c.c.",
+      "trust e segregazione patrimoniale opponibilità creditori"
+    ]
+  },
+  {
+    "materia": "Diritto Civile",
+    "topic": "obbligazioni e adempimento",
+    "keywords": ["obbligazioni", "adempimento", "inadempimento", "responsabilità contrattuale", "mora"],
+    "sotto_query_forzate": [
+      "inadempimento obbligazione art 1218 c.c. impossibilità sopravvenuta",
+      "mora del debitore art 1219 c.c. effetti perpetuatio obligationis",
+      "risarcimento danno contrattuale prevedibilità art 1225 c.c.",
+      "responsabilità contrattuale extracontrattuale concorso cumulo",
+      "obbligazioni solidali regresso art 1292-1299 c.c.",
+      "clausola penale caparra confirmatoria penitenziale art 1382 1385 1386 c.c."
+    ]
+  },
+  {
+    "materia": "Diritto Civile",
+    "topic": "azione revocatoria",
+    "keywords": ["azione revocatoria", "revocatoria ordinaria", "pauliana", "art 2901", "frode ai creditori"],
+    "sotto_query_forzate": [
+      "azione revocatoria ordinaria art 2901 c.c. presupposti eventus damni",
+      "scientia damni consilium fraudis atti gratuiti onerosi",
+      "revocatoria fallimentare art 64-67 legge fallimentare CCII",
+      "rapporto revocatoria simulazione azione surrogatoria",
+      "revocatoria atti di dotazione trust conferimenti societari",
+      "participatio fraudis terzo acquirente art 2901 comma 2"
+    ]
+  },
+  {
+    "materia": "Diritto Amministrativo",
+    "topic": "silenzio della pubblica amministrazione",
+    "keywords": ["silenzio", "silenzio assenso", "silenzio inadempimento", "inerzia PA", "silenzio amministrativo"],
+    "sotto_query_forzate": [
+      "silenzio assenso art 20 legge 241/1990 presupposti limiti",
+      "silenzio inadempimento art 31 CPA ricorso avverso inerzia",
+      "silenzio diniego silenzio rigetto significato",
+      "SCIA segnalazione certificata inizio attività art 19 legge 241",
+      "obbligo di provvedere termini procedimentali art 2 legge 241",
+      "danno da ritardo della PA art 2-bis legge 241"
+    ]
+  },
+  {
+    "materia": "Diritto Amministrativo",
+    "topic": "vizi dell'atto amministrativo",
+    "keywords": ["vizi atto amministrativo", "annullabilità", "nullità atto", "illegittimità", "eccesso di potere"],
+    "sotto_query_forzate": [
+      "annullabilità atto amministrativo art 21-octies legge 241 vizi formali sostanziali",
+      "eccesso di potere figure sintomatiche sviamento",
+      "nullità atto amministrativo art 21-septies tassatività",
+      "autotutela annullamento d'ufficio art 21-nonies limiti temporali",
+      "irregolarità atto amministrativo differenza illegittimità",
+      "motivazione atto amministrativo art 3 legge 241"
+    ]
+  },
+  {
+    "materia": "Diritto Amministrativo",
+    "topic": "appalti pubblici contratti",
+    "keywords": ["appalti pubblici", "contratti pubblici", "codice contratti", "gara d'appalto", "offerta anomala"],
+    "sotto_query_forzate": [
+      "principi contratti pubblici codice 36/2023 trasparenza concorrenza",
+      "procedure di aggiudicazione aperta ristretta negoziata",
+      "esclusione automatica offerte anomale soglia calcolo",
+      "subappalto limiti nuovo codice contratti",
+      "accesso agli atti gara riservatezza bilanciamento",
+      "risarcimento in forma specifica interesse legittimo pretensivo"
+    ]
+  }
+];
+
 /* ============================================================
    PROXY.JS — Serverless API Proxy for OpenAI
    
@@ -133,6 +322,51 @@ function materiaMatches(chunkMateria, filterMateria) {
     return materiaFamily(chunkMateria) === materiaFamily(filterMateria);
 }
 
+// --- TAXONOMY ENRICHMENT ---
+// Arricchisce le sotto-query con query forzate dalla tassonomia degli argomenti.
+// Garantisce copertura completa per argomenti-ombrello (es. "reati contro la PA" → tutti gli artt. 314-323)
+function enrichWithTaxonomy(subQueries, userQuery, materia) {
+    if (!TOPIC_TAXONOMY || TOPIC_TAXONOMY.length === 0) return subQueries;
+    
+    const queryLower = userQuery.toLowerCase();
+    const materiaLower = (materia || '').toLowerCase();
+    
+    // Cerca match nella tassonomia
+    const matching = TOPIC_TAXONOMY.filter(t => {
+        // Match materia (se specificata)
+        const materiaMatch = !materia || 
+            t.materia.toLowerCase().includes(materiaLower.replace('diritto ', '')) ||
+            materiaLower.includes(t.materia.toLowerCase().replace('diritto ', ''));
+        if (!materiaMatch) return false;
+        
+        // Match keywords nel topic o nella query utente
+        return t.keywords.some(kw => queryLower.includes(kw.toLowerCase())) ||
+               queryLower.includes(t.topic.toLowerCase());
+    });
+    
+    if (matching.length === 0) return subQueries;
+    
+    // Raccogli tutte le sotto-query forzate
+    const forcedQueries = matching.flatMap(t => t.sotto_query_forzate);
+    
+    // Filtra quelle già coperte dalle sotto-query esistenti
+    const existingText = subQueries.join(' ').toLowerCase();
+    const newQueries = forcedQueries.filter(fq => {
+        // Controlla se i primi 3 termini significativi della query forzata sono già coperti
+        const keyTerms = fq.toLowerCase().split(' ').filter(w => w.length > 3).slice(0, 3);
+        return !keyTerms.every(term => existingText.includes(term));
+    });
+    
+    if (newQueries.length > 0) {
+        console.log(`[RAG] 📚 Taxonomy enrichment: +${newQueries.length} sotto-query forzate da ${matching.length} topic match`);
+        // Limita a max 8 query totali per non sovraccaricare l'embedding
+        const enriched = [...subQueries, ...newQueries].slice(0, 8);
+        return enriched;
+    }
+    
+    return subQueries;
+}
+
 // --- QUERY EXPANSION (Multi-Query RAG) ---
 // Decompone titoli complessi in sotto-query atomiche usando Gemini Flash.
 // Es: "Contratto simulato e in frode alla legge, con rif. al contratto di società"
@@ -195,7 +429,10 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
     }
     try {
         // 1. QUERY EXPANSION: decomponi titoli complessi in sotto-query atomiche
-        const subQueries = await expandQuery(userMessageText, materiaFilter, googleKey);
+        let subQueries = await expandQuery(userMessageText, materiaFilter, googleKey);
+        
+        // 1b. TAXONOMY ENRICHMENT: arricchisci con sotto-query forzate dalla tassonomia
+        subQueries = enrichWithTaxonomy(subQueries, userMessageText, materiaFilter);
         
         // 2. Genera embedding per query principale + sotto-query (in parallelo)
         const embedUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key=${googleKey}`;
