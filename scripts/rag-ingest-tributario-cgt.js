@@ -32,7 +32,7 @@ const limitArg = process.argv.find(a => a.startsWith('--limit'));
 const LIMIT = limitArg ? parseInt(limitArg.split('=')[1] || process.argv[process.argv.indexOf(limitArg) + 1]) : Infinity;
 const DRY_RUN = process.argv.includes('--dry-run');
 
-const BASE_DIR = 'schede_tributario_vip';
+const BASE_DIR = 'data/schede_tributario_vip';
 
 function generateUUID(name) {
     return crypto.createHash('sha256')

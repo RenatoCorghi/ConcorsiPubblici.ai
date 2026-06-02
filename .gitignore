@@ -27,19 +27,45 @@ sentenze_*/
 Federalismi/
 riviste_*/
 massimario_vip/
+corte_conti_vip_schede/
+schede_tributario_vip/
+manuali_oa_schede_v3/
+
+# Scraper & pipeline artifacts (NEVER commit)
 scraper_cassazione/
+scraper_*/
+temp_cache*/
+temp_extracted*.json
 
 # Scratch / temp / debug artifacts
 scratch/
-temp_cache/
-temp_extracted.json
 discarded_admin_log.txt
 sample_admin_*
 test_estratto.txt
 test_admin_vip_v3.md
 test_rivista_vip.md
+non_sentenze_to_delete.json
+audit_integrity_report.txt
+audit_oscuramento.cjs
+oscurated_files_report.txt
+pii_scan_ssuu_report.json
 
-# Logs
+# Pipeline & scraping logs
 *.log
 npm-debug.log*
+pipeline_*.log
+scraper_*.log
 
+# Python / venv
+venv/
+__pycache__/
+*.pyc
+*.py
+
+# Batch scripts (internal tooling)
+*.bat
+
+# Debug / test scripts (root level)
+check_*.mjs
+debug_*.mjs
+test_*.mjs

@@ -83,7 +83,7 @@ async function generateVIP(text, meta, retries = 5) {
     
     for (let attempt = 1; attempt <= retries; attempt++) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 180000); // 180s timeout
         
         try {
             const response = await fetch(url, {
@@ -135,13 +135,22 @@ async function main() {
     const args = process.argv.slice(2);
     const limitArg = args.find(a => a.startsWith('--limit='));
     const LIMIT = limitArg ? parseInt(limitArg.split('=')[1]) : Infinity;
+    const sedeArg = args.find(a => a.startsWith('--sede='));
+    const SEDE_FILTER = sedeArg ? sedeArg.split('=')[1] : null;
+    const annoArg = args.find(a => a.startsWith('--anno='));
+    const ANNO_FILTER = annoArg ? parseInt(annoArg.split('=')[1]) : null;
 
     console.log("📡 Fetching VIP_CONFERMATA dal DB...");
-    const { data: records, error } = await supabase
+    let query = supabase
         .from('provvedimenti_ga')
         .select('id, tipo_provvedimento, sede_slug, sede_nome, numero_provvedimento, anno_pubblicazione, testo_completo')
         .eq('importance_tier', 'VIP_CONFERMATA')
         .not('testo_completo', 'is', null);
+
+    if (SEDE_FILTER) query = query.eq('sede_slug', SEDE_FILTER);
+    if (ANNO_FILTER) query = query.eq('anno_pubblicazione', ANNO_FILTER);
+
+    const { data: records, error } = await query;
 
     if (error) {
         console.error("❌ Errore fetch DB:", error);
@@ -161,8 +170,10 @@ async function main() {
 
     for (const record of filesToProcess) {
         // Formato filename: es. TAR_2024_1234.md o CdS_2023_567.md
+        // Se è TAR ed è diverso da tar-lazio-roma, aggiungiamo la sede per evitare collisioni
         const prefix = record.sede_slug.startsWith('cds') ? 'CdS' : 'TAR';
-        const fileName = `${prefix}_${record.anno_pubblicazione}_${record.numero_provvedimento}.md`;
+        const sedeSuffix = (record.sede_slug === 'tar-lazio-roma' || !record.sede_slug) ? '' : `_${record.sede_slug}`;
+        const fileName = `${prefix}${sedeSuffix}_${record.anno_pubblicazione}_${record.numero_provvedimento}.md`;
         const outputFilePath = path.join(OUTPUT_DIR, fileName);
 
         if (fs.existsSync(outputFilePath)) {
@@ -175,12 +186,30 @@ async function main() {
         try {
             const rawText = record.testo_completo;
 
-            if (rawText.length < 500) {
-                console.log(`   ⏭️  SCARTO AUTOMATICO: Testo troppo corto (<500 caratteri).`);
-                fs.writeFileSync(outputFilePath, "[SCARTO_ASSOLUTO] (Pre-filtro locale: Testo troppo breve)", 'utf8');
+            // --- SAFETY GATES ---
+            const MIN_CONTENT_LENGTH = 1000;
+            const cleanedText = rawText.replace(/\s+/g, ' ').trim();
+            if (cleanedText.length < MIN_CONTENT_LENGTH) {
+                console.log(`   ⏭️  SCARTO AUTOMATICO: Testo troppo corto (${cleanedText.length} caratteri < ${MIN_CONTENT_LENGTH}).`);
+                fs.writeFileSync(outputFilePath, `[SCARTO_ASSOLUTO] (Pre-filtro locale: Testo troppo breve, ${cleanedText.length} chars)`, 'utf8');
                 discarded++;
                 continue;
             }
+
+            const OSCURAMENTO_PATTERNS = [
+                /in fase di oscuramento/i,
+                /sentenza richiesta.*oscuramento/i,
+                /provvedimento.*non.*disponibile/i,
+                /testo.*non.*disponibile/i
+            ];
+            const isOscurato = OSCURAMENTO_PATTERNS.some(p => p.test(rawText));
+            if (isOscurato) {
+                console.log(`   ⏭️  SCARTO AUTOMATICO: Sentenza oscurata.`);
+                fs.writeFileSync(outputFilePath, "[SCARTO_ASSOLUTO] (Pre-filtro locale: Sentenza oscurata)", 'utf8');
+                discarded++;
+                continue;
+            }
+            // ---------------------
 
             const anonymizedText = anonymizeText(rawText);
 
@@ -204,7 +233,8 @@ async function main() {
                 processed++;
             }
 
-            await new Promise(r => setTimeout(r, 800));
+            // Aumentato a 4000ms per rispettare i limiti di rate limit del modello preview
+            await new Promise(r => setTimeout(r, 4000));
 
         } catch (e) {
             console.error(`   ❌ Errore: ${e.message}`);

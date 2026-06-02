@@ -52,6 +52,74 @@ const MIN_FILE_SIZE = 500;    // Minimo bytes per non essere stub
 const TIPO_DB = 'sentenza_sez_semplici';
 
 // ── Utility ──
+function anonymizeText(text) {
+    if (!text) return '';
+    let clean = text;
+    clean = clean.replace(/[\u2018\u2019\u201A\u2039\u203A]/g, "'");
+
+    const extractedNames = new Set();
+    function addName(fullName) {
+        if (!fullName) return;
+        const trimmed = fullName.trim().replace(/\s+/g, ' ');
+        if (trimmed.length < 3) return;
+        extractedNames.add(trimmed);
+        for (const part of trimmed.split(/\s+/)) {
+            const cleaned = part.replace(/['']/g, '');
+            if (cleaned.length >= 3 && /[A-ZÀ-Ú]/.test(cleaned[0])) {
+                extractedNames.add(part);
+            }
+        }
+    }
+
+    let m;
+    const upperNameRegex = /\b([A-ZÀ-Ú'][A-ZÀ-Ú']+(?:\s+[A-ZÀ-Ú'][A-ZÀ-Ú']+){1,4})\s+(?:nat[oa]\s+a|avverso|Parti|parte)/g;
+    while ((m = upperNameRegex.exec(clean)) !== null) addName(m[1]);
+    const propRegex = /(?:proposto da|sul ricorso (?:proposto )?da)[:\s]+([A-ZÀ-Ú'][a-zàèéìòùA-ZÀ-Ú']+(?:\s+[A-ZÀ-Ú'a-zàèéìòù]+){1,4})\s+(?:nat[oa]|avverso|con sede|elettivamente)/gi;
+    while ((m = propRegex.exec(clean)) !== null) addName(m[1]);
+    const prefixRegex = /(?:Avvocat[oi]|Avvocata|Avv\.?\s*t?o?|Dott\.?\s*(?:ssa)?|Prof\.?\s*(?:ssa)?|Sig\.?\s*(?:ra)?|Signor[ae]?|Ing\.|Geom\.|Rag\.)\s+([A-ZÀ-Ú](?:[a-zàèéìòùà-ú']+|\.)\s*(?:(?:di|del|della|De|Di|D'[A-Za-zàèéìòùÀ-Ú])\s*[A-Za-zàèéìòùÀ-Ú']*\s*)?(?:[A-ZÀ-Ú][a-zàèéìòùà-ú']+\s*){0,3})/g;
+    while ((m = prefixRegex.exec(clean)) !== null) addName(m[1]);
+    const contractedPrefixRegex = /(?:l['']|dall['']|dell['']|all[''])(?:Avv|avv)\.?\s*t?o?\s+([A-ZÀ-Ú](?:[a-zàèéìòùà-ú']+|\.)\s*(?:(?:di|del|della|De|Di|D'[A-Za-zàèéìòùÀ-Ú])\s*[A-Za-zàèéìòùÀ-Ú']*\s*)?(?:[A-ZÀ-Ú][a-zàèéìòùà-ú']+\s*){0,3})/g;
+    while ((m = contractedPrefixRegex.exec(clean)) !== null) addName(m[1]);
+    const multiLawyerRegex = /(?:dagli|degli|dalle)\s+(?:Avvocat[oi]|avvocat[oi])\s+(.+?)(?=\s+giusta|\s+con\s+procura|\s+rappresentat)/gi;
+    while ((m = multiLawyerRegex.exec(clean)) !== null) {
+        for (const part of m[1].split(/\s+e\s+/)) addName(part.replace(/\([^)]+\)/g, '').trim());
+    }
+    const mezzoRegex = /a mezzo (?:dell['']avv\.?\s*t?o?|del difensore)\s+([A-ZÀ-Ú](?:[a-zàèéìòùà-ú']+|\.)\s*(?:[A-ZÀ-Ú][a-zàèéìòùà-ú']+\s*){0,3})/gi;
+    while ((m = mezzoRegex.exec(clean)) !== null) addName(m[1]);
+    const roleRegex = /(?:Consigliere|Magistrato|Giudice|Presidente|Sostituto Procuratore Generale|Procuratore Generale)\s+([A-ZÀ-Ú][a-zàèéìòùà-ú']+(?:\s+(?:De|Di|D'[A-Za-zàèéìòùÀ-Ú]|del|della)\s*[A-Za-zàèéìòùÀ-Ú']*)?(?:\s+[A-ZÀ-Ú][a-zàèéìòùà-ú']+){0,3})/g;
+    while ((m = roleRegex.exec(clean)) !== null) addName(m[1]);
+    const ctxRegex = /(?:posizione di|istanza di|carico di|confronti di|difensore di|difeso da|difesa da|a favore di|nei confronti di|parte civile[:\s]+|Parti civili[:\s]+|ricorso di|figlio|figlia|coniuge)\s+([A-ZÀ-Ú][a-zàèéìòùà-ú']+(?:\s+(?:di|del|della|De|Di|D'[A-Za-zàèéìòùÀ-Ú])\s*[A-Za-zàèéìòùÀ-Ú']*)?(?:\s+[A-ZÀ-Ú][a-zàèéìòùà-ú']+){0,3})/gi;
+    while ((m = ctxRegex.exec(clean)) !== null) addName(m[1]);
+
+    const legalWords = new Set([
+        'Corte','Tribunale','Cassazione','Sezione','Penale','Civile',
+        'Repubblica','Italiana','Fatto','Diritto','Sentenza','Ordinanza',
+        'Decreto','Ricorso','Appello','Procuratore','Generale','Pubblico',
+        'Ministero','Camera','Consiglio','Stato','Presidente','Consigliere',
+        'Commissario','Giudice','Udienza','Semplice','Concordato','Aggiunto',
+        'con','del','della','che','per','non','nel','una','suo','sua','gli','dei',
+    ]);
+    for (const name of [...extractedNames]) {
+        if (legalWords.has(name) || name.length < 3) extractedNames.delete(name);
+    }
+
+    const sortedNames = [...extractedNames].sort((a, b) => b.length - a.length);
+    for (const name of sortedNames) {
+        if (name.length < 3) continue;
+        const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        clean = clean.replace(new RegExp(`(?<=[\\s,;:.("\\-]|^)${escaped}(?=[\\s,;:.)"\\-]|$)`, 'g'), '[OMISSIS]');
+    }
+
+    clean = clean.replace(/\(?[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]\)?/gi, '[CF_OMISSIS]');
+    clean = clean.replace(/\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g, '[OMISSIS]');
+    clean = clean.replace(/\bnat[oa]\s+a\s+[A-ZÀ-Ú][A-Za-zàèéìòùÀ-Ú'\s]+?\s+il\s+\d{1,2}[\/\.\-]\d{1,2}[\/\.\-]\d{2,4}/gi, 'nato/a a [OMISSIS] il [OMISSIS]');
+    clean = clean.replace(/\bnat[oa]\s+il\s+\d{1,2}[\/\.\-]\d{1,2}[\/\.\-]\d{2,4}/gi, 'nato/a il [OMISSIS]');
+    clean = clean.replace(/\b(?:residente|domiciliat[oa]|domicilio|con sede)\s+(?:in|a)\s+[A-ZÀ-Ú][A-Za-zàèéìòùÀ-Ú'\s,]+?(?:(?:via|viale|piazza|p\.zza|corso|largo|contrada)\s+[A-Za-zàèéìòùÀ-Ú'\s.]+?(?:n\.\s*\d+[\/\w]*)?)?(?=\s*[,;.\-]|\s+presso|\s+rappresentat|\s+in persona|\s+elettivamente)/gi, '[DOMICILIO_OMISSIS]');
+    clean = clean.replace(/\b(?:R\.?G\.?|r\.?g\.?)\s*(?:n\.?\s*)?\d+[\/\-]\d{4}/g, 'R.G. [OMISSIS]');
+    clean = clean.replace(/\b(?:via|viale|piazza|p\.zza|corso|largo)\s+[A-ZÀ-Ú][A-Za-zàèéìòùÀ-Ú'\s.]+?n\.\s*\d+[\/\w]*/gi, '[INDIRIZZO_OMISSIS]');
+    return clean;
+}
+
 function generateUUID(name) {
     return crypto.createHash('sha256')
         .update(name)
@@ -59,6 +127,7 @@ function generateUUID(name) {
         .substring(0, 32)
         .replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5');
 }
+
 
 /**
  * Estrae metadati dal nome del file.
@@ -369,7 +438,8 @@ async function main() {
                 }
 
                 const titolo = extractTitle(content, item.meta);
-                const cleanContent = content
+                const anonymizedText = anonymizeText(content);
+                const cleanContent = anonymizedText
                     .replace(/<thinking>[\s\S]*?<\/thinking>/g, '')
                     .replace(/CORTE SUPREMA DI CASSAZIONE\s+ITALGIUREWEB/gi, '')
                     .trim();

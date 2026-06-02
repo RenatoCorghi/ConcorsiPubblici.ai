@@ -48,6 +48,8 @@ const SAMPLE_SIZE = sampleArg ? parseInt(sampleArg.split('=')[1]) : Infinity;
 const DRY_RUN = args.includes('--dry-run');
 const sedeArg = args.find(a => a.startsWith('--sede='));
 const SEDE_FILTER = sedeArg ? sedeArg.split('=')[1] : null;
+const annoArg = args.find(a => a.startsWith('--anno='));
+const ANNO_FILTER = annoArg ? parseInt(annoArg.split('=')[1]) : null;
 
 // ═══════════════════════════════════════════════════════
 // ESTRAZIONE CONTESTO PRE-P.Q.M.
@@ -126,7 +128,7 @@ CRITERI per vip=false:
 // CHIAMATA GEMINI FLASH
 // ═══════════════════════════════════════════════════════
 
-async function microTriage(header, prePQM, meta, retries = 3) {
+async function microTriage(header, prePQM, meta, retries = 5) {
     const userPrompt = `METADATI: ${JSON.stringify(meta)}
 
 INTESTAZIONE (prime 300 chars):
@@ -216,6 +218,7 @@ async function main() {
         .order('importance_score', { ascending: false });
 
     if (SEDE_FILTER) query = query.eq('sede_slug', SEDE_FILTER);
+    if (ANNO_FILTER) query = query.eq('anno_pubblicazione', ANNO_FILTER);
     if (SAMPLE_SIZE !== Infinity) query = query.limit(SAMPLE_SIZE);
 
     const { data: records, error } = await query;
@@ -296,8 +299,8 @@ async function main() {
             })
             .eq('id', record.id);
 
-        // Rate limiting — Gemini Flash ha limiti generosi ma rispettiamoli
-        await new Promise(r => setTimeout(r, 300));
+        // Rate limiting — Aumentato a 4000ms per evitare il rate limit di 15 RPM su free-tier
+        await new Promise(r => setTimeout(r, 4000));
     }
 
     if (DRY_RUN) {

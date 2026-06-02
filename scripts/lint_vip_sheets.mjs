@@ -101,8 +101,11 @@ export function validateSheet(filePath, content) {
     // 4. Regole per Riviste e Tributario CGT
     // ----------------------------------------------------
     if (normalizedPath.includes('riviste_vip_schede') || normalizedPath.includes('schede_tributario_vip')) {
+        // I file cgt_archivio_art_ derivano da articoli HTML e hanno un formato più snello
+        const isArchivioArt = fileName.startsWith('cgt_archivio_art_');
+
         // Verifica dei Metadati
-        if (!content.includes('METADATI RAG') && !content.includes('Metadati RAG')) {
+        if (!isArchivioArt && !content.includes('METADATI RAG') && !content.includes('Metadati RAG')) {
             throw new Error("[LINTER ERROR] Mancano i metadati RAG ('🧾 METADATI RAG')");
         }
 
@@ -112,7 +115,7 @@ export function validateSheet(filePath, content) {
                                       normalizedPath.includes('PROCESSO_TRIBUTARIO_DLgs_546_1992') ||
                                       normalizedPath.includes('RISCOSSIONE_DPR_602_1973') ||
                                       normalizedPath.includes('TUIR_DPR_917_1986');
-        if (!isTheoreticalTaxSheet) {
+        if (!isTheoreticalTaxSheet && !isArchivioArt) {
             const hasFatto = content.includes('Il Fatto e il Principio di Diritto') || 
                              content.includes('La Questione di Diritto') || 
                              content.includes('Dato Normativo') ||

@@ -1,19 +1,19 @@
 /**
- * SCANNER + BONIFICA PII nei chunk SS.UU. già nel database Supabase.
+/**
+ * REMEDIATE RAG DB PII
  * 
- * Tipo target: 'sentenza_ssuu' (677 chunk)
+ * Bonifica in-place per tutti i chunk RAG su Supabase.
+ * Scansiona tutti i chunk delle tipologie contaminate ('sentenza_sez_semplici' e 'sentenza_cc_vip')
+ * ed applica l'anonymizer v3 in-place su Supabase.
  * 
- * Fase 1: Scansiona tutti i chunk per PII
- * Fase 2: Se --fix, applica anonymizer v3 e aggiorna il chunk in-place (UPDATE)
- * 
- * Uso: 
- *   node scripts/scan_fix_ssuu_db.js          # solo scan
- *   node scripts/scan_fix_ssuu_db.js --fix     # scan + fix in-place
+ * Uso:
+ *   node scripts/remediate_rag_db_pii.mjs
  */
 
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 
+// ── Caricamento .env ──
 const envFile = fs.readFileSync('.env', 'utf8');
 const env = {};
 envFile.split('\n').forEach(line => {
@@ -22,9 +22,8 @@ envFile.split('\n').forEach(line => {
 });
 
 const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
-const FIX_MODE = process.argv.includes('--fix');
 
-// ═══ ANONYMIZER v3 ═══
+// ── ANONYMIZER v3.0 Two-Pass ──
 function anonymizeText(text) {
     if (!text) return '';
     let clean = text;
@@ -93,94 +92,145 @@ function anonymizeText(text) {
     return clean;
 }
 
-// ═══ PII PATTERNS per scan ═══
+// ── PII Regex Patterns per lo scan veloce ──
 const PII_PATTERNS = [
     { name: 'CF', regex: /\b[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]\b/gi },
     { name: 'Nascita', regex: /\bnat[oa]\s+a\s+[A-ZÀ-Ú][A-Za-zàèéìòùÀ-Ú'\s]+?\s+il\s+\d{1,2}[\/\.\-]\d{1,2}[\/\.\-]\d{2,4}/gi },
     { name: 'Avv+Nome', regex: /\b(?:Avv\.?\s*t?o?|Avvocat[oa])\s+[A-ZÀ-Ú][a-zàèéìòù']+\s+[A-ZÀ-Ú][a-zàèéìòù']+/g },
     { name: 'Dott+Nome', regex: /\b(?:Dott\.?\s*(?:ssa)?)\s+[A-ZÀ-Ú][a-zàèéìòù']+\s+[A-ZÀ-Ú][a-zàèéìòù']+/g },
+    { name: 'Sig+Nome', regex: /\b(?:Sig\.?\s*(?:ra)?|Signor[ae]?)\s+[A-ZÀ-Ú][a-zàèéìòù']+\s+[A-ZÀ-Ú][a-zàèéìòù']+/g },
     { name: 'Indirizzo', regex: /\b(?:via|viale|piazza|p\.zza|corso|largo)\s+[A-ZÀ-Ú][A-Za-zàèéìòùÀ-Ú'\s.]+?n\.\s*\d+/gi },
-    { name: 'Email', regex: /\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g },
+    { name: 'Email', regex: /\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g }
 ];
 
-async function main() {
-    console.log(`🔍 SCAN${FIX_MODE ? ' + FIX' : ''} PII — chunk SS.UU. nel database`);
-    console.log('='.repeat(60));
-
-    // Fetch tutti i chunk sentenza_ssuu (paginated)
-    let allChunks = [];
-    let from = 0;
-    const PAGE = 500;
-    while (true) {
-        const { data, error } = await supabase
-            .from('rag_chunks')
-            .select('id, content, document_id')
-            .eq('tipo', 'sentenza_ssuu')
-            .range(from, from + PAGE - 1);
-        if (error) { console.error('DB error:', error.message); break; }
-        if (!data || data.length === 0) break;
-        allChunks.push(...data);
-        from += PAGE;
-        if (data.length < PAGE) break;
-    }
-
-    console.log(`📦 Recuperati ${allChunks.length} chunk con tipo 'sentenza_ssuu'.`);
-
-    let contaminated = 0, totalHits = 0, fixed = 0, fixErrors = 0;
-
-    for (const chunk of allChunks) {
-        const content = chunk.content;
-        let hits = 0;
-
-        for (const { name, regex } of PII_PATTERNS) {
-            regex.lastIndex = 0;
-            const matches = content.match(regex);
-            if (matches) {
-                for (const m of matches) {
-                    if (/Avvocat[oa]\s+General/i.test(m)) continue;
-                    if (/Procurator/i.test(m)) continue;
-                    hits++;
-                }
-            }
-        }
-
-        if (hits > 0) {
-            contaminated++;
-            totalHits += hits;
-            if (contaminated <= 10) {
-                console.log(`❌ chunk ${chunk.id.substring(0, 8)}... (${hits} hit PII)`);
-            }
-
-            // FIX: applica anonymizer e aggiorna nel DB
-            if (FIX_MODE) {
-                try {
-                    const cleaned = anonymizeText(content);
-                    const { error } = await supabase
-                        .from('rag_chunks')
-                        .update({ content: cleaned })
-                        .eq('id', chunk.id);
-                    if (error) throw error;
-                    fixed++;
-                    await new Promise(r => setTimeout(r, 50));
-                } catch (e) {
-                    fixErrors++;
-                    if (fixErrors <= 5) console.error(`   Fix error: ${e.message}`);
-                }
+function hasPII(content) {
+    for (const { name, regex } of PII_PATTERNS) {
+        regex.lastIndex = 0;
+        const matches = content.match(regex);
+        if (matches) {
+            for (const m of matches) {
+                // Escludi falsi positivi noti
+                if (/Avvocat[oa]\s+General/i.test(m)) continue;
+                if (/Avvocat[oa]\s+dello\s+Stato/i.test(m)) continue;
+                if (/Avvocat[oi]\s+dello\s+Stato/i.test(m)) continue;
+                if (/Procurator/i.test(m)) continue;
+                return true;
             }
         }
     }
-
-    console.log(`\n${'='.repeat(60)}`);
-    console.log(`📊 RISULTATI:`);
-    console.log(`   Chunk scansionati:    ${allChunks.length}`);
-    console.log(`   Chunk contaminati:    ${contaminated} (${(contaminated/allChunks.length*100).toFixed(1)}%)`);
-    console.log(`   Hit PII totali:       ${totalHits}`);
-    if (FIX_MODE) {
-        console.log(`   ✅ Chunk bonificati:  ${fixed}`);
-        console.log(`   ❌ Errori fix:        ${fixErrors}`);
-    } else if (contaminated > 0) {
-        console.log(`\n💡 Per bonificare, rilancia con: node scripts/scan_fix_ssuu_db.js --fix`);
-    }
+    return false;
 }
 
-main();
+const TARGET_TYPES = ['sentenza_sez_semplici', 'sentenza_cc_vip'];
+
+async function remediateType(tipo) {
+    console.log(`\n🚀 Avvio bonifica per tipo: '${tipo}'`);
+    console.log('='.repeat(50));
+
+    let offset = 0;
+    const PAGE_SIZE = 1000;
+    let scanned = 0;
+    let modified = 0;
+    let errors = 0;
+
+    const startTime = Date.now();
+
+    while (true) {
+        // Legge solo id e content del tipo target
+        const { data, error } = await supabase
+            .from('rag_chunks')
+            .select('id, content')
+            .eq('tipo', tipo)
+            .range(offset, offset + PAGE_SIZE - 1);
+
+        if (error) {
+            console.error(`\n❌ Errore di caricamento all'offset ${offset}:`, error.message);
+            break;
+        }
+
+        if (!data || data.length === 0) break;
+
+        // 1. Scansiona i chunk della pagina locali e identifica quelli che necessitano di bonifica
+        const chunksToUpdate = [];
+        for (const chunk of data) {
+            scanned++;
+            const original = chunk.content || '';
+            if (hasPII(original)) {
+                const anonymized = anonymizeText(original);
+                if (anonymized !== original) {
+                    chunksToUpdate.push({ id: chunk.id, content: anonymized });
+                }
+            }
+        }
+
+        // 2. Esegui gli update in micro-gruppi di 5 alla volta per evitare statement timeout ed FTS lock contention
+        const BATCH_UPDATE_SIZE = 5;
+        for (let u = 0; u < chunksToUpdate.length; u += BATCH_UPDATE_SIZE) {
+            const batch = chunksToUpdate.slice(u, u + BATCH_UPDATE_SIZE);
+            await Promise.all(batch.map(async (item) => {
+                let attempts = 3;
+                while (attempts > 0) {
+                    try {
+                        const { error: updateErr } = await supabase
+                            .from('rag_chunks')
+                            .update({ content: item.content })
+                            .eq('id', item.id);
+
+                        if (updateErr) {
+                            throw updateErr;
+                        }
+                        modified++;
+                        break; // Success!
+                    } catch (e) {
+                        attempts--;
+                        if (attempts === 0) {
+                            errors++;
+                            if (errors <= 10) {
+                                console.error(`\n❌ Errore durante l'update del chunk ${item.id} dopo 3 tentativi:`, e.message);
+                            }
+                        } else {
+                            // Attesa esponenziale prima del retry (es. 200ms, poi 400ms)
+                            const waitTime = 200 * (3 - attempts);
+                            await new Promise(r => setTimeout(r, waitTime));
+                        }
+                    }
+                }
+            }));
+            
+            // Un piccolo delay di 60ms per dare respiro al DB
+            await new Promise(r => setTimeout(r, 60));
+        }
+
+        const elapsed = (Date.now() - startTime) / 1000;
+        const speed = scanned / elapsed;
+        process.stdout.write(`\r🔍 Scansionati: ${scanned} | Bonificati: ${modified} | Errori: ${errors} | Velocità: ${speed.toFixed(1)} chunks/s`);
+
+        if (data.length < PAGE_SIZE) break;
+        offset += PAGE_SIZE;
+    }
+
+    console.log(`\n\n✅ Completata bonifica per '${tipo}'!`);
+    console.log(`   • Chunk totali analizzati: ${scanned}`);
+    console.log(`   • Chunk bonificati nel DB: ${modified}`);
+    console.log(`   • Errori riscontrati:      ${errors}`);
+    console.log(`   • Tempo impiegato:         ${((Date.now() - startTime) / 1000).toFixed(1)} secondi`);
+}
+
+async function main() {
+    console.log('========================================================');
+    console.log('🏛️  BONIFICA RAG DATABASE IN-PLACE — GDPR PRIVACY SAFETY');
+    console.log('========================================================\n');
+
+    const totalStartTime = Date.now();
+
+    for (const tipo of TARGET_TYPES) {
+        await remediateType(tipo);
+    }
+
+    console.log('\n========================================================');
+    console.log('🎉 BONIFICA RAG COMPLETATA CON SUCCESSO!');
+    console.log(`   • Tempo totale: ${(((Date.now() - totalStartTime) / 1000) / 60).toFixed(1)} minuti`);
+    console.log('========================================================\n');
+}
+
+main().catch(console.error);

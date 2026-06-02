@@ -37,6 +37,8 @@ const limitArg = args.find(a => a.startsWith('--limit='));
 const LIMIT = limitArg ? parseInt(limitArg.split('=')[1]) : Infinity;
 const sedeArg = args.find(a => a.startsWith('--sede='));
 const SEDE_FILTER = sedeArg ? sedeArg.split('=')[1] : null;
+const annoArg = args.find(a => a.startsWith('--anno='));
+const ANNO_FILTER = annoArg ? parseInt(annoArg.split('=')[1]) : null;
 
 // ── RIVISTE INDEX ──
 let rivisteSet = new Set();
@@ -182,6 +184,7 @@ async function main() {
             .range(offset, offset + remaining - 1);
 
         if (SEDE_FILTER) query = query.eq('sede_slug', SEDE_FILTER);
+        if (ANNO_FILTER) query = query.eq('anno_pubblicazione', ANNO_FILTER);
 
         const { data, error } = await query;
 
@@ -224,7 +227,8 @@ async function main() {
         }
 
         processed += data.length;
-        offset += data.length;
+        // offset remains 0 because the query filters out the processed records
+        // offset += data.length;
 
         // Progress
         const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
