@@ -5,6 +5,7 @@
 
 import { APP_CONFIG } from '../config.js';
 import { escapeHtml } from '../utils.js';
+import { Metering } from '../metering.js';
 
 // State locale per la vista
 let searchState = {
@@ -100,6 +101,22 @@ async function loadDetail(id) {
 // ── RENDER ──
 
 export function renderGiurisprudenza() {
+    // --- LOCKDOWN MODE: mostra pagina di manutenzione per non-whitelisted ---
+    if (APP_CONFIG.LOCKDOWN_MODE && !Metering.isWhitelisted()) {
+        return `
+            <div class="fade-in flex flex-col items-center justify-center text-center py-24 px-6">
+                <div class="w-20 h-20 rounded-full bg-gray-800/50 flex items-center justify-center mb-6 border border-gray-700">
+                    <i data-lucide="construction" class="w-10 h-10 text-gray-500"></i>
+                </div>
+                <h1 class="text-2xl font-display font-bold text-white mb-3">Sezione in Manutenzione</h1>
+                <p class="text-gray-400 text-sm max-w-md mb-6">La Giurisprudenza Decodificata è temporaneamente non disponibile per interventi di manutenzione. Tornerà operativa a breve.</p>
+                <button onclick="app.navigate('home')" class="px-6 py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-bold transition border border-gray-700 flex items-center gap-2 text-sm">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> Torna alla Dashboard
+                </button>
+            </div>
+        `;
+    }
+
     // Carichiamo subito le schede VIP dato che questa è l'unica vista ora
     setTimeout(loadVIPSchede, 0);
 

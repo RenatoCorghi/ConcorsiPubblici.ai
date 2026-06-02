@@ -5,6 +5,8 @@
 import { AppState } from '../state.js';
 import { GLOSSARIO_ISTITUTI, DB_TRACCE, FALLBACK_GLOSSARIO } from '../../data.js';
 import { escapeHtml } from '../utils.js';
+import { APP_CONFIG } from '../config.js';
+import { Metering } from '../metering.js';
 
 export function renderGlossario() {
     var now = new Date();
@@ -238,6 +240,23 @@ export async function initVIPDossiers() {
     const container = document.getElementById('vip-dossiers-container');
     console.log("📦 [Glossario] Container trovato:", container !== null);
     if (!container) return;
+
+    // --- LOCKDOWN MODE: non caricare VIP dossiers per non-whitelisted ---
+    if (APP_CONFIG.LOCKDOWN_MODE && !Metering.isWhitelisted()) {
+        container.innerHTML = `
+            <div class="p-4 rounded-xl border border-dashed border-gray-700 bg-gray-900/30 text-center">
+                <div class="flex items-center justify-center gap-2 text-gray-500 mb-2">
+                    <i data-lucide="construction" class="w-4 h-4"></i>
+                    <span class="text-xs font-bold uppercase tracking-widest">In Manutenzione</span>
+                </div>
+                <p class="text-xs text-gray-600">Le schede giurisprudenziali VIP sono temporaneamente non disponibili. Torneranno a breve.</p>
+            </div>
+        `;
+        container.classList.remove('opacity-0');
+        container.classList.add('opacity-100');
+        if (window.lucide) lucide.createIcons();
+        return;
+    }
     
     if (!window.supabaseClient) {
         console.warn("⚠️ [Glossario] Supabase Client non trovato!");

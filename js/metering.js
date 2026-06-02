@@ -128,12 +128,33 @@ export const Metering = {
     },
 
     /**
+     * Controlla se l'utente corrente è nella whitelist di lockdown.
+     * Usato quando LOCKDOWN_MODE è attivo per permettere l'accesso ai beta-tester.
+     * @returns {boolean}
+     */
+    isWhitelisted() {
+        const email = (
+            window.cloud?.user?.email ||
+            AppState.userProfile?.email ||
+            ''
+        ).toLowerCase();
+        if (!email) return false;
+        return (APP_CONFIG.LOCKDOWN_WHITELIST || []).some(e => e.toLowerCase() === email);
+    },
+
+    /**
      * Verifica che l'utente sia registrato. Se è un ospite, mostra il modale
      * di registrazione con un messaggio specifico per la feature.
      * @param {string} featureLabel — Nome della feature (es. "Briefing Pre-Tema")
      * @returns {boolean} true se l'utente è registrato, false se è ospite
      */
     requireRegistration(featureLabel) {
+        // --- LOCKDOWN MODE: blocca anche utenti registrati non-whitelisted ---
+        if (APP_CONFIG.LOCKDOWN_MODE && !this.isWhitelisted()) {
+            showToast(`🔧 ${featureLabel} è temporaneamente riservata ai beta-tester. Tornerà disponibile a breve!`, "info");
+            return false;
+        }
+
         if (!this.isGuest()) return true;
 
         // Mostra il modale di auth con messaggio personalizzato
@@ -181,6 +202,11 @@ export const Metering = {
      * @returns {boolean}
      */
     canUseWeekly(feature, category) {
+        // --- LOCKDOWN MODE: blocca tutto per non-whitelisted ---
+        if (APP_CONFIG.LOCKDOWN_MODE && !this.isWhitelisted()) {
+            return false;
+        }
+
         const tier = this._getTier();
         const limits = WEEKLY_CATEGORY_LIMITS[tier] || WEEKLY_CATEGORY_LIMITS.Free;
         if (limits[feature] === Infinity) return true;
@@ -210,8 +236,6 @@ export const Metering = {
      * Per Starter/Pro: mostra il modale checkout.
      */
     showWeeklyPaywall(feature, category) {
-        const tier = this._getTier();
-        const limits = WEEKLY_CATEGORY_LIMITS[tier] || WEEKLY_CATEGORY_LIMITS.Free;
         const featureLabels = {
             briefing: 'Debrief Pre-Tema',
             lezione: 'Lezione Socratica',
@@ -220,6 +244,15 @@ export const Metering = {
             quiz: 'Quiz AI'
         };
         const label = featureLabels[feature] || category;
+
+        // --- LOCKDOWN MODE: messaggio specifico ---
+        if (APP_CONFIG.LOCKDOWN_MODE && !this.isWhitelisted()) {
+            showToast(`🔧 ${label} è temporaneamente riservata ai beta-tester. Tornerà disponibile a breve!`, "info");
+            return;
+        }
+
+        const tier = this._getTier();
+        const limits = WEEKLY_CATEGORY_LIMITS[tier] || WEEKLY_CATEGORY_LIMITS.Free;
 
         if (limits[feature] === 0) {
             // Feature completamente bloccata per questo tier
@@ -264,6 +297,9 @@ export const Metering = {
      * @returns {boolean} true se ha GIÀ consumato il trial (bloccato), false se può ancora usare
      */
     hasUsedFreeLifetime(feature) {
+        // --- LOCKDOWN MODE: blocca come se fosse già usato ---
+        if (APP_CONFIG.LOCKDOWN_MODE && !this.isWhitelisted()) return true;
+
         const tier = this._getTier();
         if (tier !== 'Free') return false; // Solo i Free hanno questo limite
         const store = this._getFreeLifetimeStore();
@@ -369,6 +405,11 @@ export const Metering = {
      * @returns {boolean}
      */
     canUse(feature) {
+        // --- LOCKDOWN MODE: blocca tutto per non-whitelisted ---
+        if (APP_CONFIG.LOCKDOWN_MODE && !this.isWhitelisted()) {
+            return false;
+        }
+
         const tier = this._getTier();
         const limits = TIER_LIMITS[tier] || TIER_LIMITS.Free;
         const limit = limits[feature];
@@ -427,10 +468,17 @@ export const Metering = {
      * @param {string} feature
      */
     showPaywall(feature) {
+        const label = FEATURE_LABELS[feature] || feature;
+
+        // --- LOCKDOWN MODE: messaggio specifico ---
+        if (APP_CONFIG.LOCKDOWN_MODE && !this.isWhitelisted()) {
+            showToast(`🔧 ${label} è temporaneamente riservata ai beta-tester. Tornerà disponibile a breve!`, "info");
+            return;
+        }
+
         const tier = this._getTier();
         const limits = TIER_LIMITS[tier] || TIER_LIMITS.Free;
         const limit = limits[feature];
-        const label = FEATURE_LABELS[feature] || feature;
 
         if (limit === 0) {
             // Feature completamente bloccata per Free

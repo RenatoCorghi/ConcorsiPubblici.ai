@@ -58,6 +58,17 @@ export const APP_CONFIG = {
     VOTO_MAX: 20,
     MIN_WORDS_FOR_AI: 10,        // Minimo parole per attivare correzione AI
 
+    // --- Lockdown Mode (Pre-Lancio) ---
+    // Quando true: oscura Giurisprudenza Decodificata, VIP Glossario,
+    // e blocca TUTTE le generazioni AI per utenti non in whitelist.
+    // Per ripristinare tutto: mettere a false e fare deploy.
+    LOCKDOWN_MODE: true,
+    LOCKDOWN_WHITELIST: [
+        'renatocorghi80@gmail.com',
+        'david.dimeo@gmail.com',
+        'chantconte@gmail.com',
+    ],
+
     // --- App Info ---
     APP_NAME: 'ConcorsiPubblici.ai',
     APP_VERSION: '1.4.1',
