@@ -398,7 +398,8 @@ export function renderHome() {
                 </div>
             </div>
 
-            <!-- RAG STATS BANNER -->
+            <!-- RAG STATS BANNER (nascosto in lockdown mode) -->
+            ${!APP_CONFIG.LOCKDOWN_MODE ? `
             <div class="mt-16 mb-8 border border-magis-500/30 rounded-2xl p-8 glass-panel relative overflow-hidden bg-gradient-to-br from-gray-900 to-magis-950/40 shadow-2xl">
                 <!-- Background animations -->
                 <div class="absolute -top-24 -right-24 w-72 h-72 bg-magis-600/10 rounded-full blur-3xl animate-pulse"></div>
@@ -432,6 +433,7 @@ export function renderHome() {
                     </div>
                 </div>
             </div>
+            ` : ''}
 
             <!-- PWA INSTALL BANNER (bottom) -->
             ${window.deferredPrompt ? `
