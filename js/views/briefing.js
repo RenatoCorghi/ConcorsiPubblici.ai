@@ -329,10 +329,26 @@ function renderBriefingContent(briefing) {
 
     const ragCount = (briefing.rag_sources && briefing.rag_sources.length > 0) ? briefing.rag_sources.length : 0;
     const ragBadgeHtml = ragCount > 0 ? `
-        <div class="mb-6 flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl max-w-fit">
-            <i data-lucide="database" class="w-4 h-4 text-emerald-400"></i>
-            <span class="text-xs font-bold text-emerald-300">Intelligenza Giuridica Attiva: estratti ${ragCount} frammenti normativi/giurisprudenziali dal database.</span>
-        </div>
+        <details class="mb-6 group bg-emerald-500/10 border border-emerald-500/20 rounded-xl overflow-hidden">
+            <summary class="flex items-center gap-2 p-3 cursor-pointer hover:bg-emerald-500/20 transition list-none select-none [&::-webkit-details-marker]:hidden">
+                <i data-lucide="database" class="w-4 h-4 text-emerald-400"></i>
+                <span class="text-xs font-bold text-emerald-300">Intelligenza Giuridica Attiva: estratti ${ragCount} frammenti normativi/giurisprudenziali dal database.</span>
+                <i data-lucide="chevron-down" class="w-4 h-4 text-emerald-400 ml-auto transition-transform group-open:rotate-180"></i>
+            </summary>
+            <div class="px-4 pb-4 pt-1 border-t border-emerald-500/20 max-h-96 overflow-y-auto custom-scrollbar">
+                <div class="space-y-3 mt-3">
+                    ${briefing.rag_sources.map((src, i) => `
+                        <div class="p-3 bg-gray-900/80 rounded-lg border border-emerald-500/20">
+                            <div class="flex items-start justify-between gap-2 mb-2">
+                                <h4 class="font-bold text-emerald-300 text-sm">${escapeHtml(src.titolo || 'Fonte senza titolo')}</h4>
+                                <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 bg-emerald-900/50 text-emerald-400 rounded border border-emerald-800">${escapeHtml(src.materia || '')}</span>
+                            </div>
+                            <p class="text-xs text-gray-300 leading-relaxed font-serif">${escapeHtml(src.content || src.contenuto || '').substring(0, 600)}...</p>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </details>
     ` : '';
 
     return `
@@ -492,10 +508,29 @@ function renderModelEssay(modelData) {
                             </div>
                         </div>
                         ${ragCount > 0 ? `
-                            <div class="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-                                <i data-lucide="database" class="w-3 h-3 text-emerald-400"></i>
-                                <span class="text-xs font-bold text-emerald-300">${ragCount} fonti RAG</span>
-                            </div>
+                            <details class="group relative z-20">
+                                <summary class="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg cursor-pointer hover:bg-emerald-500/20 transition list-none select-none [&::-webkit-details-marker]:hidden">
+                                    <i data-lucide="database" class="w-3 h-3 text-emerald-400"></i>
+                                    <span class="text-xs font-bold text-emerald-300">${ragCount} fonti RAG</span>
+                                    <i data-lucide="chevron-down" class="w-3 h-3 text-emerald-400 transition-transform group-open:rotate-180"></i>
+                                </summary>
+                                <div class="absolute right-0 top-full mt-2 w-[400px] max-w-[85vw] bg-gray-900 border border-emerald-500/30 rounded-xl shadow-2xl overflow-hidden p-0 max-h-[60vh] flex flex-col">
+                                    <div class="px-4 py-3 border-b border-emerald-500/20 bg-emerald-950/30 shrink-0">
+                                        <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Fonti utilizzate per il modello</h4>
+                                    </div>
+                                    <div class="p-3 overflow-y-auto custom-scrollbar space-y-3">
+                                        ${modelData.rag_sources.map(src => `
+                                            <div class="p-3 bg-gray-800/80 rounded-lg border border-gray-700 hover:border-emerald-500/30 transition">
+                                                <div class="flex items-start justify-between gap-2 mb-2">
+                                                    <span class="font-bold text-gray-200 text-xs">${escapeHtml(src.titolo || 'Fonte')}</span>
+                                                    <span class="text-[10px] text-emerald-400 bg-emerald-900/30 border border-emerald-500/30 px-1.5 py-0.5 rounded whitespace-nowrap">${escapeHtml(src.materia || '')}</span>
+                                                </div>
+                                                <p class="text-xs text-gray-400 leading-relaxed font-serif line-clamp-4 hover:line-clamp-none transition-all">${escapeHtml(src.content || src.contenuto || '')}</p>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </details>
                         ` : ''}
                     </div>
                 </div>
