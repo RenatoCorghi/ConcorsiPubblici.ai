@@ -340,10 +340,10 @@ function renderBriefingContent(briefing) {
                     ${briefing.rag_sources.map((src, i) => `
                         <div class="p-3 bg-gray-900/80 rounded-lg border border-emerald-500/20">
                             <div class="flex items-start justify-between gap-2 mb-2">
-                                <h4 class="font-bold text-emerald-300 text-sm">${escapeHtml(src.titolo || 'Fonte senza titolo')}</h4>
+                                <h4 class="font-bold text-emerald-300 text-sm">${escapeHtml(src.titolo || src.tipo || 'Fonte senza titolo')}</h4>
                                 <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 bg-emerald-900/50 text-emerald-400 rounded border border-emerald-800">${escapeHtml(src.materia || '')}</span>
                             </div>
-                            <p class="text-xs text-gray-300 leading-relaxed font-serif">${escapeHtml(src.content || src.contenuto || '').substring(0, 600)}...</p>
+                            <p class="text-xs text-gray-300 leading-relaxed font-serif">${escapeHtml(src.content || src.fullContent || src.snippet || src.contenuto || '').substring(0, 600)}...</p>
                         </div>
                     `).join('')}
                 </div>
@@ -522,10 +522,10 @@ function renderModelEssay(modelData) {
                                         ${modelData.rag_sources.map(src => `
                                             <div class="p-3 bg-gray-800/80 rounded-lg border border-gray-700 hover:border-emerald-500/30 transition">
                                                 <div class="flex items-start justify-between gap-2 mb-2">
-                                                    <span class="font-bold text-gray-200 text-xs">${escapeHtml(src.titolo || 'Fonte')}</span>
+                                                    <span class="font-bold text-gray-200 text-xs">${escapeHtml(src.titolo || src.tipo || 'Fonte')}</span>
                                                     <span class="text-[10px] text-emerald-400 bg-emerald-900/30 border border-emerald-500/30 px-1.5 py-0.5 rounded whitespace-nowrap">${escapeHtml(src.materia || '')}</span>
                                                 </div>
-                                                <p class="text-xs text-gray-400 leading-relaxed font-serif line-clamp-4 hover:line-clamp-none transition-all">${escapeHtml(src.content || src.contenuto || '')}</p>
+                                                <p class="text-xs text-gray-400 leading-relaxed font-serif line-clamp-4 hover:line-clamp-none transition-all">${escapeHtml(src.content || src.fullContent || src.snippet || src.contenuto || '')}</p>
                                             </div>
                                         `).join('')}
                                     </div>

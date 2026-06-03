@@ -701,9 +701,11 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
             // Metadati delle fonti per il frontend (include fullContent per la verifica citazioni lato client)
             const sources = topMatches.map(m => ({
                 tipo: m.titolo || 'documento',
+                titolo: m.titolo || 'documento',
                 materia: m.materia || 'Giurisprudenza',
                 similarity: m.similarity || 0,
                 snippet: (m.content || '').substring(0, 250),
+                content: m.content || '',
                 fullContent: m.content || ''
             }));
             

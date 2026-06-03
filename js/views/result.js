@@ -176,11 +176,11 @@ function renderResultCorrezione(res) {
                         <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 relative overflow-hidden hover:border-emerald-800/50 transition">
                             <div class="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500"></div>
                             <div class="flex flex-wrap items-center gap-2 mb-2 ml-2">
-                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-900/50 text-emerald-300 border border-emerald-800">${escapeHtml(s.tipo || 'documento')}</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-900/50 text-emerald-300 border border-emerald-800">${escapeHtml(s.titolo || s.tipo || 'documento')}</span>
                                 <span class="text-xs font-bold text-white">${escapeHtml(s.materia || '')}</span>
                                 <span class="text-[10px] text-gray-500 ml-auto">Affinità: ${(s.similarity * 100).toFixed(0)}%</span>
                             </div>
-                            <p class="text-xs text-gray-400 leading-relaxed ml-2 line-clamp-2">${escapeHtml((s.snippet || '').substring(0, 200))}</p>
+                            <p class="text-xs text-gray-400 leading-relaxed ml-2 line-clamp-2">${escapeHtml((s.snippet || s.content || s.fullContent || '').substring(0, 200))}</p>
                         </div>
                     `).join('')}
                 </div>
@@ -213,9 +213,9 @@ function renderResultSchema(res) {
                         ${res.rag_sources && res.rag_sources.length > 0 ? res.rag_sources.map(s => `
                             <div class="bg-gray-900 border border-gray-800 rounded-lg p-3 relative overflow-hidden">
                                 <div class="absolute left-0 top-0 bottom-0 w-1 bg-emerald-600"></div>
-                                <div class="text-[10px] font-bold text-emerald-400 mb-1">${escapeHtml(s.tipo || 'documento')} — ${escapeHtml(s.materia || '')}</div>
+                                <div class="text-[10px] font-bold text-emerald-400 mb-1">${escapeHtml(s.titolo || s.tipo || 'documento')} — ${escapeHtml(s.materia || '')}</div>
                                 <p class="text-[11px] text-gray-500 mb-1">Affinità: ${(s.similarity * 100).toFixed(0)}%</p>
-                                <p class="text-xs text-gray-300 line-clamp-3">${escapeHtml((s.snippet || '').substring(0, 150))}</p>
+                                <p class="text-xs text-gray-300 line-clamp-3">${escapeHtml((s.snippet || s.content || s.fullContent || '').substring(0, 150))}</p>
                             </div>
                         `).join('') : `
                             <div class="bg-gray-900 border border-gray-800 rounded-lg p-3 relative overflow-hidden">
