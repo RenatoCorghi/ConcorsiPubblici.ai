@@ -27,6 +27,7 @@ Restituisci SOLO un JSON: {"voto": numero_da_0_a_10, "feedback": "giudizio anali
                 method: 'POST',
                 headers: await getAuthHeaders(),
                 body: JSON.stringify({
+                    feature: 'oralSessions',
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].CORR,
                     messages: [
@@ -85,6 +86,7 @@ REGOLA: Mantieni le tue risposte sotto le 60-80 parole. Usa un lessico tecnico i
                 method: 'POST',
                 headers: await getAuthHeaders(),
                 body: JSON.stringify({
+                    feature: 'oralSessions',
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].CHAT,
                     messages: apiMessages,

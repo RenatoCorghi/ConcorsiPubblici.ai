@@ -23,6 +23,7 @@ export const tracesApi = {
                 method: 'POST',
                 headers: await getAuthHeaders(),
                 body: JSON.stringify({
+                    feature: 'aiTraces',
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].GEN,
                     messages: [{"role": "user", "content": prompt}],

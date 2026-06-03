@@ -206,8 +206,8 @@ const TOPIC_TAXONOMY = [
 // dinamici (Gemini, Claude, GPT) e vengono gestiti tramite APP_CONFIG lato frontend.
 
 const MAX_TOKENS_LIMIT = 8000;   // Cap assoluto su max_tokens (alzato per Lectio Magistralis)
-const MAX_MESSAGES = 30;          // Max messaggi in una conversazione
-const MAX_MESSAGE_LENGTH = 25000;  // Max lunghezza singolo messaggio (chars) — alzato per Lectio multi-modulo
+const MAX_MESSAGES = 100;         // Max messaggi in una conversazione (alzato per sessioni lunghe)
+const MAX_MESSAGE_LENGTH = 150000; // Max lunghezza singolo messaggio (chars) — alzato per saggi/temi lunghi ed evoluzioni RAG
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;  // 1 minuto
 const RATE_LIMIT_MAX_REQUESTS = 60;      // 60 richieste per finestra
 

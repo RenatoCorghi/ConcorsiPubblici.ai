@@ -44,6 +44,7 @@ CONTESTO UTENTE: ${userSummary}`;
                 method: 'POST',
                 headers: await getAuthHeaders(),
                 body: JSON.stringify({
+                    feature: 'tutorChats',
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].CHAT,
                     useRAG: true,
