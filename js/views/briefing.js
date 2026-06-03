@@ -384,51 +384,47 @@ function renderBriefingContent(briefing) {
     });
 
     const ragCount = (briefing.rag_sources && briefing.rag_sources.length > 0) ? briefing.rag_sources.length : 0;
-    const ragBadgeHtml = ragCount > 0 ? `
-        <details class="mb-6 group bg-emerald-500/10 border border-emerald-500/20 rounded-xl overflow-hidden">
-            <summary class="flex items-center gap-2 p-3 cursor-pointer hover:bg-emerald-500/20 transition list-none select-none [&::-webkit-details-marker]:hidden">
-                <i data-lucide="database" class="w-4 h-4 text-emerald-400"></i>
-                <span class="text-xs font-bold text-emerald-300">Intelligenza Giuridica Attiva: estratti ${ragCount} frammenti normativi/giurisprudenziali dal database.</span>
-                <i data-lucide="chevron-down" class="w-4 h-4 text-emerald-400 ml-auto transition-transform group-open:rotate-180"></i>
+    const webCitations = briefing.web_citations || [];
+    const totalSources = ragCount + webCitations.length;
+
+    const sourcesBadgeHtml = totalSources > 0 ? `
+        <details class="mb-6 group bg-gray-800/40 border border-gray-700/50 rounded-xl overflow-hidden">
+            <summary class="flex items-center gap-2 p-3 cursor-pointer hover:bg-gray-700/30 transition list-none select-none [&::-webkit-details-marker]:hidden">
+                <i data-lucide="layers" class="w-4 h-4 text-gray-300"></i>
+                <span class="text-xs font-bold text-gray-200">Fonti Consultate: ${totalSources} documenti</span>
+                <div class="flex items-center gap-1.5 ml-2">
+                    ${ragCount > 0 ? `<span class="text-[10px] px-1.5 py-0.5 bg-emerald-500/15 text-emerald-400 rounded border border-emerald-500/25 font-mono">📚 ${ragCount} RAG</span>` : ''}
+                    ${webCitations.length > 0 ? `<span class="text-[10px] px-1.5 py-0.5 bg-blue-500/15 text-blue-400 rounded border border-blue-500/25 font-mono">🌐 ${webCitations.length} WEB</span>` : ''}
+                </div>
+                <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400 ml-auto transition-transform group-open:rotate-180"></i>
             </summary>
-            <div class="px-4 pb-4 pt-1 border-t border-emerald-500/20 max-h-96 overflow-y-auto custom-scrollbar">
+            <div class="px-4 pb-4 pt-1 border-t border-gray-700/30 max-h-96 overflow-y-auto custom-scrollbar">
                 <div class="space-y-3 mt-3">
-                    ${briefing.rag_sources.map((src, i) => `
-                        <div class="p-3 bg-gray-900/80 rounded-lg border border-emerald-500/20">
+                    ${(briefing.rag_sources || []).map(src => `
+                        <div class="p-3 bg-gray-900/80 rounded-lg border-l-[3px] border-emerald-500 border border-t-gray-800 border-r-gray-800 border-b-gray-800">
                             <div class="flex items-start justify-between gap-2 mb-2">
-                                <h4 class="font-bold text-emerald-300 text-sm">${escapeHtml(src.titolo || src.tipo || 'Fonte senza titolo')}</h4>
-                                <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 bg-emerald-900/50 text-emerald-400 rounded border border-emerald-800">${escapeHtml(src.materia || '')}</span>
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <span class="text-[9px] uppercase tracking-wider px-1.5 py-0.5 bg-emerald-900/50 text-emerald-400 rounded border border-emerald-800 shrink-0 font-mono">📚 RAG</span>
+                                    <h4 class="font-bold text-emerald-300 text-sm truncate">${escapeHtml(src.titolo || src.tipo || 'Fonte senza titolo')}</h4>
+                                </div>
+                                <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 bg-gray-800 text-gray-400 rounded border border-gray-700 shrink-0">${escapeHtml(src.materia || '')}</span>
                             </div>
                             <p class="text-xs text-gray-300 leading-relaxed font-serif">${escapeHtml(src.content || src.fullContent || src.snippet || src.contenuto || '').substring(0, 600)}...</p>
                         </div>
                     `).join('')}
-                </div>
-            </div>
-        </details>
-    ` : '';
-
-    // --- Web Citations Badge (fonti web in tempo reale) ---
-    const webCitations = briefing.web_citations || [];
-    const webBadgeHtml = webCitations.length > 0 ? `
-        <details class="mb-6 group bg-blue-500/10 border border-blue-500/20 rounded-xl overflow-hidden">
-            <summary class="flex items-center gap-2 p-3 cursor-pointer hover:bg-blue-500/20 transition list-none select-none [&::-webkit-details-marker]:hidden">
-                <i data-lucide="globe" class="w-4 h-4 text-blue-400"></i>
-                <span class="text-xs font-bold text-blue-300">🌐 ${webCitations.length} fonti web consultate in tempo reale (portali istituzionali)</span>
-                <i data-lucide="chevron-down" class="w-4 h-4 text-blue-400 ml-auto transition-transform group-open:rotate-180"></i>
-            </summary>
-            <div class="px-4 pb-4 pt-1 border-t border-blue-500/20 max-h-60 overflow-y-auto custom-scrollbar">
-                <div class="space-y-2 mt-2">
                     ${webCitations.map(cit => `
-                        <div class="p-2.5 bg-gray-900/80 rounded-lg border border-blue-500/20 flex items-start gap-2">
-                            <i data-lucide="external-link" class="w-3 h-3 text-blue-400 mt-0.5 shrink-0"></i>
-                            <div class="min-w-0">
-                                <a href="${escapeHtml(cit.url)}" target="_blank" rel="noopener noreferrer" 
-                                   class="text-xs font-bold text-blue-300 hover:text-blue-200 underline break-all">
-                                    ${escapeHtml(cit.titolo || 'Fonte web')}
-                                </a>
-                                ${cit.snippet ? `<p class="text-[10px] text-gray-400 mt-0.5 line-clamp-2">${escapeHtml(cit.snippet)}</p>` : ''}
-                                <p class="text-[10px] text-gray-600 mt-0.5 truncate">${escapeHtml(cit.url || '')}</p>
+                        <div class="p-3 bg-gray-900/80 rounded-lg border-l-[3px] border-blue-500 border border-t-gray-800 border-r-gray-800 border-b-gray-800">
+                            <div class="flex items-start justify-between gap-2 mb-2">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <span class="text-[9px] uppercase tracking-wider px-1.5 py-0.5 bg-blue-900/50 text-blue-400 rounded border border-blue-800 shrink-0 font-mono">🌐 WEB</span>
+                                    <a href="${escapeHtml(cit.url)}" target="_blank" rel="noopener noreferrer" 
+                                       class="font-bold text-blue-300 text-sm hover:text-blue-200 underline truncate">
+                                        ${escapeHtml(cit.titolo || 'Fonte web')}
+                                    </a>
+                                </div>
                             </div>
+                            ${cit.snippet ? `<p class="text-xs text-gray-400 leading-relaxed line-clamp-2">${escapeHtml(cit.snippet)}</p>` : ''}
+                            <p class="text-[10px] text-gray-600 mt-1 truncate">${escapeHtml(cit.url || '')}</p>
                         </div>
                     `).join('')}
                 </div>
@@ -438,8 +434,7 @@ function renderBriefingContent(briefing) {
 
     return `
         <div class="space-y-6">
-            ${ragBadgeHtml}
-            ${webBadgeHtml}
+            ${sourcesBadgeHtml}
             ${sections.map((section, idx) => {
                 if (!section.content || (Array.isArray(section.content) && section.content.length === 0)) return '';
                 
@@ -577,6 +572,8 @@ function renderModelEssay(modelData) {
     }
 
     const ragCount = modelData.rag_sources ? modelData.rag_sources.length : 0;
+    const webCitCount = modelData.web_citations ? modelData.web_citations.length : 0;
+    const totalModelSources = ragCount + webCitCount;
 
     return `
         <div class="mt-8 fade-in" id="model-essay-section">
@@ -593,25 +590,47 @@ function renderModelEssay(modelData) {
                                 <p class="text-xs text-violet-300/60">Simulazione di un elaborato perfetto in stile concorsuale</p>
                             </div>
                         </div>
-                        ${ragCount > 0 ? `
+                        ${totalModelSources > 0 ? `
                             <details class="group relative z-20">
-                                <summary class="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg cursor-pointer hover:bg-emerald-500/20 transition list-none select-none [&::-webkit-details-marker]:hidden">
-                                    <i data-lucide="database" class="w-3 h-3 text-emerald-400"></i>
-                                    <span class="text-xs font-bold text-emerald-300">${ragCount} fonti RAG</span>
-                                    <i data-lucide="chevron-down" class="w-3 h-3 text-emerald-400 transition-transform group-open:rotate-180"></i>
+                                <summary class="flex items-center gap-2 px-3 py-1.5 bg-gray-800/60 border border-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-700/40 transition list-none select-none [&::-webkit-details-marker]:hidden">
+                                    <i data-lucide="layers" class="w-3 h-3 text-gray-300"></i>
+                                    <span class="text-xs font-bold text-gray-200">${totalModelSources} fonti</span>
+                                    <div class="flex items-center gap-1">
+                                        ${ragCount > 0 ? `<span class="text-[9px] px-1 py-0.5 bg-emerald-500/15 text-emerald-400 rounded border border-emerald-500/25 font-mono">📚${ragCount}</span>` : ''}
+                                        ${webCitCount > 0 ? `<span class="text-[9px] px-1 py-0.5 bg-blue-500/15 text-blue-400 rounded border border-blue-500/25 font-mono">🌐${webCitCount}</span>` : ''}
+                                    </div>
+                                    <i data-lucide="chevron-down" class="w-3 h-3 text-gray-400 transition-transform group-open:rotate-180"></i>
                                 </summary>
-                                <div class="absolute right-0 top-full mt-2 w-[400px] max-w-[85vw] bg-gray-900 border border-emerald-500/30 rounded-xl shadow-2xl overflow-hidden p-0 max-h-[60vh] flex flex-col">
-                                    <div class="px-4 py-3 border-b border-emerald-500/20 bg-emerald-950/30 shrink-0">
-                                        <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Fonti utilizzate per il modello</h4>
+                                <div class="absolute right-0 top-full mt-2 w-[400px] max-w-[85vw] bg-gray-900 border border-gray-700/50 rounded-xl shadow-2xl overflow-hidden p-0 max-h-[60vh] flex flex-col">
+                                    <div class="px-4 py-3 border-b border-gray-700/30 bg-gray-950/50 shrink-0">
+                                        <h4 class="text-xs font-bold text-gray-300 uppercase tracking-wider">Fonti utilizzate per il modello</h4>
                                     </div>
                                     <div class="p-3 overflow-y-auto custom-scrollbar space-y-3">
-                                        ${modelData.rag_sources.map(src => `
-                                            <div class="p-3 bg-gray-800/80 rounded-lg border border-gray-700 hover:border-emerald-500/30 transition">
+                                        ${(modelData.rag_sources || []).map(src => `
+                                            <div class="p-3 bg-gray-800/80 rounded-lg border-l-[3px] border-emerald-500 border border-t-gray-700 border-r-gray-700 border-b-gray-700 hover:border-emerald-500/30 transition">
                                                 <div class="flex items-start justify-between gap-2 mb-2">
-                                                    <span class="font-bold text-gray-200 text-xs">${escapeHtml(src.titolo || src.tipo || 'Fonte')}</span>
-                                                    <span class="text-[10px] text-emerald-400 bg-emerald-900/30 border border-emerald-500/30 px-1.5 py-0.5 rounded whitespace-nowrap">${escapeHtml(src.materia || '')}</span>
+                                                    <div class="flex items-center gap-2 min-w-0">
+                                                        <span class="text-[9px] px-1.5 py-0.5 bg-emerald-900/50 text-emerald-400 rounded border border-emerald-800 shrink-0 font-mono">📚 RAG</span>
+                                                        <span class="font-bold text-gray-200 text-xs truncate">${escapeHtml(src.titolo || src.tipo || 'Fonte')}</span>
+                                                    </div>
+                                                    <span class="text-[10px] text-gray-500 bg-gray-900/50 border border-gray-700 px-1.5 py-0.5 rounded whitespace-nowrap">${escapeHtml(src.materia || '')}</span>
                                                 </div>
                                                 <p class="text-xs text-gray-400 leading-relaxed font-serif line-clamp-4 hover:line-clamp-none transition-all">${escapeHtml(src.content || src.fullContent || src.snippet || src.contenuto || '')}</p>
+                                            </div>
+                                        `).join('')}
+                                        ${(modelData.web_citations || []).map(cit => `
+                                            <div class="p-3 bg-gray-800/80 rounded-lg border-l-[3px] border-blue-500 border border-t-gray-700 border-r-gray-700 border-b-gray-700 hover:border-blue-500/30 transition">
+                                                <div class="flex items-start justify-between gap-2 mb-2">
+                                                    <div class="flex items-center gap-2 min-w-0">
+                                                        <span class="text-[9px] px-1.5 py-0.5 bg-blue-900/50 text-blue-400 rounded border border-blue-800 shrink-0 font-mono">🌐 WEB</span>
+                                                        <a href="${escapeHtml(cit.url)}" target="_blank" rel="noopener noreferrer" 
+                                                           class="font-bold text-blue-300 text-xs hover:text-blue-200 underline truncate">
+                                                            ${escapeHtml(cit.titolo || 'Fonte web')}
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                                ${cit.snippet ? `<p class="text-xs text-gray-400 leading-relaxed line-clamp-2">${escapeHtml(cit.snippet)}</p>` : ''}
+                                                <p class="text-[10px] text-gray-600 mt-1 truncate">${escapeHtml(cit.url || '')}</p>
                                             </div>
                                         `).join('')}
                                     </div>
