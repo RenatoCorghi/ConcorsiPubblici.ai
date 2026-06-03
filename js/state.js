@@ -48,6 +48,7 @@ export const AppState = {
     tutorChat: [], // Insieme di messaggi pregressi del chatbot fluttuante
     aiTraces: [],  // Tracce generate dinamicamente dall'AI sulle lacune (se saved: true, sono persistenti)
     phantomTutorEnabled: false, // Toggle per la correzione live non invasiva
+    webSearchEnabled: false,    // Toggle per ricerca web durante generazione AI
     tutorialSeen: false,
 
     // Spaced Repetition System

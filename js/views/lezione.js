@@ -82,6 +82,27 @@ export function renderLezione() {
                         </button>
                     </div>
                 </div>
+                <!-- Web Search Toggle (compact) -->
+                <div class="mb-4 p-3 bg-gray-800/50 border border-gray-700/40 rounded-xl flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="globe" class="w-4 h-4 ${AppState.webSearchEnabled ? 'text-blue-400' : 'text-gray-500'}"></i>
+                        <div>
+                            <span class="text-sm font-bold text-white">Ricerca Web</span>
+                            <span class="text-[10px] text-gray-500 ml-1">(portali istituzionali)</span>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input type="checkbox" id="web-search-toggle-lezione"
+                               ${AppState.webSearchEnabled ? 'checked' : ''}
+                               onchange="app.toggleWebSearch(this.checked)"
+                               class="sr-only peer">
+                        <div class="w-10 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer 
+                                    peer-checked:after:translate-x-full peer-checked:bg-blue-600 
+                                    after:content-[''] after:absolute after:top-[2px] after:left-[2px] 
+                                    after:bg-white after:rounded-full after:h-4 after:w-4 
+                                    after:transition-all transition-colors"></div>
+                    </label>
+                </div>
                 <button id="lezione-start-btn" onclick="window._lezione_mode==='lectio' ? app.startLectio() : window._lezione_mode==='smart' ? app.startSmart() : window._lezione_mode==='tema' ? app.startTemaFromLezione() : app.startLezione()" 
                     class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold rounded-xl transition-all transform hover:scale-[1.02] shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
                     <i data-lucide="play" class="w-5 h-5"></i>

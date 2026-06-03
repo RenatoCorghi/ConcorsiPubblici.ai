@@ -301,6 +301,16 @@ export const app = {
         }
     },
 
+    // --- Web Search Toggle ---
+    toggleWebSearch: function(enabled) {
+        AppState.webSearchEnabled = enabled;
+        localStorage.setItem('concorsi_web_search', enabled ? 'true' : 'false');
+        showToast(enabled 
+            ? '🌐 Ricerca Web attiva — L\'AI cercherà fonti aggiornate su Internet.' 
+            : '📚 Ricerca Web disattivata — L\'AI userà solo il database interno (RAG).', 
+            enabled ? 'info' : 'warning');
+    },
+
     // --- Gamification UI ---
     toggleGamification: function () {
         const panel = document.getElementById('gamification-dropdown');
@@ -653,6 +663,9 @@ export const app = {
             initTutorChatState();
             initAiTracesState();
             TutorController.renderMessages();
+
+            // Restore web search preference
+            AppState.webSearchEnabled = localStorage.getItem('concorsi_web_search') === 'true';
 
             Gamification.updateStreak(); // Aggiorna la streak giornaliera
             checkDailyReminders(); // Invia Notifiche Locali

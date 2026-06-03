@@ -112,6 +112,7 @@ Struttura ESATTA richiesta:
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].CORR,
                     useRAG: true,
+                    useWebSearch: AppState.webSearchEnabled,
                     materia: subject,
                     messages: [
                         {"role": "system", "content": promptSystem},
@@ -150,7 +151,8 @@ Struttura ESATTA richiesta:
                 schema_ideale: aiContent.schema_ideale || [],
                 confronto: aiContent.confronto || [],
                 metriche: aiContent.metriche || defaultRes.metriche,
-                rag_sources: ragSourcesFromProxy
+                rag_sources: ragSourcesFromProxy,
+                web_citations: data.web_citations || []
             };
 
         } catch (e) {
@@ -263,6 +265,7 @@ IMPORTANTE: Produci testi molto corposi e densissimi. I valori del JSON non devo
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].CORR,
                     useRAG: true,
+                    useWebSearch: AppState.webSearchEnabled,
                     materia: subject,
                     messages: [
                         {"role": "system", "content": promptSystem},
@@ -294,7 +297,8 @@ IMPORTANTE: Produci testi molto corposi e densissimi. I valori del JSON non devo
                 time_management: briefing.time_management || '',
                 arsenale_lessicale: briefing.arsenale_lessicale || [],
                 consiglio: briefing.consiglio_finale || '',
-                rag_sources: data.rag_sources || []
+                rag_sources: data.rag_sources || [],
+                web_citations: data.web_citations || []
             };
 
         } catch (e) {
@@ -397,6 +401,7 @@ LUNGHEZZA: Calibra l'elaborato per una lunghezza tra le 1200 e le 1800 parole, d
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].CORR,
                     useRAG: true,
+                    useWebSearch: AppState.webSearchEnabled,
                     materia: subject,
                     messages: [
                         {"role": "system", "content": promptSystem},
@@ -419,7 +424,8 @@ LUNGHEZZA: Calibra l'elaborato per una lunghezza tra le 1200 e le 1800 parole, d
             return {
                 success: true,
                 essay: essay,
-                rag_sources: data.rag_sources || []
+                rag_sources: data.rag_sources || [],
+                web_citations: data.web_citations || []
             };
 
         } catch (e) {

@@ -207,9 +207,55 @@ const TOPIC_TAXONOMY = [
 
 const MAX_TOKENS_LIMIT = 8000;   // Cap assoluto su max_tokens (alzato per Lectio Magistralis)
 const MAX_MESSAGES = 100;         // Max messaggi in una conversazione (alzato per sessioni lunghe)
-const MAX_MESSAGE_LENGTH = 150000; // Max lunghezza singolo messaggio (chars) — alzato per saggi/temi lunghi ed evoluzioni RAG
+const MAX_MESSAGE_LENGTH = 150000; // Max lunghezza singolo messaggio (chars) — alzato per saggi/temi lunghe ed evoluzioni RAG
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;  // 1 minuto
 const RATE_LIMIT_MAX_REQUESTS = 60;      // 60 richieste per finestra
+
+// --- WEB SEARCH WHITELIST (Istruzione per ricerca web guidata) ---
+// Derivata dalla Deep Research sulla compliance legale delle fonti.
+// Il modello viene istruito a cercare ESCLUSIVAMENTE su portali istituzionali e riviste Fascia A.
+const WEB_SEARCH_WHITELIST_PROMPT = `
+═══════════════════════════════════════════════
+🌐 ACCESSO INTERNET ATTIVO — PROTOCOLLO WHITELIST BLINDATA
+═══════════════════════════════════════════════
+
+Hai accesso a Internet tramite lo strumento di ricerca web. USALO per verificare e integrare le informazioni del RAG con fonti aggiornate in tempo reale.
+
+🔒 VINCOLO DI FONTE ESCLUSIVA (TASSATIVO):
+Puoi cercare e citare informazioni ESCLUSIVAMENTE dai seguenti portali istituzionali e riviste scientifiche accreditate. Qualsiasi altra fonte web (blog, forum, siti commerciali, enciclopedie collaborative) è SEVERAMENTE VIETATA.
+
+FONTI ISTITUZIONALI (Primarie):
+• gazzettaufficiale.it — Gazzetta Ufficiale della Repubblica Italiana
+• normattiva.it — Portale della normativa vigente (Presidenza del Consiglio)
+• eur-lex.europa.eu — Legislazione e giurisprudenza dell'Unione Europea
+• giustizia-amministrativa.it — Consiglio di Stato e TAR (Open GA)
+• cortecostituzionale.it — Corte Costituzionale (sentenze e comunicati)
+• italgiure.giustizia.it — CED Cassazione (ItalgiureWeb)
+• cortedicassazione.it — Sito ufficiale della Suprema Corte
+• dejure.it — Banca dati giuridica Giuffrè
+• camera.it / senato.it — Lavori parlamentari e dossier
+
+RIVISTE SCIENTIFICHE DI FASCIA A (ANVUR):
+• judicium.it — Diritto Civile e Processuale Civile
+• sistemapenale.it — Diritto Penale e Processuale Penale
+• ceridap.eu — Diritto Amministrativo
+• archiviopenale.it — Diritto Penale sostanziale e processuale
+• lalegislazionepenale.eu — Legislazione Penale
+• medialaws.eu — Diritto delle Nuove Tecnologie e IA
+• biodfritto.org — Diritto e Scienze della Vita
+• dirittopenaleuomo.org — Diritto Penale e diritti fondamentali
+• federalismi.it — Diritto Pubblico e Costituzionale
+
+FINALITÀ DELLA RICERCA WEB:
+— Verificare estremi di sentenze recenti (post-2024) non presenti nel RAG
+— Cercare novelle legislative recentissime in Gazzetta Ufficiale
+— Controllare aggiornamenti normativi e riforme in itinere
+— Integrare con dottrina scientifica aggiornata
+
+OBBLIGO DI CITAZIONE: Per ogni informazione reperita online, CITA SEMPRE la fonte con URL completo e data di accesso. Le citazioni web devono essere distinte dalle fonti RAG interne.
+
+DIVIETO DI FONTI NON VERIFICATE: Se i risultati della ricerca provengono da fonti NON presenti nella whitelist sopra, IGNORA quei risultati e prosegui con il solo RAG interno. Non citare mai blog personali, Wikipedia, siti di studi legali commerciali o forum giuridici.
+`;
 
 // --- MODEL WHITELIST (anti-abuso costi) ---
 const MODEL_WHITELIST = {
@@ -881,6 +927,7 @@ export default async function handler(req, res) {
     try {
         const provider = req.body.provider || 'openai'; // google | anthropic | openai
         const useRAG = req.body.useRAG === true;
+        const useWebSearch = req.body.useWebSearch === true;
         const validation = sanitizePayload(req.body);
 
         if (!validation.valid) {
@@ -1037,6 +1084,19 @@ export default async function handler(req, res) {
                 geminiPayload.systemInstruction = systemInstruction;
             }
 
+            // Web Search: Gemini Grounding with Google Search
+            if (useWebSearch) {
+                geminiPayload.tools = [{ googleSearch: {} }];
+                // Inject whitelist instruction into system instruction
+                const webSearchDirective = WEB_SEARCH_WHITELIST_PROMPT;
+                if (systemInstruction) {
+                    geminiPayload.systemInstruction.parts[0].text += '\n\n' + webSearchDirective;
+                } else {
+                    geminiPayload.systemInstruction = { parts: [{ text: webSearchDirective }] };
+                }
+                console.log('[WebSearch] Gemini Grounding attivato');
+            }
+
             fetchBody = JSON.stringify(geminiPayload);
         } 
         else if (provider === 'anthropic') {
@@ -1074,6 +1134,19 @@ export default async function handler(req, res) {
                 max_tokens: validation.payload.max_tokens,
                 messages: mappedMessages
             };
+
+            // Web Search: Claude Native Web Search Tool
+            if (useWebSearch) {
+                anthropicPayload.tools = [
+                    {
+                        type: "web_search_20250305",
+                        name: "web_search",
+                        max_uses: 3  // Cost control: max 3 ricerche per chiamata
+                    }
+                ];
+                systemInstruction += '\n\n' + WEB_SEARCH_WHITELIST_PROMPT;
+                console.log('[WebSearch] Claude Native Web Search attivato (max 3 uses)');
+            }
 
             // Abilita Prompt Caching sul System Prompt
             if (systemInstruction.trim().length > 0) {
@@ -1145,19 +1218,76 @@ export default async function handler(req, res) {
                     total_tokens: (data.usageMetadata?.totalTokenCount) || 0
                 }
             };
+
+            // Estrai citazioni web da Gemini Grounding metadata
+            if (useWebSearch && data.candidates?.[0]?.groundingMetadata) {
+                const gm = data.candidates[0].groundingMetadata;
+                const webCitations = (gm.groundingChunks || []).map(chunk => ({
+                    titolo: chunk.web?.title || 'Fonte web',
+                    url: chunk.web?.uri || '',
+                    tipo: 'web_search',
+                    materia: 'Ricerca Web'
+                })).filter(c => c.url);
+                if (webCitations.length > 0) {
+                    normalizedResponse.web_citations = webCitations;
+                    console.log(`[WebSearch] Gemini: ${webCitations.length} citazioni web estratte`);
+                }
+            }
         }
         else if (provider === 'anthropic') {
+            // Anthropic: gestione response con/senza web search
+            let contentText = "";
+            let webCitations = [];
+
+            if (Array.isArray(data.content)) {
+                for (const block of data.content) {
+                    if (block.type === 'text') {
+                        contentText += block.text;
+                        // Estrai citazioni inline dal blocco testo
+                        if (Array.isArray(block.citations)) {
+                            for (const cit of block.citations) {
+                                if (cit.type === 'web_search_result_location') {
+                                    webCitations.push({
+                                        titolo: cit.title || cit.cited_text?.substring(0, 120) || 'Fonte web',
+                                        url: cit.url || '',
+                                        snippet: cit.cited_text?.substring(0, 200) || '',
+                                        tipo: 'web_search',
+                                        materia: 'Ricerca Web'
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    // Ignora blocchi tool_use e server_tool_use (interni al web search)
+                }
+            } else if (data.content?.[0]?.text) {
+                contentText = data.content[0].text;
+            }
+
+            // Deduplica citazioni web per URL
+            const seenUrls = new Set();
+            webCitations = webCitations.filter(c => {
+                if (!c.url || seenUrls.has(c.url)) return false;
+                seenUrls.add(c.url);
+                return true;
+            });
+
             normalizedResponse = {
                 choices: [{
                     message: { 
                         role: 'assistant', 
-                        content: data.content && data.content[0] ? data.content[0].text : "" 
+                        content: contentText
                     }
                 }],
                 usage: {
                     total_tokens: (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0)
                 }
             };
+
+            if (webCitations.length > 0) {
+                normalizedResponse.web_citations = webCitations;
+                console.log(`[WebSearch] Anthropic: ${webCitations.length} citazioni web estratte`);
+            }
         }
 
         // Aggiungi le fonti RAG alla response per il frontend

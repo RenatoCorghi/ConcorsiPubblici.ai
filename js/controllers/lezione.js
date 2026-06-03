@@ -522,6 +522,7 @@ export const LezioneController = {
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
+                    useWebSearch: AppState.webSearchEnabled,
                     materia: materia,
                     ragQuery: this._getExpandedRAGQuery(argomento, 1),
                     messages: [
@@ -634,6 +635,7 @@ export const LezioneController = {
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
+                    useWebSearch: AppState.webSearchEnabled,
                     materia: materia,
                     ragQuery: this._getExpandedRAGQuery(argomento, 1),
                     messages: [
@@ -738,6 +740,7 @@ export const LezioneController = {
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
+                    useWebSearch: AppState.webSearchEnabled,
                     materia: materia,
                     ragQuery: this._getExpandedRAGQuery(argomento, 1),
                     messages: [
@@ -852,6 +855,7 @@ export const LezioneController = {
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
+                    useWebSearch: AppState.webSearchEnabled,
                     materia: materia,
                     ragQuery: this._getExpandedRAGQuery(argomento, 1),
                     messages: [
@@ -1063,6 +1067,7 @@ ${coveredBlock}`
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
+                    useWebSearch: AppState.webSearchEnabled,
                     materia: AppState.lezioneMeta?.materia || null,
                     ragQuery: this._getExpandedRAGQuery(AppState.lezioneMeta?.argomento, nextModNum),
                     messages: messages,
@@ -1187,6 +1192,7 @@ ${coveredBlock}`
                     provider: APP_CONFIG.ACTIVE_AI_STACK,
                     model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
                     useRAG: true,
+                    useWebSearch: AppState.webSearchEnabled,
                     materia: AppState.lezioneMeta?.materia || null,
                     ragQuery: this._getExpandedRAGQuery(AppState.lezioneMeta?.argomento, this.currentModule || 1),
                     messages: messages,

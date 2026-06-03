@@ -66,6 +66,62 @@ export function renderBriefing() {
                 ` : ''}
             </div>
 
+            <!-- Web Search Toggle -->
+            <div class="mt-4 p-4 bg-gray-900/60 border border-gray-700/50 rounded-xl">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl ${AppState.webSearchEnabled ? 'bg-blue-500/20 border-blue-500/30' : 'bg-gray-800 border-gray-700'} border flex items-center justify-center transition-colors">
+                            <i data-lucide="globe" class="w-4 h-4 ${AppState.webSearchEnabled ? 'text-blue-400' : 'text-gray-500'}"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-bold text-white flex items-center gap-2">
+                                Ricerca Web in tempo reale
+                                ${AppState.webSearchEnabled ? '<span class="text-[10px] px-1.5 py-0.5 bg-blue-500/20 text-blue-400 rounded border border-blue-500/30 font-mono">ATTIVA</span>' : ''}
+                            </h4>
+                            <p class="text-[11px] text-gray-400 max-w-md">L'AI cercherà fonti giuridiche aggiornate su portali istituzionali e riviste Fascia A.</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input type="checkbox" id="web-search-toggle" 
+                               ${AppState.webSearchEnabled ? 'checked' : ''} 
+                               onchange="app.toggleWebSearch(this.checked)"
+                               class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer 
+                                    peer-checked:after:translate-x-full peer-checked:bg-blue-600 
+                                    after:content-[''] after:absolute after:top-[2px] after:left-[2px] 
+                                    after:bg-white after:rounded-full after:h-5 after:w-5 
+                                    after:transition-all transition-colors"></div>
+                    </label>
+                </div>
+                <details class="mt-3">
+                    <summary class="text-[11px] text-blue-400 cursor-pointer hover:text-blue-300 
+                                    list-none select-none flex items-center gap-1 [&::-webkit-details-marker]:hidden">
+                        <i data-lucide="info" class="w-3 h-3"></i>
+                        Vantaggi e svantaggi
+                    </summary>
+                    <div class="mt-2 grid grid-cols-2 gap-3 text-[11px]">
+                        <div class="p-2.5 bg-emerald-950/30 border border-emerald-900/30 rounded-lg">
+                            <p class="font-bold text-emerald-400 mb-1">✅ Con Internet</p>
+                            <ul class="text-emerald-300/80 space-y-0.5">
+                                <li>• Fonti normative aggiornate al minuto</li>
+                                <li>• Verifica sentenze post-2024 in tempo reale</li>
+                                <li>• Novelle legislative recentissime (GU)</li>
+                                <li>• Solo fonti istituzionali certificate</li>
+                            </ul>
+                        </div>
+                        <div class="p-2.5 bg-amber-950/30 border border-amber-900/30 rounded-lg">
+                            <p class="font-bold text-amber-400 mb-1">⚡ Senza Internet</p>
+                            <ul class="text-amber-300/80 space-y-0.5">
+                                <li>• Velocità massima di generazione</li>
+                                <li>• Costo inferiore per generazione</li>
+                                <li>• Basato solo su RAG curato e verificato</li>
+                                <li>• Nessuna latenza di ricerca web</li>
+                            </ul>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
             <!-- Briefing Content -->
             <div class="mt-8">
                 ${isLoading ? renderLoadingState() : (hasError ? renderErrorState(briefing.error) : renderBriefingContent(briefing))}
@@ -351,9 +407,39 @@ function renderBriefingContent(briefing) {
         </details>
     ` : '';
 
+    // --- Web Citations Badge (fonti web in tempo reale) ---
+    const webCitations = briefing.web_citations || [];
+    const webBadgeHtml = webCitations.length > 0 ? `
+        <details class="mb-6 group bg-blue-500/10 border border-blue-500/20 rounded-xl overflow-hidden">
+            <summary class="flex items-center gap-2 p-3 cursor-pointer hover:bg-blue-500/20 transition list-none select-none [&::-webkit-details-marker]:hidden">
+                <i data-lucide="globe" class="w-4 h-4 text-blue-400"></i>
+                <span class="text-xs font-bold text-blue-300">🌐 ${webCitations.length} fonti web consultate in tempo reale (portali istituzionali)</span>
+                <i data-lucide="chevron-down" class="w-4 h-4 text-blue-400 ml-auto transition-transform group-open:rotate-180"></i>
+            </summary>
+            <div class="px-4 pb-4 pt-1 border-t border-blue-500/20 max-h-60 overflow-y-auto custom-scrollbar">
+                <div class="space-y-2 mt-2">
+                    ${webCitations.map(cit => `
+                        <div class="p-2.5 bg-gray-900/80 rounded-lg border border-blue-500/20 flex items-start gap-2">
+                            <i data-lucide="external-link" class="w-3 h-3 text-blue-400 mt-0.5 shrink-0"></i>
+                            <div class="min-w-0">
+                                <a href="${escapeHtml(cit.url)}" target="_blank" rel="noopener noreferrer" 
+                                   class="text-xs font-bold text-blue-300 hover:text-blue-200 underline break-all">
+                                    ${escapeHtml(cit.titolo || 'Fonte web')}
+                                </a>
+                                ${cit.snippet ? `<p class="text-[10px] text-gray-400 mt-0.5 line-clamp-2">${escapeHtml(cit.snippet)}</p>` : ''}
+                                <p class="text-[10px] text-gray-600 mt-0.5 truncate">${escapeHtml(cit.url || '')}</p>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </details>
+    ` : '';
+
     return `
         <div class="space-y-6">
             ${ragBadgeHtml}
+            ${webBadgeHtml}
             ${sections.map((section, idx) => {
                 if (!section.content || (Array.isArray(section.content) && section.content.length === 0)) return '';
                 
