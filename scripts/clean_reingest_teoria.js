@@ -211,7 +211,7 @@ async function main() {
                 titolo: card.titolo,
                 materia: 'Dottrina e Teoria Generale',
                 tipo: 'massimario_teoria',
-                autore: card.fonte || 'Giurisprudenza Italiana',
+                autore: card.fonte || 'Dottrina giuridica',
                 filename: card.fileName + '.md',
                 status: 'completed'
             });

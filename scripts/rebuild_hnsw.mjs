@@ -15,7 +15,7 @@ const projectRef = (envVars.SUPABASE_URL || '').match(/https:\/\/([^.]+)\./)?.[1
 const hosts = [
     `db.${projectRef}.supabase.co`,
     `${projectRef}.supabase.co`,
-    `aws-0-eu-central-1.pooler.supabase.com`,
+    `aws-1-eu-central-1.pooler.supabase.com`,
 ];
 
 let client;

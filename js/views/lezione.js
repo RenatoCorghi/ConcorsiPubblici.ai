@@ -38,6 +38,7 @@ export function renderLezione() {
                 <div class="mb-4">
                     <label class="block text-sm text-gray-400 mb-2">Materia</label>
                     <select id="lezione-materia" class="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition">
+                        <option value="Tutte le materie">Tutte le materie (Interdisciplinare)</option>
                         <option value="Diritto Civile">Diritto Civile</option>
                         <option value="Diritto Penale">Diritto Penale</option>
                         <option value="Diritto Amministrativo">Diritto Amministrativo</option>

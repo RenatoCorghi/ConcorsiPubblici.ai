@@ -69,7 +69,7 @@ const { error: docErr } = await supabase.from('rag_documents').upsert({
     titolo: 'Soccorso Istruttorio e Appalti PNRR - Art. 101 D.Lgs. 36/2023',
     materia: 'Dottrina e Teoria Generale',
     tipo: 'massimario_teoria',
-    autore: 'Giurisprudenza Italiana 2024/5',
+    autore: 'Dottrina giuridica',
     filename: 'giurit_2024_5_soccorso_istruttorio.md',
     status: 'completed'
 });

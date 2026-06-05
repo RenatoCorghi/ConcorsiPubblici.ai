@@ -39,6 +39,7 @@ temp_extracted*.json
 
 # Scratch / temp / debug artifacts
 scratch/
+compliance_reports/
 discarded_admin_log.txt
 sample_admin_*
 test_estratto.txt

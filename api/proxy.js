@@ -211,50 +211,106 @@ const MAX_MESSAGE_LENGTH = 150000; // Max lunghezza singolo messaggio (chars) �
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;  // 1 minuto
 const RATE_LIMIT_MAX_REQUESTS = 60;      // 60 richieste per finestra
 
-// --- WEB SEARCH WHITELIST (Istruzione per ricerca web guidata) ---
-// Derivata dalla Deep Research sulla compliance legale delle fonti.
-// Il modello viene istruito a cercare ESCLUSIVAMENTE su portali istituzionali e riviste Fascia A.
+// --- WEB SEARCH WHITELIST & PROTOCOLLO COMPLIANCE v2.0 ---
+// Aggiornata il 2026-06-04 — Deep Research su licenze, ToS, Legge 132/2025, GDPR.
+// REGOLE:
+//   GREEN LIGHT = Open Data / CC BY 4.0 / consultazione libera → consentite
+//   RED LIGHT   = ToS restrittivi / paywall / opt-out attivo → VIETATE
+//   YELLOW LIGHT = Licenza NC (Non-Commerciale) → VIETATE (app monetizzata)
+// Il modello viene istruito a cercare ESCLUSIVAMENTE su fonti GREEN LIGHT.
 const WEB_SEARCH_WHITELIST_PROMPT = `
-═══════════════════════════════════════════════
-🌐 ACCESSO INTERNET ATTIVO — PROTOCOLLO WHITELIST BLINDATA
-═══════════════════════════════════════════════
+═══════════════════════════════════════════════════════════════════
+🌐 ACCESSO INTERNET ATTIVO — PROTOCOLLO WHITELIST BLINDATA v2.0
+═══════════════════════════════════════════════════════════════════
 
 Hai accesso a Internet tramite lo strumento di ricerca web. USALO per verificare e integrare le informazioni del RAG con fonti aggiornate in tempo reale.
 
-🔒 VINCOLO DI FONTE ESCLUSIVA (TASSATIVO):
-Puoi cercare e citare informazioni ESCLUSIVAMENTE dai seguenti portali istituzionali e riviste scientifiche accreditate. Qualsiasi altra fonte web (blog, forum, siti commerciali, enciclopedie collaborative) è SEVERAMENTE VIETATA.
+══════════════════════════════════════════════
+§1 — FONTI CONSENTITE (GREEN LIGHT — TASSATIVE)
+══════════════════════════════════════════════
 
-FONTI ISTITUZIONALI (Primarie):
-• gazzettaufficiale.it — Gazzetta Ufficiale della Repubblica Italiana
-• normattiva.it — Portale della normativa vigente (Presidenza del Consiglio)
-• eur-lex.europa.eu — Legislazione e giurisprudenza dell'Unione Europea
-• giustizia-amministrativa.it — Consiglio di Stato e TAR (Open GA)
-• cortecostituzionale.it — Corte Costituzionale (sentenze e comunicati)
-• italgiure.giustizia.it — CED Cassazione (ItalgiureWeb)
+🔒 VINCOLO DI FONTE ESCLUSIVA (TASSATIVO):
+Puoi cercare e citare informazioni ESCLUSIVAMENTE dai portali e riviste elencati qui sotto. Qualsiasi altra fonte web (blog, forum, siti commerciali, enciclopedie collaborative, banche dati a pagamento) è SEVERAMENTE VIETATA.
+
+FONTI ISTITUZIONALI (Primarie — Open Data / Consultazione libera):
+• gazzettaufficiale.it — Gazzetta Ufficiale (Art. 52 CAD, dati aperti per default)
+• normattiva.it — Portale normativa vigente, interrogazione multivigenza
+• eur-lex.europa.eu — Legislazione e giurisprudenza UE (CC BY 4.0 / CC0)
+• cortecostituzionale.it — Corte Costituzionale (Open Data ex CAD)
+• curia.europa.eu — Corte di Giustizia UE (riproduzione libera con citazione "CGUE")
+• giustizia-amministrativa.it — Consiglio di Stato e TAR
+• openga.giustizia-amministrativa.it — Portale Open GA (dati liberamente riutilizzabili con citazione fonte)
+• italgiure.giustizia.it/sncass/ — SentenzeWeb (consultazione libera e gratuita delle massime)
 • cortedicassazione.it — Sito ufficiale della Suprema Corte
-• dejure.it — Banca dati giuridica Giuffrè
 • camera.it / senato.it — Lavori parlamentari e dossier
 
-RIVISTE SCIENTIFICHE DI FASCIA A (ANVUR):
-• judicium.it — Diritto Civile e Processuale Civile
-• sistemapenale.it — Diritto Penale e Processuale Penale
-• ceridap.eu — Diritto Amministrativo
-• archiviopenale.it — Diritto Penale sostanziale e processuale
-• lalegislazionepenale.eu — Legislazione Penale
-• medialaws.eu — Diritto delle Nuove Tecnologie e IA
-• biodfritto.org — Diritto e Scienze della Vita
-• dirittopenaleuomo.org — Diritto Penale e diritti fondamentali
-• federalismi.it — Diritto Pubblico e Costituzionale
+RIVISTE SCIENTIFICHE FASCIA A — SOLO LICENZE COMPATIBILI (CC BY 4.0 o Open Access pieno):
+• rivista.eurojus.it — Diritto UE e internazionale (CC BY 4.0 — riutilizzo commerciale consentito)
+• ojs.unito.it/index.php/cardozo — Cardozo Electronic Law Bulletin, diritto privato e comparato (Open Access)
+• www.giureta.unipa.it — Diritto dell'Economia e dei Trasporti (Open Access pieno)
+• www.dirittoepoliticadeitrasporti.it — Dottrina dei Trasporti (CC BY 4.0 Gold Open Access)
 
-FINALITÀ DELLA RICERCA WEB:
+══════════════════════════════════════════════
+§2 — FONTI VIETATE (RED LIGHT — DIVIETO ASSOLUTO)
+══════════════════════════════════════════════
+
+⛔ Se nei risultati di ricerca compaiono pagine da questi domini, IGNORA COMPLETAMENTE quei risultati. NON citarli, NON utilizzarne il contenuto, NON menzionarli nemmeno indirettamente.
+
+BANCHE DATI COMMERCIALI (ToS vietano uso automatizzato):
+• italgiure.giustizia.it (ESCLUSO /sncass/) — ItalgiureWeb CED: accesso a pagamento, ToS vietano scraping e uso commerciale
+• dejure.it — Giuffrè: banca dati commerciale protetta da copyright
+• iusexplorer.it — Wolters Kluwer: banca dati commerciale
+• pluris-cedam.utetgiuridica.it — CEDAM/UTET: accesso a pagamento
+
+RIVISTE CON OPT-OUT ATTIVO (Legge 132/2025 — Art. 171, c.1, lett. a-ter LDA):
+• Qualsiasi rivista privata di Fascia A che espone protocolli di riserva TDM (tdm-reservation: 1)
+
+RIVISTE OPEN ACCESS CON LICENZA NON-COMMERCIALE (incompatibili con app monetizzata):
+• sistemapenale.it (BY-NC-ND) • ceridap.eu (BY-NC-ND) • federalismi.it (BY-NC)
+• biodiritto.org (BY-NC) • dirittopenaleuomo.org (BY-NC) • medialaws.eu (BY-NC)
+• archiviopenale.it (BY-NC) • lalegislazionepenale.eu (BY-NC)
+• judicium.it (diritti riservati) • Milan Law Review (BY-NC-SA)
+
+══════════════════════════════════════════════
+§3 — FINALITÀ E OBBLIGHI DELLA RICERCA WEB
+══════════════════════════════════════════════
+
+QUANDO USARE LA RICERCA WEB:
 — Verificare estremi di sentenze recenti (post-2024) non presenti nel RAG
-— Cercare novelle legislative recentissime in Gazzetta Ufficiale
+— Cercare novelle legislative recentissime in Gazzetta Ufficiale o Normattiva
 — Controllare aggiornamenti normativi e riforme in itinere
-— Integrare con dottrina scientifica aggiornata
+— Verificare lo stato vigente di una norma (multivigenza via Normattiva)
+— Integrare con dottrina scientifica delle sole riviste in §1
 
-OBBLIGO DI CITAZIONE: Per ogni informazione reperita online, CITA SEMPRE la fonte con URL completo e data di accesso. Le citazioni web devono essere distinte dalle fonti RAG interne.
+OBBLIGO DI CITAZIONE: Per ogni informazione reperita online, CITA SEMPRE la fonte con URL completo e data di accesso. Le citazioni web devono essere DISTINTE dalle fonti RAG interne.
 
-DIVIETO DI FONTI NON VERIFICATE: Se i risultati della ricerca provengono da fonti NON presenti nella whitelist sopra, IGNORA quei risultati e prosegui con il solo RAG interno. Non citare mai blog personali, Wikipedia, siti di studi legali commerciali o forum giuridici.
+DIVIETO DI FONTI NON VERIFICATE: Se i risultati della ricerca provengono da fonti NON presenti in §1, IGNORA quei risultati e prosegui con il solo RAG interno.
+
+══════════════════════════════════════════════
+§4 — GUARDRAILS DI COMPLIANCE (OBBLIGATORI)
+══════════════════════════════════════════════
+
+4A. DOUBLE-CHECK TEMPORALE (PREVENZIONE ANACRONISMI):
+Estrai SEMPRE la data di pubblicazione di ogni documento web inserito nel contesto.
+Se un parere dottrinale o una sentenza è ANTERIORE a una di queste riforme cardine:
+  — Riforma Cartabia (D.Lgs. 149/2022 e 150/2022)
+  — Nuovo Codice Contratti Pubblici (D.Lgs. 36/2023)
+  — Riforma fiscale (D.Lgs. 219-221/2023)
+  — Abolizione abuso d'ufficio (L. 114/2024, c.d. "Riforma Nordio")
+  — Direttiva Danni da Prodotto (2024/2853)
+  — Legge IA e Copyright (L. 132/2025)
+…allora NON applicare quel documento come diritto vigente. Qualificalo come "storico dibattito dogmatico" e avvia una ricerca secondaria sul quadro normativo vigente.
+
+4B. ANONIMIZZAZIONE STRATEGICA CITAZIONI ISOLATE:
+Se dalla ricerca web emerge una sentenza citata solo per estremi numerici (es. "Cass. n. 8604/2025") SENZA testo integrale o massima dettagliata, è VIETATO inventarne il fatto o la motivazione. Converti la citazione in formula astratta:
+  ✅ «La giurisprudenza di legittimità ha chiarito che l'efficacia probatoria...»
+  ❌ «La sentenza n. 8604/2025 ha stabilito che... [fatto inventato]»
+
+4C. GERARCHIA DELLE FONTI:
+  1° — Normativa vigente (Normattiva, Gazzetta Ufficiale, Eur-Lex)
+  2° — Giurisprudenza istituzionale (Corte Cost., CGUE, CdS, Cassazione SentenzeWeb)
+  3° — Riviste scientifiche Fascia A (solo quelle in §1)
+  4° — MAI fonti non verificate o non in whitelist
 `;
 
 // --- MODEL WHITELIST (anti-abuso costi) ---
@@ -322,7 +378,7 @@ function isRateLimited(ip) {
 // Risolve il problema del RAG che si "impunta" sulle differenze testuali.
 // Mappa sinonimi e varianti (es. "Procedura Civile", "amministrativo") a un formato canonico.
 function normalizeMateria(inputMateria) {
-    if (!inputMateria) return null;
+    if (!inputMateria || inputMateria === 'Tutte le materie') return null;
     const str = inputMateria.toLowerCase().trim();
     
     if (str.includes('amministrativ')) return 'Diritto Amministrativo';
@@ -348,9 +404,9 @@ function normalizeMateria(inputMateria) {
 // Mappa materia del chunk → famiglia canonica per matching soft
 // Es: "Giurisprudenza Civile" e "Diritto Processuale Civile" matchano con "Diritto Civile"
 function materiaFamily(materia) {
-    if (!materia) return null;
+    if (!materia || materia === 'Tutte le materie') return null;
     const s = materia.toLowerCase();
-    if (s.includes('civile') || s.includes('lavoro')) return 'civile';
+    if (s.includes('civile') || s.includes('lavoro') || s.includes('commerciale')) return 'civile';
     if (s.includes('penale')) return 'penale';
     if (s.includes('amministrativ')) return 'amministrativo';
     if (s.includes('tributar')) return 'tributario';
