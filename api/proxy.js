@@ -208,6 +208,7 @@ const TOPIC_TAXONOMY = [
 const MAX_TOKENS_LIMIT = 8000;   // Cap assoluto su max_tokens (alzato per Lectio Magistralis)
 const MAX_MESSAGES = 100;         // Max messaggi in una conversazione (alzato per sessioni lunghe)
 const MAX_MESSAGE_LENGTH = 150000; // Max lunghezza singolo messaggio (chars) — alzato per saggi/temi lunghe ed evoluzioni RAG
+const MAX_TOTAL_CHARS = 400000;   // Cap complessivo payload (system incluso) — senza questo, 100 msg × 150k = 15M chars per richiesta
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;  // 1 minuto
 const RATE_LIMIT_MAX_REQUESTS = 60;      // 60 richieste per finestra
 
@@ -241,12 +242,18 @@ FONTI ISTITUZIONALI (Primarie — Open Data / Consultazione libera):
 • giustizia-amministrativa.it — Consiglio di Stato e TAR
 • openga.giustizia-amministrativa.it — Portale Open GA (dati liberamente riutilizzabili con citazione fonte)
 • italgiure.giustizia.it/sncass/ — SentenzeWeb (consultazione libera e gratuita delle massime)
-• cortedicassazione.it — Sito ufficiale della Suprema Corte
+• cortedicassazione.it — Sito ufficiale della Suprema Corte (incl. Relazioni Ufficio del Massimario)
+• scuolamagistratura.it — Scuola Superiore della Magistratura (Quaderni SSM, esenti ex Art. 5 L. 633/1941)
+• agenas.gov.it — Portale governativo dei dati aperti sanitari (CC-BY)
 • camera.it / senato.it — Lavori parlamentari e dossier
 
 RIVISTE SCIENTIFICHE FASCIA A — SOLO LICENZE COMPATIBILI (CC BY 4.0 o Open Access pieno):
 • rivista.eurojus.it — Diritto UE e internazionale (CC BY 4.0 — riutilizzo commerciale consentito)
-• ojs.unito.it/index.php/cardozo — Cardozo Electronic Law Bulletin, diritto privato e comparato (Open Access)
+• ojs.unito.it/index.php/cardozo — Cardozo Electronic Law Bulletin (CC BY 4.0)
+• theitalianlawjournal.it — Issues (CC BY 3.0 / 4.0)
+• pmc.ncbi.nlm.nih.gov — PubMed Central (filtro "Open Access - CC BY")
+• mdpi.com — MDPI (filtro "Open Access - CC BY")
+• amsacta.unibo.it — Repository IRIS Bologna (solo pubblicazioni/dispense CC BY)
 • www.giureta.unipa.it — Diritto dell'Economia e dei Trasporti (Open Access pieno)
 • www.dirittoepoliticadeitrasporti.it — Dottrina dei Trasporti (CC BY 4.0 Gold Open Access)
 
@@ -269,6 +276,9 @@ RIVISTE OPEN ACCESS CON LICENZA NON-COMMERCIALE (incompatibili con app monetizza
 • sistemapenale.it (BY-NC-ND) • ceridap.eu (BY-NC-ND) • federalismi.it (BY-NC)
 • biodiritto.org (BY-NC) • dirittopenaleuomo.org (BY-NC) • medialaws.eu (BY-NC)
 • archiviopenale.it (BY-NC) • lalegislazionepenale.eu (BY-NC)
+• teseo.unitn.it/biolaw (BY-NC-ND) • cortisupremeesalute.it (BY-NC-ND)
+• iusetsalus.it (diritti riservati) • osservatorioaic.it (BY-NC-ND)
+• snlg.iss.it (non commerciale - Manuale Operativo SNLG)
 • judicium.it (diritti riservati) • Milan Law Review (BY-NC-SA)
 
 ══════════════════════════════════════════════
@@ -325,7 +335,6 @@ const MODEL_WHITELIST = {
         'claude-opus-4-8',
         'claude-opus-4-7',
         'claude-sonnet-4-6',
-        'claude-haiku-4',
         'claude-haiku-4-5-20251001',
         'claude-3-5-sonnet-20241022',
         'claude-3-5-haiku-20241022'
@@ -339,9 +348,50 @@ const MODEL_WHITELIST = {
 
 import { ALLOWED_ORIGINS, isOriginAllowed } from './_cors.js';
 
-// --- RATE LIMITER IN-MEMORY ---
-// Nota: funziona per singola istanza Vercel. Per produzione ad alto traffico
-// sostituire con Upstash Redis (@upstash/ratelimit).
+// --- RATE LIMITER ---
+// Primario: Upstash Redis via REST (condiviso tra tutte le istanze serverless).
+// Fallback: in-memory (per-istanza, debole su serverless) se Upstash non è configurato.
+// Per attivare Upstash: creare un DB su upstash.com e impostare su Vercel
+// UPSTASH_REDIS_REST_URL e UPSTASH_REDIS_REST_TOKEN.
+
+async function isRateLimitedUpstash(ip) {
+    const url = process.env.UPSTASH_REDIS_REST_URL;
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    const key = `rl:proxy:${ip}`;
+    const windowSecs = Math.ceil(RATE_LIMIT_WINDOW_MS / 1000);
+
+    // Finestra fissa: INCR del contatore, TTL impostato solo alla prima richiesta (NX)
+    const res = await fetch(`${url}/pipeline`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify([
+            ['INCR', key],
+            ['EXPIRE', key, String(windowSecs), 'NX'],
+            ['TTL', key]
+        ])
+    });
+    if (!res.ok) throw new Error(`Upstash HTTP ${res.status}`);
+    const data = await res.json();
+    const count = data[0]?.result;
+    const ttl = data[2]?.result;
+    if (typeof count !== 'number') throw new Error('Risposta Upstash inattesa');
+
+    if (count > RATE_LIMIT_MAX_REQUESTS) {
+        return { limited: true, remaining: 0, retryAfter: (typeof ttl === 'number' && ttl > 0) ? ttl : windowSecs };
+    }
+    return { limited: false, remaining: RATE_LIMIT_MAX_REQUESTS - count };
+}
+
+async function checkRateLimit(ip) {
+    if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+        try {
+            return await isRateLimitedUpstash(ip);
+        } catch (e) {
+            console.warn(`[RateLimit] Upstash non raggiungibile (${e.message}) — fallback in-memory.`);
+        }
+    }
+    return isRateLimited(ip);
+}
 
 const rateLimitStore = new Map();
 
@@ -559,12 +609,13 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
         );
         
         const embedResults = await Promise.all(allEmbedRequests);
+        // Accoppia PRIMA di filtrare: filtrare prima fa scalare gli indici e
+        // assocerebbe i vettori alle sotto-query sbagliate quando un embedding fallisce
         const vectors = embedResults
-            .filter(r => r?.embedding?.values)
-            .map((r, i) => ({ vector: r.embedding.values, query: subQueries[i] }));
-        
+            .map((r, i) => ({ vector: r?.embedding?.values, query: subQueries[i] }))
+            .filter(v => v.vector);
+
         if (vectors.length === 0) return null;
-        const primaryVector = vectors[0].vector; // Primo vettore = query principale (o prima sotto-query)
         
         console.log(`[RAG] 📐 Embedding generati: ${vectors.length}/${subQueries.length} (${subQueries.length > 1 ? 'multi-query' : 'single'})`);
 
@@ -586,15 +637,15 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
         if (normalizedMateria) console.log(`[RAG] 🎯 Filtro materia attivo: ${normalizedMateria}`);
 
         try {
-            const searchPromises = vectors.map((v, idx) => {
-                const isVeryShort = subQueries[idx].length < 20;
-            
+            const searchPromises = vectors.map((v) => {
+                const isVeryShort = v.query.length < 20;
+
                 if (isVeryShort) {
                     let ftsUrl = `${process.env.SUPABASE_URL}/rest/v1/rag_chunks?select=id,document_id,content,materia,tipo,rag_documents(titolo)&limit=15`;
                     if (normalizedMateria) {
                         ftsUrl += `&materia=eq.${encodeURIComponent(normalizedMateria)}`;
                     }
-                    ftsUrl += `&content=ilike.*${encodeURIComponent(subQueries[idx])}*`;
+                    ftsUrl += `&content=ilike.*${encodeURIComponent(v.query)}*`;
                     
                     return fetch(ftsUrl, {
                         method: 'GET',
@@ -617,7 +668,7 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                         headers: rpcHeaders,
                         body: JSON.stringify({
                             query_embedding: v.vector,
-                            query_text: subQueries[idx],
+                            query_text: v.query,
                             filter_materia: normalizedMateria,
                             match_count: Math.ceil(15 / vectors.length) + 3,
                             match_threshold: 0.40
@@ -693,7 +744,9 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                 // I frammenti che contengono solo "P.Q.M." o dispositivo sono privi di
                 // contenuto argomentativo — penalizzarli pesantemente.
                 const contentLower = (m.content || '').toLowerCase();
-                const isPQM = contentLower.includes('p.q.m') || contentLower.includes('per questi motivi') ||
+                // Penalizza solo chunk CORTI che sono dispositivo puro: un chunk lungo che
+                // menziona "P.Q.M." in coda contiene comunque motivazione utile
+                const isPQM = ((contentLower.includes('p.q.m') || contentLower.includes('per questi motivi')) && contentLower.length < 800) ||
                               (contentLower.includes('rigetta') && contentLower.includes('ricorso') && contentLower.length < 500) ||
                               (contentLower.includes('annulla') && contentLower.includes('rinvia') && contentLower.length < 500);
                 if (isPQM) {
@@ -848,6 +901,11 @@ function sanitizePayload(body) {
                 break;
             }
         }
+
+        const totalChars = body.messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : 0), 0);
+        if (totalChars > MAX_TOTAL_CHARS) {
+            errors.push(`Payload complessivo troppo grande (${totalChars} chars). Max: ${MAX_TOTAL_CHARS}.`);
+        }
     }
 
     if (errors.length > 0) return { valid: false, errors };
@@ -889,8 +947,10 @@ export default async function handler(req, res) {
     }
 
     // --- Rate Limiting ---
-    const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
-    const rateCheck = isRateLimited(ip);
+    // x-forwarded-for può essere una lista "client, proxy1, proxy2": il client reale è il primo
+    const forwardedFor = req.headers['x-forwarded-for'];
+    const ip = (typeof forwardedFor === 'string' && forwardedFor.split(',')[0].trim()) || req.socket?.remoteAddress || 'unknown';
+    const rateCheck = await checkRateLimit(ip);
     if (rateCheck.limited) {
         res.setHeader('Retry-After', rateCheck.retryAfter);
         return res.status(429).json({ error: 'Troppe richieste. Riprova tra qualche secondo.', retryAfter: rateCheck.retryAfter });
@@ -959,9 +1019,12 @@ export default async function handler(req, res) {
             const matches = searchRes.ok ? await searchRes.json() : [];
             
             // 3. Filtra: il numero deve comparire nel content del chunk
+            // Word boundary: evita che "123" matchi dentro "20123" validando citazioni inesistenti
+            const numRegex = new RegExp(`\\b${sentNum}\\b`);
+            const yearRegex = new RegExp(`\\b${sentYear}\\b`);
             const verified = matches.filter(m => {
-                const content = (m.content || '').toLowerCase();
-                return content.includes(sentNum) && content.includes(sentYear);
+                const content = m.content || '';
+                return numRegex.test(content) && yearRegex.test(content);
             });
             
             console.log(`[Verify] 🔍 Citazione ${searchKey}: ${verified.length > 0 ? '✅ TROVATA' : '❌ NON trovata'} (${matches.length} candidati, ${verified.length} confermati)`);
@@ -1188,6 +1251,7 @@ export default async function handler(req, res) {
             const anthropicPayload = {
                 model: validation.payload.model,
                 max_tokens: validation.payload.max_tokens,
+                temperature: Math.min(validation.payload.temperature, 1), // Anthropic accetta max 1.0
                 messages: mappedMessages
             };
 

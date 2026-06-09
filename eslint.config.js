@@ -22,6 +22,11 @@ export default [
                 alert: "readonly",
                 confirm: "readonly",
                 getComputedStyle: "readonly",
+                requestAnimationFrame: "readonly",
+                cancelAnimationFrame: "readonly",
+                performance: "readonly",
+                Notification: "readonly",
+                html2pdf: "readonly",
                 // App specific globals (until migrated to modules)
                 APP_CONFIG: "readonly",
                 AppState: "readonly",
@@ -46,6 +51,26 @@ export default [
             "quotes": ["warn", "single", { "avoidEscape": true }],
             "no-unused-vars": "warn",
             "no-undef": "error"
+        }
+    },
+    {
+        // File Node.js (serverless functions, script di pipeline, test)
+        files: ["api/**/*.js", "scripts/**/*.js", "scripts/**/*.mjs", "tests/**/*.mjs", "*.mjs", "*.cjs"],
+        languageOptions: {
+            globals: {
+                process: "readonly",
+                Buffer: "readonly",
+                console: "readonly",
+                fetch: "readonly",
+                URL: "readonly",
+                setTimeout: "readonly",
+                setInterval: "readonly",
+                clearTimeout: "readonly",
+                clearInterval: "readonly",
+                __dirname: "readonly",
+                require: "readonly",
+                module: "writable"
+            }
         }
     }
 ];

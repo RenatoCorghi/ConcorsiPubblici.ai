@@ -8,6 +8,9 @@ export const ALLOWED_ORIGINS = [
 
 export function isOriginAllowed(origin) {
     if (ALLOWED_ORIGINS.includes(origin)) return true;
-    if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin)) return true;
+    // Solo i preview deployment del NOSTRO progetto: una regex aperta su *.vercel.app
+    // permetterebbe a qualsiasi sito hostato su Vercel di consumare l'API dai browser dei visitatori.
+    // Se il nome del progetto Vercel cambia, aggiornare il prefisso qui sotto.
+    if (/^https:\/\/concorsi[a-z0-9-]*\.vercel\.app$/.test(origin)) return true;
     return false;
 }

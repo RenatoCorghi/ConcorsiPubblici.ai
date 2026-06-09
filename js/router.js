@@ -2,6 +2,7 @@
    ROUTER.JS — Routing e rendering delle viste con Hash Router
    ============================================================ */
 import { AppState, saveDraft, loadDraft } from './state.js';
+import { loadLezione } from './lezione-loader.js';
 import { renderHome } from './views/home.js';
 import { renderTracce } from './views/tracce.js';
 import { renderGlossario, initVIPDossiers } from './views/glossario.js';
@@ -15,9 +16,7 @@ import { renderCommunityLayout } from './views/community.js';
 import { renderLegal } from './views/legal.js';
 import { renderAdmin } from './views/admin.js';
 import { renderQuizView } from './views/quiz.js';
-import { renderGiurisprudenza } from './views/giurisprudenza.js';
 import { renderBandiView } from './views/bandi.js';
-import { renderBriefing } from './views/briefing.js';
 import { renderLezione } from './views/lezione.js';
 import { renderProfile } from './views/profile.js';
 
@@ -67,12 +66,12 @@ export function renderView() {
     main.classList.add('route-exit');
     
     // Wait for exit animation to finish, then swap content
-    setTimeout(function() {
+    setTimeout(async function() {
         main.classList.remove('route-exit');
         main.innerHTML = '';
-        
-        _injectRouteContent(main);
-        
+
+        await _injectRouteContent(main);
+
         // --- Route Enter Transition ---
         main.classList.add('route-enter');
         setTimeout(function() { main.classList.remove('route-enter'); }, 350);
@@ -89,7 +88,7 @@ export function renderView() {
  * Inietta il contenuto HTML della route corrente nel container principale.
  * Separato da renderView per chiarezza.
  */
-function _injectRouteContent(main) {
+async function _injectRouteContent(main) {
     try {
     switch(AppState.currentRoute) {
         case 'home':
@@ -147,31 +146,40 @@ function _injectRouteContent(main) {
             main.innerHTML = renderHistory();
             initHistoryChart();
             break;
-        case 'giurisprudenza':
-            main.innerHTML = renderGiurisprudenza();
+        case 'giurisprudenza': {
+            // Chunk lazy (~43 kB): caricato alla prima visita della route
+            const mG = await import('./views/giurisprudenza.js');
+            if (AppState.currentRoute !== 'giurisprudenza') break; // l'utente ha già cambiato route
+            main.innerHTML = mG.renderGiurisprudenza();
             break;
+        }
         case 'bandi':
             main.innerHTML = renderBandiView();
             break;
-        case 'briefing':
-            main.innerHTML = renderBriefing();
+        case 'briefing': {
+            // Chunk lazy (~40 kB): caricato alla prima visita della route
+            const mB = await import('./views/briefing.js');
+            if (AppState.currentRoute !== 'briefing') break;
+            main.innerHTML = mB.renderBriefing();
             break;
+        }
         case 'lezione':
             main.innerHTML = renderLezione();
             // Scroll automatico in basso per riprendere la conversazione da dove si era interrotta
             setTimeout(function() {
                 var container = document.getElementById('lezione-messages');
                 if (container) container.scrollTop = container.scrollHeight;
-
-                // RIPRISTINA L'INDICATORE DI GENERAZIONE O IL TASTO CONTINUA
-                if (window.Lezione) {
-                    if (window.Lezione.isGenerating) {
-                        window.Lezione.restoreActiveIndicator();
-                    } else {
-                        window.Lezione.restoreContinueButton();
-                    }
-                }
             }, 50);
+            // Carica il controller (chunk lazy) e ripristina indicatore/tasto continua
+            loadLezione().then(function(c) {
+                if (c.isGenerating) {
+                    c.restoreActiveIndicator();
+                } else {
+                    c.restoreContinueButton();
+                }
+            }).catch(function(err) {
+                console.warn('[Router] Controller lezione non caricato:', err);
+            });
             break;
         case 'pricing':
             main.innerHTML = renderPricing();

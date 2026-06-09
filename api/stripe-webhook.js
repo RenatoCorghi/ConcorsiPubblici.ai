@@ -53,15 +53,19 @@ export default async function handler(req, res) {
 
     console.log(`[Stripe Webhook] Ricevuto Evento: ${event.type}`);
 
-    // Gestione dell'evento di completamento pagamento
-    if (event.type === 'checkout.session.completed') {
+    // Gestione dell'evento di completamento pagamento.
+    // checkout.session.completed può arrivare con payment_status 'unpaid' per metodi
+    // asincroni (SEPA, bonifico): in quel caso si attende async_payment_succeeded.
+    if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
         const session = event.data.object;
-        
+
         // Questo è lo user.id inviato tramite il Parametro 'client_reference_id' nel Link Stripe
         const userId = session.client_reference_id;
         const stripeCustomerId = session.customer;
 
-        if (!userId) {
+        if (session.payment_status !== 'paid') {
+            console.log(`[Stripe Webhook] Sessione ${session.id} non ancora pagata (payment_status: ${session.payment_status}). Attendo conferma asincrona.`);
+        } else if (!userId) {
             console.warn('[Stripe Webhook] Nessun client_reference_id passato nella sessione. Impossibile associare l\'utente.');
         } else {
             // Aggiorna il profilo Supabase usando le Service Keys (bypassa RLS)

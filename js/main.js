@@ -27,8 +27,7 @@ import { CommunityController } from './controllers/community.js';
 import { Modals } from './views/modals.js';
 import { Gamification } from './gamification.js';
 import { TutorController } from './controllers/tutor.js';
-import { LezioneController } from './controllers/lezione.js';
-window.Lezione = LezioneController; // Esposto per il pulsante "Ascolta la Lezione"
+import { loadLezione } from './lezione-loader.js'; // Lazy: il controller (~128 kB) viene caricato on-demand
 import { Metering } from './metering.js';
 import { QuizController } from './controllers/quiz.js';
 import { initNormeTooltip } from './tooltip.js';
@@ -334,13 +333,13 @@ export const app = {
 
     // --- Lezione Magistrale ---
     startLezione: function() {
-        LezioneController.start();
+        loadLezione().then(c => c.start());
     },
     startLectio: function() {
-        LezioneController.startLectio();
+        loadLezione().then(c => c.startLectio());
     },
     startSmart: function() {
-        LezioneController.startSmart();
+        loadLezione().then(c => c.startSmart());
     },
     startTemaFromLezione: async function() {
         // Legge l'argomento dall'input della lezione e genera un tema modello
@@ -388,16 +387,18 @@ export const app = {
         }, 200);
     },
     sendLezioneMessage: function(e) {
-        LezioneController.sendMessage(e);
+        // preventDefault sincrono: se arrivasse dopo l'await del lazy-load il form farebbe submit
+        if (e) e.preventDefault();
+        loadLezione().then(c => c.sendMessage(e));
     },
     sendLezioneQuickAction: function(text) {
-        LezioneController.quickAction(text);
+        loadLezione().then(c => c.quickAction(text));
     },
     resetLezione: function() {
-        LezioneController.reset();
+        loadLezione().then(c => c.reset());
     },
     startLezioneFromTraccia: function() {
-        LezioneController.startFromTraccia();
+        loadLezione().then(c => c.startFromTraccia());
     },
     backToBriefing: function() {
         AppState.lezioneFromTraccia = false;
