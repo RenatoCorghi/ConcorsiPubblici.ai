@@ -18,7 +18,22 @@
 
 BEGIN;
 
-DROP FUNCTION IF EXISTS public.match_documents_hybrid(vector, text, integer, double precision, text, text, integer, integer);
+-- Droppa TUTTE le versioni/overload esistenti della funzione, qualunque firma
+-- abbiano (in passato ci sono stati overload duplicati, cfr. 007_fix_overload)
+DO $drop$
+DECLARE
+    fn record;
+BEGIN
+    FOR fn IN
+        SELECT oid::regprocedure AS sig
+        FROM pg_proc
+        WHERE proname = 'match_documents_hybrid'
+          AND pronamespace = 'public'::regnamespace
+    LOOP
+        EXECUTE format('DROP FUNCTION %s', fn.sig);
+    END LOOP;
+END
+$drop$;
 
 CREATE FUNCTION public.match_documents_hybrid(
     query_embedding vector(768),
