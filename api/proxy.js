@@ -591,7 +591,14 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
         // 2. Genera embedding per query principale + sotto-query (in parallelo)
         const embedUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key=${googleKey}`;
         const materiaPrefix = materiaFilter ? `${normalizeMateria(materiaFilter)}: ` : '';
-        
+
+        // Embedding asimmetrico (query vs documento): impostare su Vercel
+        // RAG_QUERY_TASK_TYPE=RETRIEVAL_QUERY SOLO DOPO aver completato il
+        // re-embed del corpus con scripts/reembed_task_type.mjs — i task type
+        // diversi vivono in spazi vettoriali leggermente diversi e mischiare
+        // query tipizzate con un corpus non tipizzato peggiora il retrieval.
+        const queryTaskType = process.env.RAG_QUERY_TASK_TYPE || null;
+
         const allEmbedRequests = subQueries.map(sq =>
             fetch(embedUrl, {
                 method: 'POST',
@@ -599,7 +606,8 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
                 body: JSON.stringify({
                     model: 'models/gemini-embedding-2',
                     content: { parts: [{ text: materiaPrefix + sq }] },
-                    outputDimensionality: 768
+                    outputDimensionality: 768,
+                    ...(queryTaskType ? { taskType: queryTaskType } : {})
                 })
             }).then(r => r.json()).then(data => {
                 if (data.error) console.error("[RAG] ❌ Embed Error:", data.error);
@@ -643,16 +651,25 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
                 const isVeryShort = v.query.length < 20;
 
                 if (isVeryShort) {
-                    let ftsUrl = `${process.env.SUPABASE_URL}/rest/v1/rag_chunks?select=id,document_id,content,materia,tipo,rag_documents(titolo)&limit=15`;
+                    // FTS sul GIN esistente (idx_rag_chunks_fts) invece di ILIKE:
+                    // content=ilike.*q* su 35k chunk era una scansione completa
+                    // server-side. Fallback ILIKE solo se la FTS non trova nulla
+                    // (es. sigle o parole troncate che il tokenizer non matcha).
+                    let baseUrl = `${process.env.SUPABASE_URL}/rest/v1/rag_chunks?select=id,document_id,content,materia,tipo,rag_documents(titolo)&limit=15`;
                     if (normalizedMateria) {
-                        ftsUrl += `&materia=eq.${encodeURIComponent(normalizedMateria)}`;
+                        baseUrl += `&materia=eq.${encodeURIComponent(normalizedMateria)}`;
                     }
-                    ftsUrl += `&content=ilike.*${encodeURIComponent(v.query)}*`;
-                    
+                    const ftsUrl = `${baseUrl}&fts=plfts(italian).${encodeURIComponent(v.query)}`;
+                    const ilikeUrl = `${baseUrl}&content=ilike.*${encodeURIComponent(v.query)}*`;
+
                     return fetch(ftsUrl, {
                         method: 'GET',
                         headers: rpcHeaders
-                    }).then(r => r.json()).then(data => {
+                    }).then(r => r.json()).then(data =>
+                        (Array.isArray(data) && data.length > 0)
+                            ? data
+                            : fetch(ilikeUrl, { method: 'GET', headers: rpcHeaders }).then(r => r.json())
+                    ).then(data => {
                         if (!Array.isArray(data)) return [];
                         // Aggiungi una finta similarity per i risultati FTS così vengono presi in considerazione
                         return data.map(m => ({

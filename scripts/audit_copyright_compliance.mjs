@@ -82,6 +82,13 @@ const BANNED_PUBLISHERS = [
     'Milan Law Review',            // CC BY-NC-SA
     'BUP',                         // CC BY-NC-SA
     'Roma TrE-Press',              // CC BY-NC-ND
+    // Riviste Diritto Sanitario vietate (NC/ND o ToS restrittivi)
+    'BioLaw Journal',              // CC BY-NC-ND (teseo.unitn.it/biolaw)
+    'Corti Supreme e Salute',      // CC BY-NC-ND (cortisupremeesalute.it)
+    'Ius et Salus',                // Diritto d'autore / Riservato (iusetsalus.it)
+    'Osservatorio Costituzionale',  // CC BY-NC-ND (osservatorioaic.it)
+    'Istituto Superiore di Sanità', // Manuale Operativo impone uso Non-Commerciale (snlg.iss.it)
+    'SNLG',                        // Sistema Nazionale Linee Guida (snlg.iss.it)
     // Nomi mascherati (usati dallo storico script sanitize_copyright)
     'Dottrina Civilistica',
     'Dottrina Diritto Pubblico',
@@ -113,6 +120,14 @@ const BANNED_CHUNK_PATTERNS = [
     'dejure.it',
     'iusexplorer.it',
     'pluris-cedam',
+    'biolawjournal',
+    'teseo.unitn.it/biolaw',
+    'cortisupremeesalute.it',
+    'lalegislazionepenale.eu',
+    'iusetsalus.it',
+    'osservatorioaic.it',
+    'snlg.iss.it',
+    'snlg',
 ];
 
 const BANNED_DIRECTORIES = [
@@ -127,6 +142,7 @@ const BANNED_DIRECTORIES = [
     'data/manuali_oa_vip_v3',
     'temp_cache',
     'temp_cache_federalismi',
+    'data/diritto_sanitario/snlg',
 ];
 
 const BANNED_SCRIPTS = [

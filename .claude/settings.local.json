@@ -2,7 +2,20 @@
   "permissions": {
     "allow": [
       "Bash(ls \"/c/Users/Pc/.claude/projects/C--Users-Pc-OneDrive-Desktop-concorsi-ai/memory/\" 2>/dev/null || echo \"no memory yet\")",
-      "Bash(ls \"/c/Users/Pc/.claude/projects/C--Users-Pc-OneDrive-Desktop-concorsi-ai/\" 2>/dev/null)"
+      "Bash(ls \"/c/Users/Pc/.claude/projects/C--Users-Pc-OneDrive-Desktop-concorsi-ai/\" 2>/dev/null)",
+      "Bash(npx eslint *)",
+      "Bash(npm run *)",
+      "PowerShell(node node_modules/vite/bin/vite.js --port 5173)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git fetch *)",
+      "Bash(node --check api/proxy.js)",
+      "Bash(npm test *)",
+      "Bash(node --test tests/unit)",
+      "Bash(node --check js/controllers/lezione.js)",
+      "Bash(node scratch_diag_corpus.mjs)"
     ]
   }
 }

@@ -207,7 +207,7 @@ export const TutorController = {
         container.innerHTML += `
         <div id="${msgId}" class="flex gap-3 max-w-[85%] mr-auto fade-in">
             <div class="w-6 h-6 rounded-full shrink-0 flex items-center justify-center bg-gradient-to-tr from-magis-600 to-indigo-500 overflow-hidden">
-                <img src="./cicero.png" class="w-full h-full object-cover" />
+                <img src="./cicero.webp" class="w-full h-full object-cover" />
             </div>
             <div class="bg-gray-800/80 border border-gray-700/50 rounded-2xl rounded-tl-sm px-4 py-3 relative">
                 <div class="ai-typing">
@@ -244,7 +244,7 @@ export const TutorController = {
             return `
             <div id="${id}" class="flex gap-3 max-w-[85%]">
                 <div class="w-6 h-6 rounded-full shrink-0 flex items-center justify-center bg-gradient-to-tr from-magis-600 to-indigo-500 mt-1 overflow-hidden">
-                    <img src="./cicero.png" class="w-full h-full object-cover" />
+                    <img src="./cicero.webp" class="w-full h-full object-cover" />
                 </div>
                 <div class="bg-gray-800/80 border border-gray-700 text-gray-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-md relative leading-relaxed text-sm format-content">
                     ${formatted}
