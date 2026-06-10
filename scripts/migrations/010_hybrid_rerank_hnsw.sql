@@ -1,20 +1,26 @@
 -- ============================================================
--- Migration 010: il path HNSW ora riordina per hybrid_score
+-- Migration 010: re-rank ibrido nel path HNSW + tipi uuid corretti
+--
+-- NOTA IMPORTANTE: le migration 008 e 009 dichiaravano id/document_id come
+-- bigint, ma la tabella rag_chunks usa UUID (vedi 004/006) → CREATE OR REPLACE
+-- falliva con 42P13 e quelle versioni NON sono mai andate live.
+-- Questa migration: (a) droppa la funzione esistente, (b) la ricrea con i tipi
+-- uuid corretti, (c) include TUTTE le ottimizzazioni di 008/009 (probe count,
+-- ef_search adattivo, filtro PQM in SQL) più il re-rank ibrido nel path HNSW.
 --
 -- PRIMA: il ramo HNSW selezionava i top match_count per PURA distanza
--- vettoriale (ORDER BY embedding <=> query) — keyword_score e hybrid_score
--- venivano calcolati ma non influenzavano MAI quali righe uscivano.
--- Il 70/30 ibrido era di fatto morto su tutti i pool grandi.
+-- vettoriale — keyword_score/hybrid_score calcolati ma mai influenti.
+-- ORA: pool di match_count*3 candidati per distanza (usa l'indice HNSW),
+-- poi re-rank per punteggio ibrido 70% vettore + 30% keyword.
 --
--- ORA: si prende un pool di match_count*3 candidati per distanza (usa
--- l'indice HNSW come prima), poi si riordina il pool per punteggio
--- ibrido 70% vettore + 30% keyword. Il segnale keyword (numeri di
--- articolo, latinismi, lessico tecnico esatto) torna a contare.
---
--- Da eseguire nel SQL Editor di Supabase. Idempotente (CREATE OR REPLACE).
+-- Da eseguire nel SQL Editor di Supabase.
 -- ============================================================
 
-CREATE OR REPLACE FUNCTION public.match_documents_hybrid(
+BEGIN;
+
+DROP FUNCTION IF EXISTS public.match_documents_hybrid(vector, text, integer, double precision, text, text, integer, integer);
+
+CREATE FUNCTION public.match_documents_hybrid(
     query_embedding vector(768),
     query_text text,
     match_count int DEFAULT 5,
@@ -25,8 +31,8 @@ CREATE OR REPLACE FUNCTION public.match_documents_hybrid(
     filter_anno_min int DEFAULT NULL
 )
 RETURNS TABLE (
-    id bigint,
-    document_id bigint,
+    id uuid,
+    document_id uuid,
     content text,
     materia text,
     tipo text,
@@ -52,7 +58,7 @@ BEGIN
         ts_query := NULL;
     END IF;
 
-    -- Ottimizzazione: conta fino a un massimo di 15000 per decidere se usare la scan sequenziale
+    -- Probe: conta fino a 15000 per decidere se usare la scan sequenziale
     SELECT count(*) INTO subset_size FROM (
         SELECT 1
         FROM rag_chunks c
@@ -68,7 +74,8 @@ BEGIN
     IF use_sequential THEN
         RETURN QUERY
         WITH small_pool AS (
-            SELECT c.id, c.document_id, c.content, c.materia, c.tipo, c.fts,
+            SELECT c.id AS cid, c.document_id AS cdoc, c.content AS ccontent,
+                c.materia AS cmateria, c.tipo AS ctipo, c.fts AS cfts,
                 (1 - (c.embedding <=> query_embedding))::float AS sim
             FROM rag_chunks c
             WHERE (filter_materia IS NULL OR c.materia = filter_materia OR c.materia IS NULL)
@@ -82,26 +89,25 @@ BEGIN
                   OR c.content ILIKE '%P.Q.M.%accoglie%' OR c.content ILIKE '%P.Q.M.%cassa%'
               ))
         )
-        SELECT sp.id, sp.document_id, sp.content, sp.materia, sp.tipo,
+        SELECT sp.cid, sp.cdoc, sp.ccontent, sp.cmateria, sp.ctipo,
             d.titolo, sp.sim,
-            CASE WHEN ts_query IS NOT NULL AND sp.fts IS NOT NULL
-                THEN ts_rank_cd(sp.fts, ts_query, 32)::float ELSE 0.0
+            CASE WHEN ts_query IS NOT NULL AND sp.cfts IS NOT NULL
+                THEN ts_rank_cd(sp.cfts, ts_query, 32)::float ELSE 0.0
             END AS keyword_score,
             (0.7 * sp.sim +
-             0.3 * CASE WHEN ts_query IS NOT NULL AND sp.fts IS NOT NULL
-                THEN ts_rank_cd(sp.fts, ts_query, 32)::float ELSE 0.0
+             0.3 * CASE WHEN ts_query IS NOT NULL AND sp.cfts IS NOT NULL
+                THEN ts_rank_cd(sp.cfts, ts_query, 32)::float ELSE 0.0
              END)::float AS hybrid_score
         FROM small_pool sp
-        LEFT JOIN rag_documents d ON d.id = sp.document_id
+        LEFT JOIN rag_documents d ON d.id = sp.cdoc
         WHERE sp.sim >= match_threshold
         ORDER BY hybrid_score DESC
         LIMIT match_count;
     ELSE
-        -- Imposta ef_search più alto per ricerche filtrate per garantire esplorazione
+        -- ef_search più alto per ricerche filtrate (post-filter HNSW)
         PERFORM set_config('hnsw.ef_search',
             CASE
                 WHEN filter_materia IS NOT NULL THEN '1000'
-                WHEN subset_size < 15000 THEN '400'
                 ELSE '150'
             END, true);
 
@@ -142,3 +148,8 @@ BEGIN
     END IF;
 END;
 $$;
+
+COMMIT;
+
+-- Verifica rapida post-migration (opzionale):
+-- SELECT proname, pg_get_function_result(oid) FROM pg_proc WHERE proname = 'match_documents_hybrid';
