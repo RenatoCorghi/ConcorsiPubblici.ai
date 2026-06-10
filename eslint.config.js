@@ -69,7 +69,10 @@ export default [
                 clearInterval: "readonly",
                 __dirname: "readonly",
                 require: "readonly",
-                module: "writable"
+                module: "writable",
+                Response: "readonly",
+                Headers: "readonly",
+                Request: "readonly"
             }
         }
     }

@@ -324,7 +324,7 @@ Se dalla ricerca web emerge una sentenza citata solo per estremi numerici (es. "
 `;
 
 // --- MODEL WHITELIST (anti-abuso costi) ---
-const MODEL_WHITELIST = {
+export const MODEL_WHITELIST = {
     google: [
         'gemini-3-flash-preview',
         'gemini-3.1-pro-preview',
@@ -395,7 +395,7 @@ async function checkRateLimit(ip) {
 
 const rateLimitStore = new Map();
 
-function isRateLimited(ip) {
+export function isRateLimited(ip) {
     const now = Date.now();
     const entry = rateLimitStore.get(ip);
 
@@ -427,7 +427,7 @@ function isRateLimited(ip) {
 // --- NORMALIZZATORE INTELLIGENTE MATERIE ---
 // Risolve il problema del RAG che si "impunta" sulle differenze testuali.
 // Mappa sinonimi e varianti (es. "Procedura Civile", "amministrativo") a un formato canonico.
-function normalizeMateria(inputMateria) {
+export function normalizeMateria(inputMateria) {
     if (!inputMateria || inputMateria === 'Tutte le materie') return null;
     const str = inputMateria.toLowerCase().trim();
     
@@ -453,7 +453,7 @@ function normalizeMateria(inputMateria) {
 
 // Mappa materia del chunk → famiglia canonica per matching soft
 // Es: "Giurisprudenza Civile" e "Diritto Processuale Civile" matchano con "Diritto Civile"
-function materiaFamily(materia) {
+export function materiaFamily(materia) {
     if (!materia || materia === 'Tutte le materie') return null;
     const s = materia.toLowerCase();
     if (s.includes('civile') || s.includes('lavoro') || s.includes('commerciale')) return 'civile';
@@ -466,7 +466,7 @@ function materiaFamily(materia) {
 }
 
 // Verifica se la materia del chunk è compatibile con il filtro richiesto
-function materiaMatches(chunkMateria, filterMateria) {
+export function materiaMatches(chunkMateria, filterMateria) {
     if (!filterMateria) return true;  // Nessun filtro → tutto passa
     if (!chunkMateria) return true;   // Materia null → tieni (potrebbe essere cross-disciplinare)
     if (chunkMateria === filterMateria) return true; // Match esatto
@@ -874,7 +874,7 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
 
 // --- SANITIZZAZIONE PAYLOAD ---
 
-function sanitizePayload(body) {
+export function sanitizePayload(body) {
     const errors = [];
 
     // Rimossa whitelist rigida dei modelli perché saranno dinamici (Gemini/Claude test)
@@ -925,6 +925,51 @@ function sanitizePayload(body) {
     }
 
     return { valid: true, payload: cleanPayload };
+}
+
+// --- METERING SERVER-SIDE ---
+// Limiti mensili del tier Free. 0 = feature esclusiva Pro.
+export const FREE_LIMITS = { aiCalls: 3, oralSessions: 0, tutorChats: 5, aiTraces: 0, pdfExports: 0, aiQuiz: 5, phantomTutor: 0, normeTooltip: 30 };
+
+// Valida il JWT, controlla il tier e consuma un credito per gli utenti Free.
+// Il client Supabase è iniettato come parametro per poter testare la logica senza rete.
+export async function applyMetering(supabaseAdmin, token, requestedFeature) {
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+    if (userError || !userData?.user) {
+        return { ok: false, status: 401, error: 'Token scaduto o non valido.' };
+    }
+    const userId = userData.user.id;
+
+    const { data: profile } = await supabaseAdmin.from('profiles').select('tier').eq('id', userId).single();
+    const tier = (profile && profile.tier) || 'Free';
+
+    if (tier === 'Free') {
+        const limit = FREE_LIMITS[requestedFeature];
+        if (limit === undefined) return { ok: false, status: 400, error: 'Feature non valida.' };
+        if (limit === 0) return { ok: false, status: 403, error: 'Feature esclusiva Pro.' };
+
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+        const { data: usageData } = await supabaseAdmin
+            .from('usage_metering')
+            .select(requestedFeature)
+            .eq('user_id', userId)
+            .eq('month', currentMonth)
+            .single();
+
+        const currentUsage = usageData ? (usageData[requestedFeature] || 0) : 0;
+        if (currentUsage >= limit) {
+            return { ok: false, status: 403, error: 'Crediti mensili esauriti per questa funzionalità.' };
+        }
+
+        // Incrementa il credito
+        const upsertPayload = { user_id: userId, month: currentMonth };
+        upsertPayload[requestedFeature] = currentUsage + 1;
+        await supabaseAdmin.from('usage_metering').upsert(upsertPayload, { onConflict: 'user_id, month' });
+    }
+
+    return { ok: true, tier };
 }
 
 // --- HANDLER PRINCIPALE ---
@@ -1082,44 +1127,9 @@ export default async function handler(req, res) {
                 
                 if (supabaseUrl && supabaseKey) {
                     const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
-                    
-                    // Valida JWT per ottenere utente
-                    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
-                    if (userError || !userData?.user) {
-                        return res.status(401).json({ error: 'Token scaduto o non valido.' });
-                    }
-                    const userId = userData.user.id;
-                    
-                    // Controlla il piano
-                    const { data: profile } = await supabaseAdmin.from('profiles').select('tier').eq('id', userId).single();
-                    const tier = (profile && profile.tier) || 'Free';
-                    
-                    const freeLimits = { aiCalls: 3, oralSessions: 0, tutorChats: 5, aiTraces: 0, pdfExports: 0, aiQuiz: 5, phantomTutor: 0, normeTooltip: 30 };
-                    
-                    if (tier === 'Free') {
-                        const limit = freeLimits[requestedFeature];
-                        if (limit === undefined) return res.status(400).json({ error: 'Feature non valida.' });
-                        if (limit === 0) return res.status(403).json({ error: 'Feature esclusiva Pro.' });
-                        
-                        const now = new Date();
-                        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-                        
-                        const { data: usageData } = await supabaseAdmin
-                            .from('usage_metering')
-                            .select(requestedFeature)
-                            .eq('user_id', userId)
-                            .eq('month', currentMonth)
-                            .single();
-                            
-                        const currentUsage = usageData ? (usageData[requestedFeature] || 0) : 0;
-                        if (currentUsage >= limit) {
-                            return res.status(403).json({ error: 'Crediti mensili esauriti per questa funzionalità.' });
-                        }
-                        
-                        // Incrementa il credito
-                        const upsertPayload = { user_id: userId, month: currentMonth };
-                        upsertPayload[requestedFeature] = currentUsage + 1;
-                        await supabaseAdmin.from('usage_metering').upsert(upsertPayload, { onConflict: 'user_id, month' });
+                    const meterResult = await applyMetering(supabaseAdmin, token, requestedFeature);
+                    if (!meterResult.ok) {
+                        return res.status(meterResult.status).json({ error: meterResult.error });
                     }
                 }
             } else {
