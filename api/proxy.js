@@ -571,7 +571,7 @@ REGOLE TASSATIVE:
 // Ritorna { contextText, sources } — contextText per il prompt, sources per il frontend
 // USA: match_documents_hybrid RPC (vector 70% + full-text 30%, con metadata filtering)
 // FALLBACK: match_rag_chunks (vector-only) se la hybrid RPC non è ancora deployata
-async function fetchRAGContext(userMessageText, materiaFilter = null) {
+async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpansion = false) {
     const googleKey = process.env.GOOGLE_AI_KEY || process.env.GEMINI_API_KEY;
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
     
@@ -580,8 +580,10 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
         return null;
     }
     try {
-        // 1. QUERY EXPANSION: decomponi titoli complessi in sotto-query atomiche
-        let subQueries = await expandQuery(userMessageText, materiaFilter, googleKey);
+        // 1. QUERY EXPANSION: decomponi titoli complessi in sotto-query atomiche.
+        // Saltata se il client dichiara una ragQuery già mirata (continuazioni di
+        // modulo): risparmia una chiamata Gemini Flash (~1-2s) a richiesta.
+        let subQueries = skipExpansion ? [userMessageText] : await expandQuery(userMessageText, materiaFilter, googleKey);
         
         // 1b. TAXONOMY ENRICHMENT: arricchisci con sotto-query forzate dalla tassonomia
         subQueries = enrichWithTaxonomy(subQueries, userMessageText, materiaFilter);
@@ -706,9 +708,12 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
         if (matches && matches.length > 0) {
             let contextText = "\n\n<RAG_CONTEXT>\n";
             contextText += "⚠️ AVVERTENZA: I frammenti seguenti provengono dal database giurisprudenziale e dottrinale (Cassazione, Consiglio di Stato, TAR, Corte Costituzionale, Riviste). Alcuni documenti sono \"Schede VIP\" strutturate in 7-8 sezioni (Fatto, Contrasto, Massima, Ratio, Obiter, Spendibilità, Tags, Rete Sistematica): SFRUTTA TUTTE LE SEZIONI per costruire argomentazioni profonde. I codici numerici lunghi (es. 202401188) sono ID INTERNI del database, NON numeri di sentenza. NON citarli MAI come estremi giurisprudenziali.\n\n";
-            // Re-ranking con boost per fonti autorevoli e RECENCY
+            // Re-ranking con boost per fonti autorevoli e RECENCY.
+            // Base = hybrid_score della RPC (70% vettore + 30% keyword): prima si usava
+            // la sola similarity e il segnale keyword (numeri di articolo, latinismi,
+            // lessico tecnico esatto) veniva calcolato in SQL ma ignorato nel ranking.
             matches.forEach(m => {
-                m.boostedScore = m.similarity;
+                m.boostedScore = (typeof m.hybrid_score === 'number' && m.hybrid_score > 0) ? m.hybrid_score : m.similarity;
                 
                 // 1. Boost per Autorità
                 if (m.tipo === 'teoria_massimario') m.boostedScore *= 1.35;    // Riviste VIP
@@ -765,8 +770,10 @@ async function fetchRAGContext(userMessageText, materiaFilter = null) {
                 console.warn(`[RAG] ⚠️ ${pqmCount}/${matches.length} risultati sono PQM/dispositivo — qualità RAG degradata`);
             }
             
-            // Riordina per score boostato e prendi i top 8
-            matches = matches.filter(m => m.boostedScore > 0.50);
+            // Riordina per score boostato e prendi i top 8.
+            // Soglia ricalibrata sulla scala ibrida (hybrid = 0.7×sim quando il
+            // keyword_score è 0): 0.35 qui equivale a ~0.50 della vecchia scala solo-vettore.
+            matches = matches.filter(m => m.boostedScore > 0.35);
 
             // 4. Filtro post-retrieval per materia (safety net anti-contaminazione)
             // Se abbiamo richiesto una materia specifica, rimuovi i risultati di materie diverse
@@ -1025,43 +1032,26 @@ export default async function handler(req, res) {
             const sentYear = parts[2];
             const searchKey = `${sentNum}/${sentYear}`;
             
-            // STRATEGIA: Ricerca vettoriale via RPC (ILIKE/FTS causano timeout su Supabase)
-            // 1. Genera embedding per la citazione
-            const googleKey = process.env.GOOGLE_AI_KEY || process.env.GEMINI_API_KEY;
-            const embedRes = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key=${googleKey}`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: 'models/gemini-embedding-2',
-                        content: { parts: [{ text: `sentenza cassazione n. ${sentNum} ${sentYear}` }] },
-                        outputDimensionality: 768
-                    })
-                }
-            );
-            const embedData = await embedRes.json();
-            const vector = embedData.embedding?.values;
-            if (!vector) return res.status(200).json({ found: false, reason: 'embedding fallito' });
-            
-            // 2. Ricerca ibrida nel DB — soglia bassa per massima copertura
-            const hybridUrl = `${process.env.SUPABASE_URL}/rest/v1/rpc/match_documents_hybrid`;
-            const rpcHeaders = {
+            // STRATEGIA: Full-Text Search diretto sull'indice GIN (colonna fts) — esatto
+            // e in millisecondi, zero chiamate AI. Prima: embedding + ricerca vettoriale,
+            // semanticamente debole sui token numerici e con costo/latenza di una embed call.
+            // Il parser tsvector tokenizza "35823/2023" come token unico (tipo file) e
+            // "n. 35823 del 2023" come due token numerici: copriamo entrambe le forme.
+            const restHeaders = {
                 'apikey': supabaseKey,
-                'Authorization': `Bearer ${supabaseKey}`,
-                'Content-Type': 'application/json'
+                'Authorization': `Bearer ${supabaseKey}`
             };
-            const searchRes = await fetch(hybridUrl, {
-                method: 'POST',
-                headers: rpcHeaders,
-                body: JSON.stringify({
-                    query_embedding: vector,
-                    query_text: `${sentNum} ${sentYear}`,
-                    match_count: 10,
-                    match_threshold: 0.40
-                })
-            });
-            const matches = searchRes.ok ? await searchRes.json() : [];
+            const ftsBase = `${process.env.SUPABASE_URL}/rest/v1/rag_chunks?select=id,document_id,content&limit=10`;
+            const slashUrl = `${ftsBase}&fts=wfts(italian).${encodeURIComponent(`${sentNum}/${sentYear}`)}`;
+            const splitUrl = `${ftsBase}&fts=plfts(italian).${encodeURIComponent(`${sentNum} ${sentYear}`)}`;
+
+            const [slashRows, splitRows] = await Promise.all([
+                fetch(slashUrl, { headers: restHeaders }).then(r => r.ok ? r.json() : []).catch(() => []),
+                fetch(splitUrl, { headers: restHeaders }).then(r => r.ok ? r.json() : []).catch(() => [])
+            ]);
+            const seenIds = new Set();
+            const matches = [...(Array.isArray(slashRows) ? slashRows : []), ...(Array.isArray(splitRows) ? splitRows : [])]
+                .filter(m => !seenIds.has(m.id) && seenIds.add(m.id));
             
             // 3. Filtra: il numero deve comparire nel content del chunk
             // Word boundary: evita che "123" matchi dentro "20123" validando citazioni inesistenti
@@ -1151,14 +1141,21 @@ export default async function handler(req, res) {
                 const queryText = explicitRagQuery || lastUserMessage;
                 
                 // Cerca nel DB usando il filtro materia (se presente)
-                const ragResult = await fetchRAGContext(queryText, requestedMateria);
+                const ragResult = await fetchRAGContext(queryText, requestedMateria, req.body.skipExpansion === true);
                 
                 if (ragResult) {
-                    let systemMsg = validation.payload.messages.find(m => m.role === 'system');
-                    if (systemMsg) {
-                        systemMsg.content += `\n\n═══════════════════════════════════════════════\n📌 NOTA CRITICA: IL CONTESTO RAG QUI SOTTO È STATO RECUPERATO DAL DATABASE ED È A TUA DISPOSIZIONE.\nHai a disposizione ${ragResult.sources?.length || 'diversi'} frammenti normativi e giurisprudenziali pertinenti.\nUSA QUESTI DATI per fondare la tua risposta. Se contengono estremi di sentenze reali, PUOI citarli.\n═══════════════════════════════════════════════\n${ragResult.contextText}`;
+                    // Il RAG va in un messaggio system SEPARATO, non concatenato al prompt:
+                    // con Anthropic diventa un blocco cache a sé, così il prompt statico
+                    // fa cache-HIT anche quando il contesto RAG cambia a ogni modulo.
+                    const ragMessage = `═══════════════════════════════════════════════\n📌 NOTA CRITICA: IL CONTESTO RAG QUI SOTTO È STATO RECUPERATO DAL DATABASE ED È A TUA DISPOSIZIONE.\nHai a disposizione ${ragResult.sources?.length || 'diversi'} frammenti normativi e giurisprudenziali pertinenti.\nUSA QUESTI DATI per fondare la tua risposta. Se contengono estremi di sentenze reali, PUOI citarli.\n═══════════════════════════════════════════════\n${ragResult.contextText}`;
+                    const systemIdx = validation.payload.messages.findIndex(m => m.role === 'system');
+                    if (systemIdx >= 0) {
+                        validation.payload.messages.splice(systemIdx + 1, 0, { role: 'system', content: ragMessage });
                     } else {
-                        validation.payload.messages.unshift({ role: 'system', content: `Sei un assistente giuridico esperto. ${ragResult.contextText}` });
+                        validation.payload.messages.unshift(
+                            { role: 'system', content: 'Sei un assistente giuridico esperto.' },
+                            { role: 'system', content: ragMessage }
+                        );
                     }
                     ragSources = ragResult.sources || [];
                     console.log(`[RAG] Contesto iniettato con successo! (Materia: ${requestedMateria || 'Tutte'}, Fonti: ${ragSources.length})`);
@@ -1186,11 +1183,13 @@ export default async function handler(req, res) {
             
             // Map messages from OpenAI format to Gemini native format
             let contents = [];
-            let systemInstruction = null;
-            
+            let systemParts = [];
+
             validation.payload.messages.forEach(m => {
                 if (m.role === 'system') {
-                    systemInstruction = { parts: [{ text: m.content }] };
+                    // Più messaggi system (prompt statico + RAG) → più parts, in ordine.
+                    // Prima l'assegnazione sovrascriveva: con due system sopravviveva solo l'ultimo.
+                    systemParts.push({ text: m.content });
                 } else {
                     contents.push({
                         role: m.role === 'user' ? 'user' : 'model',
@@ -1200,6 +1199,8 @@ export default async function handler(req, res) {
             });
 
             if(contents.length === 0) contents.push({role: 'user', parts: [{text: 'Inizia'}]});
+
+            let systemInstruction = systemParts.length > 0 ? { parts: systemParts } : null;
 
             let geminiPayload = {
                 contents: contents,
@@ -1218,8 +1219,8 @@ export default async function handler(req, res) {
                 geminiPayload.tools = [{ googleSearch: {} }];
                 // Inject whitelist instruction into system instruction
                 const webSearchDirective = WEB_SEARCH_WHITELIST_PROMPT;
-                if (systemInstruction) {
-                    geminiPayload.systemInstruction.parts[0].text += '\n\n' + webSearchDirective;
+                if (geminiPayload.systemInstruction) {
+                    geminiPayload.systemInstruction.parts.push({ text: webSearchDirective });
                 } else {
                     geminiPayload.systemInstruction = { parts: [{ text: webSearchDirective }] };
                 }
@@ -1241,12 +1242,12 @@ export default async function handler(req, res) {
             };
             
             // Map to Anthropic format
-            let systemInstruction = "";
+            let systemBlocks = [];
             let mappedMessages = [];
-            
+
             validation.payload.messages.forEach(m => {
                 if (m.role === 'system') {
-                    systemInstruction += m.content + "\n";
+                    systemBlocks.push(m.content);
                 } else {
                     mappedMessages.push({
                         role: m.role === 'user' ? 'user' : 'assistant',
@@ -1274,19 +1275,35 @@ export default async function handler(req, res) {
                         max_uses: 3  // Cost control: max 3 ricerche per chiamata
                     }
                 ];
-                systemInstruction += '\n\n' + WEB_SEARCH_WHITELIST_PROMPT;
+                // Direttiva statica: accodata al PRIMO blocco system (il prompt statico),
+                // così resta dentro il blocco cacheabile
+                if (systemBlocks.length > 0) systemBlocks[0] += '\n\n' + WEB_SEARCH_WHITELIST_PROMPT;
+                else systemBlocks.push(WEB_SEARCH_WHITELIST_PROMPT);
                 console.log('[WebSearch] Claude Native Web Search attivato (max 3 uses)');
             }
 
-            // Abilita Prompt Caching sul System Prompt
-            if (systemInstruction.trim().length > 0) {
-                anthropicPayload.system = [
-                    {
-                        type: "text",
-                        text: systemInstruction.trim(),
-                        cache_control: { type: "ephemeral" }
-                    }
-                ];
+            // PROMPT CACHING A BLOCCHI: ogni messaggio system diventa un blocco con il suo
+            // breakpoint. Blocco 1 = prompt statico (identico tra moduli e utenti → cache HIT),
+            // blocco 2 = contesto RAG (cambia per modulo → write solo su quel blocco).
+            // Prima erano concatenati in un unico blocco: il RAG invalidava TUTTA la cache.
+            const sysBlocks = systemBlocks.map(t => t.trim()).filter(t => t.length > 0);
+            if (sysBlocks.length > 3) {
+                // Max 4 breakpoint cache totali (3 system + 1 sull'ultimo messaggio): accorpa gli extra
+                sysBlocks.splice(2, sysBlocks.length - 2, sysBlocks.slice(2).join('\n\n'));
+            }
+            if (sysBlocks.length > 0) {
+                anthropicPayload.system = sysBlocks.map(text => ({
+                    type: "text",
+                    text: text,
+                    cache_control: { type: "ephemeral" }
+                }));
+            }
+
+            // Breakpoint anche sull'ultimo messaggio: cacha la storia conversazionale,
+            // i turni successivi della stessa sessione riusano il prefisso già cachato
+            const lastMsg = mappedMessages[mappedMessages.length - 1];
+            if (lastMsg && typeof lastMsg.content === 'string' && lastMsg.content.length > 0) {
+                lastMsg.content = [{ type: "text", text: lastMsg.content, cache_control: { type: "ephemeral" } }];
             }
 
             fetchBody = JSON.stringify(anthropicPayload);

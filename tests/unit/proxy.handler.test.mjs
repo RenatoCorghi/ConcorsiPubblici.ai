@@ -136,6 +136,9 @@ test('happy path Anthropic: payload trasformato e risposta normalizzata in forma
     assert.equal(sent.max_tokens, 8000, 'max_tokens deve essere cappato a 8000');
     assert.equal(sent.system[0].cache_control.type, 'ephemeral', 'prompt caching attivo sul system');
     assert.equal(sent.messages.every(m => m.role !== 'system'), true, 'nessun system tra i messages Anthropic');
+    const lastSent = sent.messages[sent.messages.length - 1];
+    assert.equal(Array.isArray(lastSent.content), true, 'ultimo messaggio in forma blocco');
+    assert.equal(lastSent.content[0].cache_control.type, 'ephemeral', 'breakpoint cache sulla storia conversazionale');
 
     // Risposta normalizzata in formato OpenAI
     assert.equal(res.body.choices[0].message.content, 'La legittima difesa ex art. 52 c.p. ...');
@@ -175,4 +178,71 @@ test('errore del provider → status inoltrato (4xx) o 502 (5xx), senza leak del
     await handler(makeReq({ body: guestBody() }), res);
     assert.equal(res.statusCode, 502);
     assert.ok(!JSON.stringify(res.body).includes('sk-ant-test-dummy'));
+});
+
+test('Anthropic: due messaggi system → due blocchi cache separati (prompt statico + RAG)', async (t) => {
+    const captured = [];
+    const fetchMock = mock.method(globalThis, 'fetch', async (url, opts) => {
+        captured.push({ url: String(url), opts });
+        return new Response(JSON.stringify({
+            content: [{ type: 'text', text: 'ok' }],
+            usage: { input_tokens: 1, output_tokens: 1 }
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    });
+    t.after(() => fetchMock.mock.restore());
+
+    const res = makeRes();
+    await handler(makeReq({
+        body: {
+            provider: 'anthropic', feature: 'aiCalls', model: 'claude-sonnet-4-6',
+            messages: [
+                { role: 'system', content: 'PROMPT STATICO' },
+                { role: 'system', content: 'CONTESTO RAG DEL MODULO' },
+                { role: 'user', content: 'ciao' }
+            ]
+        }
+    }), res);
+
+    assert.equal(res.statusCode, 200);
+    const sent = JSON.parse(captured[0].opts.body);
+    assert.equal(sent.system.length, 2, 'un blocco per ogni messaggio system');
+    assert.equal(sent.system[0].text, 'PROMPT STATICO');
+    assert.equal(sent.system[1].text, 'CONTESTO RAG DEL MODULO');
+    assert.ok(sent.system.every(b => b.cache_control?.type === 'ephemeral'), 'breakpoint cache su ogni blocco');
+});
+
+test('verifyCitation: usa FTS sul GIN, nessuna chiamata embedding', async (t) => {
+    process.env.SUPABASE_URL = 'https://test-project.supabase.co';
+    process.env.SUPABASE_SERVICE_KEY = 'service-test';
+    const captured = [];
+    const fetchMock = mock.method(globalThis, 'fetch', async (url) => {
+        captured.push(String(url));
+        return new Response(JSON.stringify([
+            { id: 1, document_id: 9, content: 'La Cassazione n. 35823/2023 ha affermato il litisconsorzio necessario.' }
+        ]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    });
+    t.after(() => fetchMock.mock.restore());
+
+    const res = makeRes();
+    await handler(makeReq({ body: { feature: 'verifyCitation', citationNumber: '35823/2023' } }), res);
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.found, true);
+    assert.ok(res.body.count >= 1);
+    assert.ok(captured.every(u => !u.includes('generativelanguage')), 'nessuna chiamata embedding');
+    assert.ok(captured.some(u => u.includes('/rest/v1/rag_chunks') && u.includes('fts=')), 'query FTS su rag_chunks');
+});
+
+test('verifyCitation: numero assente dal corpus → found false', async (t) => {
+    process.env.SUPABASE_URL = 'https://test-project.supabase.co';
+    process.env.SUPABASE_SERVICE_KEY = 'service-test';
+    const fetchMock = mock.method(globalThis, 'fetch', async () =>
+        new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } })
+    );
+    t.after(() => fetchMock.mock.restore());
+
+    const res = makeRes();
+    await handler(makeReq({ body: { feature: 'verifyCitation', citationNumber: '99999/2024' } }), res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.found, false);
 });

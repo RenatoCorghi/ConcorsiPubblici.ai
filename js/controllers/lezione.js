@@ -1078,6 +1078,7 @@ ${coveredBlock}`
                     useWebSearch: AppState.webSearchEnabled,
                     materia: AppState.lezioneMeta?.materia || null,
                     ragQuery: this._getExpandedRAGQuery(AppState.lezioneMeta?.argomento, nextModNum),
+                    skipExpansion: true, // ragQuery già mirata al modulo: salta la decomposizione Gemini nel proxy (~1-2s)
                     messages: messages,
                     temperature: 0.2,
                     max_tokens: 8000
@@ -1203,6 +1204,7 @@ ${coveredBlock}`
                     useWebSearch: AppState.webSearchEnabled,
                     materia: AppState.lezioneMeta?.materia || null,
                     ragQuery: this._getExpandedRAGQuery(AppState.lezioneMeta?.argomento, this.currentModule || 1),
+                    skipExpansion: true, // ragQuery già mirata al modulo corrente: salta la decomposizione Gemini nel proxy
                     messages: messages,
                     temperature: 0.2,
                     max_tokens: 4000
