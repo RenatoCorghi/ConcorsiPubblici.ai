@@ -75,7 +75,8 @@ export default [
                 module: "writable",
                 Response: "readonly",
                 Headers: "readonly",
-                Request: "readonly"
+                Request: "readonly",
+                AbortSignal: "readonly"
             }
         }
     }

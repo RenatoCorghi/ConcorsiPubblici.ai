@@ -1,10 +1,15 @@
 // ============================================================
-// Re-embed dell'intero corpus rag_chunks con taskType RETRIEVAL_DOCUMENT.
+// Re-embed dell'intero corpus rag_chunks con DUE migliorie in una passata:
 //
-// PERCHÉ: gli embedding attuali sono stati generati senza task type.
-// Gemini supporta embedding asimmetrici (RETRIEVAL_DOCUMENT per il corpus,
-// RETRIEVAL_QUERY per le query): la coppia tipizzata migliora il retrieval.
-// I due spazi NON sono mescolabili a metà — quindi:
+//   A. taskType RETRIEVAL_DOCUMENT — embedding asimmetrici: il corpus "sa"
+//      di essere un documento, le query (RETRIEVAL_QUERY) di essere domande.
+//   B. EMBEDDING CONTESTUALI — il testo embeddato è "Documento: <titolo> /
+//      Materia: <materia> / <contenuto>" invece del solo contenuto: il
+//      vettore sa da quale sentenza/materia viene il frammento (uplift
+//      dimostrato sul retrieval). Il campo content sul DB NON cambia:
+//      il contesto entra solo nel vettore.
+//
+// I due spazi vettoriali NON sono mescolabili a metà — quindi:
 //
 //   1. Esegui questo script FINO IN FONDO (riprendibile: checkpoint su file)
 //   2. SOLO DOPO, imposta su Vercel: RAG_QUERY_TASK_TYPE=RETRIEVAL_QUERY
@@ -14,12 +19,16 @@
 // funzionare (le query restano non tipizzate finché non imposti l'env).
 //
 // USO:
+//   node scripts/reembed_task_type.mjs --restart        # da zero (ignora checkpoint)
 //   node scripts/reembed_task_type.mjs --dry-run        # stima senza scrivere
 //   node scripts/reembed_task_type.mjs --limit 200      # prova su 200 chunk
 //   node scripts/reembed_task_type.mjs                  # tutto il corpus
 //
 // In caso di interruzione, rilancia: riparte dal checkpoint
-// (scripts/.reembed_checkpoint.json). Per ripartire da zero, cancella il file.
+// (scripts/.reembed_checkpoint.json).
+// NOTA: se una run PRECEDENTE era partita con la sola miglioria A (senza
+// contesto), va rifatta da capo con --restart: tutti i chunk devono essere
+// embeddati nello stesso modo.
 // ============================================================
 import fs from 'fs';
 
@@ -40,6 +49,7 @@ if (!SUPABASE_URL || !SUPABASE_KEY || !GEMINI_API_KEY) {
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
+const RESTART = args.includes('--restart');
 const LIMIT = args.includes('--limit') ? parseInt(args[args.indexOf('--limit') + 1], 10) : Infinity;
 const BATCH_SIZE = 50;          // max 100 per batchEmbedContents
 const SLEEP_MS = 400;           // pausa tra batch (rate limit)
@@ -81,11 +91,22 @@ async function withRetry(fn, label) {
 }
 
 async function fetchBatch(lastId) {
-    let url = `${SUPABASE_URL}/rest/v1/rag_chunks?select=id,content&order=id.asc&limit=${BATCH_SIZE}`;
+    let url = `${SUPABASE_URL}/rest/v1/rag_chunks?select=id,content,materia,rag_documents(titolo)&order=id.asc&limit=${BATCH_SIZE}`;
     if (lastId) url += `&id=gt.${lastId}`;
     const r = await fetch(url, { headers: SB_HEADERS, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
     if (!r.ok) throw new Error(`Fetch chunk fallita: ${r.status} ${await r.text()}`);
     return r.json();
+}
+
+// Embedding contestuale: il vettore include titolo e materia del documento.
+// L'header sta in testa così sopravvive anche se il modello tronca la coda
+// dei chunk più lunghi. Il content sul DB resta invariato.
+function buildEmbedText(row) {
+    const titolo = row.rag_documents ? row.rag_documents.titolo : null;
+    const header = [];
+    if (titolo) header.push(`Documento: ${String(titolo).substring(0, 200)}`);
+    if (row.materia) header.push(`Materia: ${row.materia}`);
+    return header.length > 0 ? `${header.join('\n')}\n\n${row.content}` : row.content;
 }
 
 async function embedBatch(texts) {
@@ -133,13 +154,18 @@ async function patchAll(rows, vectors) {
 }
 
 // --- MAIN ---
+if (RESTART) {
+    try { fs.unlinkSync(CHECKPOINT_FILE); console.log('🔄 --restart: checkpoint cancellato, si riparte da zero'); }
+    catch { /* nessun checkpoint da cancellare */ }
+}
+
 const countRes = await fetch(`${SUPABASE_URL}/rest/v1/rag_chunks?select=id&limit=1`, {
     headers: { ...SB_HEADERS, Prefer: 'count=exact', Range: '0-0' }
 });
 const total = parseInt((countRes.headers.get('content-range') || '/0').split('/')[1], 10);
 
 const cp = loadCheckpoint();
-console.log(`🚀 Re-embed corpus con taskType RETRIEVAL_DOCUMENT`);
+console.log(`🚀 Re-embed corpus: taskType RETRIEVAL_DOCUMENT + contesto (titolo/materia)`);
 console.log(`   Corpus totale: ${total} chunk | già processati (checkpoint): ${cp.processed}`);
 if (DRY_RUN) console.log('   MODALITÀ DRY-RUN: nessuna scrittura');
 
@@ -156,7 +182,7 @@ while (processedThisRun < LIMIT) {
     if (skipped > 0) console.warn(`\n   ⚠️ ${skipped} chunk senza contenuto saltati`);
 
     if (valid.length > 0 && !DRY_RUN) {
-        const vectors = await withRetry(() => embedBatch(valid.map(r => r.content)), 'Embedding batch (Gemini)');
+        const vectors = await withRetry(() => embedBatch(valid.map(buildEmbedText)), 'Embedding batch (Gemini)');
         await withRetry(() => patchAll(valid, vectors), 'Scrittura embedding (Supabase)');
     }
 

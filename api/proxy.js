@@ -567,11 +567,84 @@ REGOLE TASSATIVE:
     return [query];
 }
 
+// --- RE-RANKER LLM (secondo parere sulla pertinenza) ---
+// Dopo il retrieval ibrido, Gemini Flash rilegge i top candidati e dà un voto
+// di pertinenza 0-10 rispetto alla richiesta. Scarta i falsi positivi
+// semantici (frammenti "simili" ma fuori tema) che il coseno da solo non
+// distingue. Fallback silenzioso: se la chiamata fallisce, scade o risponde
+// in modo troppo parziale, si mantiene l'ordinamento boostato originale.
+export async function rerankCandidates(query, candidates, googleKey) {
+    try {
+        const lista = candidates.map((m, i) =>
+            `[${i + 1}] (${m.tipo || 'documento'}${m.titolo ? ` — ${String(m.titolo).substring(0, 80)}` : ''})\n${(m.content || '').substring(0, 600)}`
+        ).join('\n\n');
+        const prompt = `Sei un magistrato che seleziona le fonti per una lezione di diritto.\nRICHIESTA: "${String(query || '').substring(0, 300)}"\n\nVALUTA la pertinenza di OGNI frammento rispetto alla richiesta (0 = irrilevante, 10 = essenziale):\n\n${lista}\n\nRispondi SOLO con un array JSON: [{"i":1,"s":8},{"i":2,"s":3},...] — un elemento per OGNI frammento.`;
+
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${googleKey}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                signal: AbortSignal.timeout(8000),
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { temperature: 0, maxOutputTokens: 1024, responseMimeType: 'application/json' }
+                })
+            }
+        );
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+        const votes = JSON.parse(text);
+        if (!Array.isArray(votes) || votes.length === 0) return null;
+
+        const scoreByIndex = new Map();
+        votes.forEach(v => {
+            const idx = parseInt(v.i, 10) - 1;
+            const s = Number(v.s);
+            if (idx >= 0 && idx < candidates.length && Number.isFinite(s)) {
+                scoreByIndex.set(idx, Math.max(0, Math.min(10, s)));
+            }
+        });
+        // Risposta troppo parziale → non fidarsi del re-rank
+        if (scoreByIndex.size < candidates.length / 2) return null;
+
+        const reranked = candidates
+            .map((m, i) => ({ m, llmScore: scoreByIndex.has(i) ? scoreByIndex.get(i) : 5 })) // non votati → neutro
+            .filter(x => x.llmScore > 2)  // i chiaramente irrilevanti escono anche se restano meno di 8 fonti
+            .sort((a, b) => (b.llmScore - a.llmScore) || (b.m.boostedScore - a.m.boostedScore))
+            .map(x => x.m);
+        return reranked.length > 0 ? reranked : null;
+    } catch (e) {
+        console.warn(`[RAG] ⚠️ Re-rank fallito (mantengo ordine boostato): ${e.message}`);
+        return null;
+    }
+}
+
+// --- LOG QUALITÀ RAG (fire-and-forget) ---
+// Una riga per richiesta su rag_quality_log (migration 012): query, materia,
+// n. risultati, punteggio del top. Serve a vedere DOVE il retrieval fallisce
+// in produzione e ad alimentare l'eval set con casi reali. Mai await-ata:
+// l'insert viaggia mentre il provider genera la risposta.
+function logRagQuality(supabaseKey, entry) {
+    try {
+        fetch(`${process.env.SUPABASE_URL}/rest/v1/rag_quality_log`, {
+            method: 'POST',
+            headers: {
+                'apikey': supabaseKey,
+                'Authorization': `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify(entry)
+        }).catch(() => {});
+    } catch { /* il log non deve mai rompere il RAG */ }
+}
+
 // --- FUNZIONE RAG (RETRIEVAL-AUGMENTED GENERATION) ---
 // Ritorna { contextText, sources } — contextText per il prompt, sources per il frontend
 // USA: match_documents_hybrid RPC (vector 70% + full-text 30%, con metadata filtering)
 // FALLBACK: match_rag_chunks (vector-only) se la hybrid RPC non è ancora deployata
-async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpansion = false) {
+async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpansion = false, feature = null) {
     const googleKey = process.env.GOOGLE_AI_KEY || process.env.GEMINI_API_KEY;
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
     
@@ -835,7 +908,16 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
                 }
             }
             matches.sort((a, b) => b.boostedScore - a.boostedScore);
-            const topMatches = matches.slice(0, 8);
+
+            // RE-RANK LLM: secondo parere di Gemini Flash sui top 24 candidati.
+            // Solo quando c'è davvero una scelta da fare (più di 8 candidati);
+            // se fallisce si tiene l'ordine boostato (rerankCandidates → null).
+            let reranked = null;
+            if (matches.length > 8) {
+                reranked = await rerankCandidates(userMessageText, matches.slice(0, 24), googleKey);
+                if (reranked) console.log(`[RAG] 🧠 Re-rank LLM applicato su ${Math.min(matches.length, 24)} candidati`);
+            }
+            const topMatches = (reranked || matches).slice(0, 8);
 
             topMatches.forEach((m, i) => {
                 let cleanContent = (m.content || '')
@@ -887,8 +969,35 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
                 content: m.content || '',
                 fullContent: m.content || ''
             }));
-            
+
+            logRagQuality(supabaseKey, {
+                feature,
+                query: String(userMessageText || '').substring(0, 300),
+                materia: normalizedMateria,
+                sub_query_count: subQueries.length,
+                skip_expansion: skipExpansion,
+                reranked: !!reranked,
+                result_count: topMatches.length,
+                top_score: topMatches[0] ? Number(topMatches[0].boostedScore.toFixed(4)) : null,
+                top_tipo: topMatches[0]?.tipo || null,
+                top_titolo: topMatches[0] ? String(topMatches[0].titolo || '').substring(0, 200) : null
+            });
+
             return { contextText, sources };
+        } else {
+            // Anche i buchi vanno misurati: result_count 0 è il segnale più utile
+            logRagQuality(supabaseKey, {
+                feature,
+                query: String(userMessageText || '').substring(0, 300),
+                materia: normalizedMateria,
+                sub_query_count: subQueries.length,
+                skip_expansion: skipExpansion,
+                reranked: false,
+                result_count: 0,
+                top_score: null,
+                top_tipo: null,
+                top_titolo: null
+            });
         }
     } catch (e) {
         console.error("[RAG] Errore durante estrazione contesto:", e.message);
@@ -1158,7 +1267,7 @@ export default async function handler(req, res) {
                 const queryText = explicitRagQuery || lastUserMessage;
                 
                 // Cerca nel DB usando il filtro materia (se presente)
-                const ragResult = await fetchRAGContext(queryText, requestedMateria, req.body.skipExpansion === true);
+                const ragResult = await fetchRAGContext(queryText, requestedMateria, req.body.skipExpansion === true, requestedFeature);
                 
                 if (ragResult) {
                     // Il RAG va in un messaggio system SEPARATO, non concatenato al prompt:
