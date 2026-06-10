@@ -575,6 +575,25 @@ function renderModelEssay(modelData) {
     const webCitCount = modelData.web_citations ? modelData.web_citations.length : 0;
     const totalModelSources = ragCount + webCitCount;
 
+    // Banner di verifica citazioni (stessa semantica colori dello scudo Lezione)
+    const citRep = modelData.citation_report;
+    const hasCitReport = citRep && ((citRep.verified || []).length > 0 || (citRep.unverified || []).length > 0 || (citRep.mismatched || []).length > 0);
+    const citationBannersHtml = hasCitReport ? `
+                <div class="px-8 pb-6 md:px-12 space-y-2">
+                    ${(citRep.verified || []).length > 0 ? `
+                        <div class="p-3 bg-green-900/40 border border-green-500/50 rounded-xl text-green-200 text-xs">
+                            ✅ <b>Fonti verificate:</b> ${citRep.verified.length} citazion${citRep.verified.length === 1 ? 'e riscontrata' : 'i riscontrate'} nell'archivio giurisprudenziale: <i>${citRep.verified.map(escapeHtml).join(', ')}</i>
+                        </div>` : ''}
+                    ${(citRep.unverified || []).length > 0 ? `
+                        <div class="p-3 bg-red-900/40 border border-red-500/50 rounded-xl text-red-200 text-xs">
+                            ⚠️ <b>Nota di prudenza:</b> i seguenti estremi non sono stati rinvenuti nell'archivio di riferimento e richiedono una verifica indipendente prima dell'uso in sede d'esame: <i>${citRep.unverified.map(escapeHtml).join(', ')}</i>
+                        </div>` : ''}
+                    ${(citRep.mismatched || []).length > 0 ? `
+                        <div class="p-3 bg-orange-900/40 border border-orange-500/50 rounded-xl text-orange-200 text-xs">
+                            🔍 <b>Verifica associazione:</b> le seguenti pronunce risultano in archivio ma il principio loro attribuito potrebbe non corrispondere alla massima originale: <i>${citRep.mismatched.map(escapeHtml).join(', ')}</i>
+                        </div>` : ''}
+                </div>` : '';
+
     return `
         <div class="mt-8 fade-in" id="model-essay-section">
             <div class="bg-gray-900/80 border border-violet-500/30 rounded-2xl overflow-hidden shadow-xl shadow-violet-500/10">
@@ -649,6 +668,7 @@ function renderModelEssay(modelData) {
                         ${escapeHtml(modelData.essay)}
                     </div>
                 </div>
+                ${citationBannersHtml}
                 <!-- Footer -->
                 <div class="border-t border-gray-800 px-6 py-3 flex items-center justify-between bg-gray-950/50">
                     <span class="text-xs text-gray-600">

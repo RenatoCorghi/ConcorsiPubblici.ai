@@ -27,6 +27,9 @@ export default [
                 performance: "readonly",
                 Notification: "readonly",
                 html2pdf: "readonly",
+                Event: "readonly",
+                Audio: "readonly",
+                SpeechSynthesisUtterance: "readonly",
                 // App specific globals (until migrated to modules)
                 APP_CONFIG: "readonly",
                 AppState: "readonly",

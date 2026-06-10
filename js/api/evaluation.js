@@ -5,6 +5,7 @@ import { APP_CONFIG } from '../config.js';
 import { AppState } from '../state.js';
 import { handleProxyError, fixJSONNewlines, extractJSON, getAuthHeaders } from './helpers.js';
 import { CICERO_EXPERT_SYSTEM } from './prompts.js';
+import { verifyCitationsTiered } from './citation-check.js';
 
 export const evaluationApi = {
 
@@ -324,9 +325,11 @@ Sei un brillante e rigoroso candidato al concorso in Magistratura Ordinaria. Il 
 
 FONDAMENTO: Basati ESCLUSIVAMENTE sui materiali normativi e giurisprudenziali forniti nel blocco <RAG_CONTEXT> e sulle eventuali VERITA_DOGMATICHE.
 
-DIVIETO DI INVENZIONE NUMERICA: Puoi citare il numero/anno di una sentenza SOLO se è testualmente presente nel RAG.
+DIVIETO DI INVENZIONE NUMERICA: Puoi citare il numero/anno di una sentenza SOLO se è testualmente presente nel RAG e marcato "UTILIZZABILE: sì" nella tua scaletta.
 
-ANONIMIZZAZIONE STRATEGICA (REALISMO): Un candidato reale all'esame non ha le banche dati sottomano. Se la struttura logica del tema richiede la menzione di un principio di cui NON possiedi gli estremi numerici, usa l'anonimizzazione ("La giurisprudenza di legittimità ha chiarito...", "Un consolidato orientamento pretorio statuisce..."). L'assenza di numeri non è un difetto, è realismo concorsuale.
+ESTREMI DI LEGGI E DECRETI: Lo stesso regime vale per gli estremi numerici di leggi e decreti. Quelli di notorietà manualistica anteriori al 2022 (es. L. 241/1990, L. 212/2000, c.c., c.p.) sono consentiti; per le novelle dal 2022 in poi cita il numero SOLO se presente nel RAG — altrimenti usa il solo nome della riforma ("riforma Cartabia", "riforma Nordio"), senza estremi numerici.
+
+ANONIMIZZAZIONE STRATEGICA (REALISMO): Un candidato reale all'esame non ha le banche dati sottomano. Se la struttura logica del tema richiede la menzione di un principio di cui NON possiedi gli estremi numerici, usa l'anonimizzazione ("La giurisprudenza di legittimità ha chiarito...", "Un orientamento pretorio statuisce..."). L'assenza di numeri non è un difetto, è realismo concorsuale. QUALIFICATORI DI FORZA: attribuisci un principio alle Sezioni Unite, o definisci un orientamento "consolidato" o "pacifico", SOLO se ciò risulta dal RAG; in mancanza usa formule neutre — sovradichiarare la forza di un orientamento è un errore al pari di un numero inventato.
 
 DIVIETO DI QUARTA PARETE: Non menzionare mai il database, il RAG, o il fatto che stai simulando. Sei un candidato che scrive con la penna sul foglio protocollo.
 
@@ -354,6 +357,17 @@ Prima di scrivere il tema, APRI UN BLOCCO <thought> chiuso, in cui definisci:
 2. GERARCHIA FONTI RAG: Individuazione delle Sezioni Unite o pronunce recenti.
 3. DEFINIZIONE DELL'APORIA: Qual è la tensione dogmatica che la traccia impone di risolvere?
 4. SILLOGISMO GIURIDICO: Premessa Maggiore (Norma) → Premessa Minore (Fattispecie/Contrasto) → Conclusione (Soluzione Nomofilattica).
+
+═══════════════════════════════════════════════
+📋 SCALETTA PREVENTIVA OBBLIGATORIA (INVENTARIO FONTI)
+═══════════════════════════════════════════════
+
+Prima dell'elaborato, genera un blocco <scaletta>...</scaletta> (verrà rimosso automaticamente: NON fa parte del tema) contenente:
+1. INVENTARIO FONTI CON CITAZIONE TESTUALE: per OGNI sentenza presente nel <RAG_CONTEXT>, copia VERBATIM le prime 2-3 righe del testo accanto al numero. NON etichettare l'argomento a memoria — LEGGILO dal testo. Formato obbligatorio:
+   "Cass. Civ., Sez. II, n. 20274/2023 — TESTO: '[prime 2-3 righe copiate]' → ARGOMENTO EFFETTIVO: [...] → UTILIZZABILE: sì/no"
+   Se il testo associato al numero tratta un tema diverso dalla traccia, segna "UTILIZZABILE: no — non pertinente".
+2. VINCOLO CONSEGUENTE: nell'elaborato potrai citare con estremi numerici ESCLUSIVAMENTE le fonti marcate "UTILIZZABILE: sì".
+Solo DOPO aver completato la scaletta, procedi con la stesura dell'elaborato.
 
 ═══════════════════════════════════════════════
 🧊 REGISTRO LINGUISTICO E STILE (IL "GHIACCIO" CONCORSUALE)
@@ -389,7 +403,7 @@ LA CONCLUSIONE: Il tema deve chiudersi con il "punto di caduta" risolutore, ovve
 
 LUNGHEZZA: Calibra l'elaborato per una lunghezza tra le 1200 e le 1800 parole, densa di concetti giuridici e spogliata di ogni vuota retorica.`;
 
-        var promptUser = `TRACCIA per concorso in ${concorsoTarget} (${subject}):\n"${traceText}"\n\nRedigi lo svolgimento integrale del tema. Produci SOLO il testo dell'elaborato, senza preamboli né commenti meta-testuali.`;
+        var promptUser = `TRACCIA per concorso in ${concorsoTarget} (${subject}):\n"${traceText}"\n\nRedigi lo svolgimento integrale del tema. Genera prima i blocchi <thought> e <scaletta> richiesti dal protocollo, poi il testo integrale dell'elaborato, senza altri preamboli né commenti meta-testuali.`;
         if (traceObj && traceObj.elementi_chiave) promptUser += `\nELEMENTI CHIAVE da integrare: ${traceObj.elementi_chiave.join(', ')}`;
 
         try {
@@ -421,9 +435,19 @@ LUNGHEZZA: Calibra l'elaborato per una lunghezza tra le 1200 e le 1800 parole, d
             essay = essay.replace(/<thought>[\s\S]*?<\/thought>/gi, '').trim();
             essay = essay.replace(/<scaletta>[\s\S]*?<\/scaletta>/gi, '').trim();
 
+            // Verifica citazioni post-generazione (stessa pipeline tiered della Lezione):
+            // il tema è l'artefatto più sensibile — lo studente lo imita per l'esame
+            let citationReport = null;
+            try {
+                citationReport = await verifyCitationsTiered(essay, data.rag_sources || [], await getAuthHeaders());
+            } catch (vErr) {
+                console.warn('[Model Essay] Verifica citazioni non riuscita:', vErr.message);
+            }
+
             return {
                 success: true,
                 essay: essay,
+                citation_report: citationReport,
                 rag_sources: data.rag_sources || [],
                 web_citations: data.web_citations || []
             };

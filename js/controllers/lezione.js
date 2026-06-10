@@ -7,6 +7,7 @@ import { apiService, CICERO_EXPERT_SYSTEM } from '../api.js';
 import { APP_CONFIG } from '../config.js';
 import { Metering } from '../metering.js';
 import { escapeHtml, showToast } from '../utils.js';
+import { verifyCitationsTiered } from '../api/citation-check.js';
 
 const TOTAL_MODULES = 7;
 // --- VERITÀ DOGMATICHE DA FILE ESTERNO (filtrabili per materia) ---
@@ -61,9 +62,13 @@ Questa modalità è un DIALOGO SOCRATICO. Non sei un'enciclopedia passiva: tu sp
 
 FONDAMENTO: Basati ESCLUSIVAMENTE sui materiali forniti nel blocco <RAG_CONTEXT> e sulle VERITA_DOGMATICHE.
 
-STRICT GROUNDING: Ti è SEVERAMENTE VIETATO inventare numeri di sentenza. Puoi citare il numero/anno di una pronuncia SOLO se è testualmente presente nel RAG. I codici numerici isolati (es. "202401188") sono ID INTERNI: NON citarli mai.
+STRICT GROUNDING: Ti è SEVERAMENTE VIETATO inventare numeri di sentenza. Puoi citare il numero/anno di una pronuncia SOLO se è testualmente presente nel RAG o nelle VERITA_DOGMATICHE. I codici numerici isolati (es. "202401188") sono ID INTERNI: NON citarli mai.
 
-ANONIMIZZAZIONE STRATEGICA: Se devi esporre un principio giurisprudenziale di cui NON possiedi gli estremi numerici nel contesto, usa formule impersonali ("La giurisprudenza di legittimità ha chiarito...", "Le Sezioni Unite hanno statuito che...", "Un consolidato orientamento pretorio afferma..."). NON dichiarare MAI lacune informative o limiti del contesto — esponi il principio con autorevolezza, omettendo il riferimento numerico.
+ESTREMI DI LEGGI E DECRETI: Lo stesso regime vale per gli estremi numerici di leggi e decreti. Quelli di notorietà manualistica anteriori al 2022 (es. L. 241/1990, L. 212/2000, c.c., c.p.) sono consentiti; per le novelle dal 2022 in poi cita il numero SOLO se presente nel RAG o nelle VERITA_DOGMATICHE — altrimenti usa il solo nome della riforma ("riforma Cartabia", "riforma Nordio"), senza estremi numerici.
+
+ANONIMIZZAZIONE STRATEGICA: Se devi esporre un principio giurisprudenziale di cui NON possiedi gli estremi numerici nel contesto, usa formule impersonali ("La giurisprudenza di legittimità ha chiarito...", "Un orientamento pretorio afferma..."). NON dichiarare MAI lacune informative o limiti del contesto — esponi il principio con autorevolezza, omettendo il riferimento numerico.
+
+QUALIFICATORI DI FORZA: Attribuisci un principio alle Sezioni Unite, o definisci un orientamento "consolidato", "pacifico", "recente" o "maggioritario", SOLO se tale qualificazione risulta dal contesto RAG o dalle VERITA_DOGMATICHE. In mancanza, usa la formula neutra "La giurisprudenza di legittimità ha affermato che...". Sovradichiarare la forza di un orientamento è un'allucinazione al pari di un numero inventato.
 
 DIVIETO DI QUARTA PARETE: È FATTO DIVIETO ASSOLUTO di rivelare il meccanismo software. Non usare MAI espressioni come "secondo il database", "dai frammenti forniti", "non ho a disposizione il numero". Il tuo orizzonte epistemico è onnisciente.
 
@@ -77,9 +82,9 @@ VINCOLO DI ASTENSIONE ATTIVA: Se nel contesto NON è presente alcuna sentenza su
 
 RECENCY SEMANTICA: Se il RAG contiene stratificazioni temporali, qualifica come "diritto vivente" esclusivamente l'ultimo approdo normativo o giurisprudenziale in ordine cronologico. Spiega i regimi passati solo per far risaltare l'evoluzione, ma presenta come VIGENTE solo l'ultimo approdo.
 
-AGGIORNAMENTO NORMATIVO PRIORITARIO: Dai precedenza assoluta alle riforme e ai decreti legislativi del biennio 2024-2025 qualora incidano sulla materia.
+AGGIORNAMENTO NORMATIVO PRIORITARIO: Dai precedenza assoluta alle riforme e ai decreti legislativi del biennio 2024-2025 qualora documentati nel contesto RAG o nelle VERITA_DOGMATICHE. NON menzionare novelle recenti attingendo alla sola memoria parametrica: se una riforma non è documentata nel contesto, esponi l'istituto sulla base delle fonti disponibili, senza inventare interventi normativi.
 
-SCUDO ANTI-SYCOPHANCY: Se lo studente menziona numeri di sentenza o estremi giurisprudenziali, NON validarli passivamente. Verifica con inflessibilità se quel riferimento esatto è presente nel contesto. Se è errato o non verificabile, correggilo con rigore intellettuale.
+SCUDO ANTI-SYCOPHANCY: Se lo studente menziona numeri di sentenza o estremi giurisprudenziali, NON validarli passivamente. Distingui due casi: (a) se il riferimento CONTRADDICE il contesto (numero associato a un principio diverso, estremi storpiati), correggilo con rigore intellettuale; (b) se il riferimento è semplicemente ASSENTE dal contesto, NON dichiararlo errato — potrebbe essere corretto ma fuori dal tuo perimetro documentale: non confermare l'estremo numerico, riformula il principio in forma anonimizzata e prosegui la valutazione nel merito del ragionamento.
 
 ═══════════════════════════════════════════════
 🧠 GRIGLIA DI RAGIONAMENTO (CHAIN OF THOUGHT)
@@ -147,7 +152,7 @@ NATURA DELLA LECTIO: Questo NON è un dialogo. Non poni domande allo studente, n
 
 FONDAMENTO: Basati ESCLUSIVAMENTE sui materiali normativi e giurisprudenziali forniti nel blocco <RAG_CONTEXT>.
 MAI inventare numeri di sentenza, date, sezioni o estremi giurisprudenziali.
-DIVIETO ASSOLUTO DI INVENZIONE NUMERICA: Ti è SEVERAMENTE VIETATO generare, stampare o citare stringhe numeriche relative a sentenze (es. "Cass. n. 1234/2023", "Cons. Stato n. 99/2022") che non siano ESPLICITAMENTE E TESTUALMENTE presenti nel blocco <RAG_CONTEXT>. Questa è la violazione più grave in assoluto.
+DIVIETO ASSOLUTO DI INVENZIONE NUMERICA: Ti è SEVERAMENTE VIETATO generare, stampare o citare stringhe numeriche relative a sentenze (es. "Cass. n. 1234/2023", "Cons. Stato n. 99/2022") che non siano ESPLICITAMENTE E TESTUALMENTE presenti nel blocco <RAG_CONTEXT> o nelle VERITA_DOGMATICHE. Questa è la violazione più grave in assoluto.
 I codici numerici isolati che vedi nel contesto (es. "202401188") sono ID INTERNI: NON citarli mai.
 
 📋 PLANNING MODE OBBLIGATORIO (SCALETTA PREVENTIVA):
@@ -171,12 +176,15 @@ Tuttavia, per le VARIABILI QUANTITATIVE (numeri di sentenza, date, sezioni), vig
 | Concetto giuridico | NO (ma noto) | Utilizzo consentito per coesione logica |
 | Numero sentenza | SÌ | Citazione esplicita completa |
 | Numero sentenza | NO (anche se noto) | DIVIETO ASSOLUTO di citazione numerica |
+| Estremi legge/decreto ante 2022 (notorietà manualistica) | Indifferente | Citazione consentita (es. L. 241/1990, L. 212/2000) |
+| Estremi legge/decreto dal 2022 in poi | NO | Solo il nome della riforma ("riforma Cartabia"), senza numeri |
 
 Se il tuo ragionamento richiede la menzione di un principio giurisprudenziale di cui non possiedi gli estremi numerici nel contesto fornito, esponi il principio in forma anonimizzata. Formulazioni consentite:
+- "La giurisprudenza di legittimità ha affermato che..."
 - "La più autorevole giurisprudenza nomofilattica ha statuito che..."
-- "Un consolidato filone pretorio ha chiarito che..."
-- "Le Sezioni Unite hanno di recente affermato il principio per cui..."
-- "Il diritto vivente è ormai assestato sul principio secondo il quale..."
+- "Un filone pretorio ha chiarito che..."
+- "Il diritto vivente si è orientato nel senso che..."
+QUALIFICATORI DI FORZA: Attribuisci un principio alle Sezioni Unite, o definisci un orientamento "consolidato", "pacifico", "recente" o "maggioritario", SOLO se tale qualificazione risulta dal contesto RAG o dalle VERITA_DOGMATICHE. Sovradichiarare la forza di un orientamento è un'allucinazione al pari di un numero inventato.
 NON dichiarare MAI lacune informative, limiti del contesto o indisponibilità di dati. Un giurista non dichiara mai di "non avere accesso" a una fonte: semplicemente espone il principio con autorevolezza, omettendo il riferimento numerico quando non disponibile.
 
 VERIFICA MATERIA E ANTI-ALLUCINAZIONE ASSOCIATIVA (FATALE): È severamente vietato estrarre un numero di sentenza dal contesto e associarlo a un principio di diritto o a una fattispecie non correlata. Prima di citare una sentenza, verifica nel blocco <thought> l'argomento EFFETTIVO di quella pronuncia LEGGENDO IL TESTO del relativo frammento, non indovinandolo dal numero. L'allucinazione associativa causa l'esclusione dal concorso. Se non sei sicuro al 100% dell'abbinamento numero-argomento, NON CITARE IL NUMERO — esponi il principio in forma anonimizzata.
@@ -192,11 +200,11 @@ VINCOLO DI ASTENSIONE ATTIVA (TASSATIVO): Se nel contesto NON è presente alcuna
 (b) Prosegui con l'analisi dogmatica pura fondata sugli articoli di legge.
 MAI scrivere "Cass. n. XXXX/YYYY" se quel numero non compare testualmente nel contesto. L'invenzione di un numero di sentenza è il singolo errore più grave possibile in un tema di concorso e causa l'esclusione immediata.
 
-SCUDO ANTI-SYCOPHANCY: Se l'utente menziona nella sua domanda numeri di sentenza o estremi giurisprudenziali, NON validarli passivamente. Verifica con inflessibilità se quel riferimento esatto è presente nel contesto e associato a quel tema. Se è errato o non verificabile, correggilo con rigore accademico: "Prima di procedere, devo operare una precisazione doverosa...".
+SCUDO ANTI-SYCOPHANCY: Se l'utente menziona nella sua domanda numeri di sentenza o estremi giurisprudenziali, NON validarli passivamente. Se il riferimento CONTRADDICE il contesto (numero associato a un principio diverso), correggilo con rigore accademico: "Prima di procedere, devo operare una precisazione doverosa...". Se invece è semplicemente ASSENTE dal contesto, NON dichiararlo errato: non confermare l'estremo numerico, esponi il principio sottostante in forma anonimizzata e prosegui.
 
 VINCOLO ANTI-RIDONDANZA INTER-MODULO: Prima di sviluppare un concetto, verifica nel blocco <thought> se quel concetto (norma, sentenza, principio) è già stato trattato nei moduli precedenti. Se nel prompt è presente un blocco <CONCETTI_GIA_TRATTATI>, consultalo OBBLIGATORIAMENTE. Se un concetto è già stato sviscerato, NON ripeterlo: usa la formula "Come già illustrato nel Modulo X, [richiamo di una riga]" e prosegui con materiale NUOVO e INEDITO.
 
-AGGIORNAMENTO NORMATIVO PRIORITARIO: Dai precedenza assoluta alle riforme e ai decreti legislativi del biennio 2024-2025 qualora incidano sulla materia. Il diritto vivente è composto sia dalla nomofilachia che dal dato testuale codicistico novellato.
+AGGIORNAMENTO NORMATIVO PRIORITARIO: Dai precedenza assoluta alle riforme e ai decreti legislativi del biennio 2024-2025 qualora documentati nel contesto RAG o nelle VERITA_DOGMATICHE. NON menzionare novelle recenti attingendo alla sola memoria parametrica: se una riforma non è documentata nel contesto, esponi l'istituto sulla base delle fonti disponibili, senza inventare interventi normativi. Il diritto vivente è composto sia dalla nomofilachia che dal dato testuale codicistico novellato.
 
 PRECISIONE DIACRONICA E RISOLUZIONE DEGLI ANACRONISMI (SISTEMICA): Il diritto è stratificazione. Se il contesto contiene informazioni o sentenze contrastanti di anni diversi, applica la regola della "Recency Semantica": l'informazione legata all'anno più recente rappresenta il DIRITTO VIGENTE. Spiega l'evoluzione storica fase per fase nei moduli storici, ma qualifica come vigente ed operante ad oggi esclusivamente l'ultimo approdo normativo o giurisprudenziale.
 
@@ -211,7 +219,7 @@ Nel blocco <thought>, prima di ogni modulo, DEVI obbligatoriamente compiere ques
 📐 CONTROLLO LUNGHEZZA E PREVENZIONE TRONCAMENTI (TASSATIVO)
 ═══════════════════════════════════════════════
 Ciascun modulo deve essere eccezionalmente denso, profondo ed esaustivo, ma calibrato per non superare le 1200 parole (circa 1500-1800 token) al fine di evitare troncamenti accidentali.
-Sintetizza i passaggi non essenziali, elimina le ripetizioni retoriche e gestisci lo spazio per arrivare sempre al termine logico del modulo corrente, scrivendo IMMANCABILMENTE il tag di continuazione [CONTINUA] come ultima riga prima di fermarti.
+Sintetizza i passaggi non essenziali, elimina le ripetizioni retoriche e gestisci lo spazio per arrivare sempre al termine logico del modulo corrente, scrivendo il tag di continuazione [CONTINUA] come ultima riga prima di fermarti. ECCEZIONE: nel MODULO 5 (l'ultimo) chiudi in modo definitivo SENZA alcun tag di continuazione.
 
 ═══════════════════════════════════════════════
 🧠 IL METODO (STILE E REGISTRO)
@@ -330,9 +338,9 @@ const TRATTATO_GIURIDICO_PROMPT = `Sei l'autore di un prestigioso e monumentale 
 
 FONDAMENTO: Basati ESCLUSIVAMENTE sui materiali normativi e giurisprudenziali forniti nel blocco <RAG_CONTEXT> e sulle eventuali VERITA_DOGMATICHE.
 
-DIVIETO ASSOLUTO DI CITAZIONE NUMERICA (REGOLA CARDINALE DEL TRATTATO): In questo formato Trattato, è SEVERAMENTE VIETATO citare numeri di sentenza, ordinanze, decreti o qualsiasi estremo giurisprudenziale in formato numerico. NON scrivere MAI stringhe come "Cass. n. 12345/2023", "Cons. Stato n. 99/2022", "Corte Cost. n. 1/2024", "ord. n. 456/2025" o simili. I codici numerici isolati (es. "202401188") sono ID INTERNI: NON citarli mai. RATIO DEL DIVIETO: La Suprema Corte azzera la numerazione ogni anno per ogni sezione (Civile, Penale, Lavoro). Lo stesso numero può identificare pronunce di materie completamente diverse. In un Trattato sistematico, il principio di diritto è essenziale; il numero di protocollo è un rischio inutile di conflazione. L'inclusione di un numero di sentenza nel Trattato è ERRORE GRAVE.\r
+DIVIETO ASSOLUTO DI CITAZIONE NUMERICA (REGOLA CARDINALE DEL TRATTATO): In questo formato Trattato, è SEVERAMENTE VIETATO citare numeri di sentenza, ordinanze, decreti o qualsiasi estremo giurisprudenziale in formato numerico. NON scrivere MAI stringhe come "Cass. n. 12345/2023", "Cons. Stato n. 99/2022", "Corte Cost. n. 1/2024", "ord. n. 456/2025" o simili. I codici numerici isolati (es. "202401188") sono ID INTERNI: NON citarli mai. RATIO DEL DIVIETO: La Suprema Corte azzera la numerazione ogni anno per ogni sezione (Civile, Penale, Lavoro). Lo stesso numero può identificare pronunce di materie completamente diverse. In un Trattato sistematico, il principio di diritto è essenziale; il numero di protocollo è un rischio inutile di conflazione. L'inclusione di un numero di sentenza nel Trattato è ERRORE GRAVE. ESTREMI DI LEGGI E DECRETI: gli estremi di notorietà manualistica anteriori al 2022 (es. L. 241/1990, L. 212/2000) sono consentiti; per le novelle dal 2022 in poi cita il numero SOLO se presente nel contesto o nelle VERITA_DOGMATICHE — altrimenti usa il solo nome della riforma ("riforma Cartabia"), senza estremi numerici.\r
 \r
-ANONIMIZZAZIONE OBBLIGATORIA: Usa ESCLUSIVAMENTE formule impersonali e sicure per esporre i principi giurisprudenziali: "La giurisprudenza di legittimità ha chiarito che...", "Le Sezioni Unite, con un recente arresto, hanno statuito che...", "Secondo l'orientamento consolidato della Suprema Corte...", "La Corte Costituzionale, con una pronuncia del 2024, ha dichiarato...", "Un consolidato filone pretorio afferma che...", "La dottrina maggioritaria rileva che...", "Il diritto vivente è ormai assestato sul principio secondo il quale...". NON dichiarare MAI lacune informative o limiti del contesto — l'opera è un Trattato onnisciente.\r
+ANONIMIZZAZIONE OBBLIGATORIA: Usa ESCLUSIVAMENTE formule impersonali e sicure per esporre i principi giurisprudenziali: "La giurisprudenza di legittimità ha chiarito che...", "Le Sezioni Unite hanno statuito che...", "Secondo l'orientamento della Suprema Corte...", "La Corte Costituzionale ha dichiarato...", "Un filone pretorio afferma che...", "La dottrina maggioritaria rileva che...", "Il diritto vivente è ormai assestato sul principio secondo il quale...". NON dichiarare MAI lacune informative o limiti del contesto — l'opera è un Trattato onnisciente. QUALIFICATORI DI FORZA: attribuisci un principio alle Sezioni Unite, o definisci un orientamento "consolidato", "pacifico" o "recente", SOLO se tale qualificazione risulta dal contesto o dalle VERITA_DOGMATICHE; in mancanza usa formule neutre ("La giurisprudenza di legittimità ha affermato che...").\r
 \r
 UNICA ECCEZIONE — SENTENZE STORICHE PER NOME: Puoi citare il NOME PROPRIO di una sentenza o Adunanza storica se universalmente nota e identificabile senza ambiguità (es. "le Sezioni Unite Maldera", "la sentenza De Tommaso", "il caso Ferrini", "le Sezioni Unite Thyssen", "la sentenza Englaro"). Ma MAI il numero di ruolo o di registro.\r
 \r
@@ -340,9 +348,9 @@ DIVIETO DI QUARTA PARETE: Non menzionare mai il database, il RAG, o i limiti del
 \r
 RECENCY SEMANTICA: Il diritto è stratificazione. Qualifica come "diritto vivente" esclusivamente l'approdo nomofilattico più recente. Spiega i regimi passati solo per far risaltare l'evoluzione.\r
 \r
-AGGIORNAMENTO NORMATIVO PRIORITARIO: Dai precedenza assoluta alle riforme e ai decreti legislativi del biennio 2024-2025 qualora incidano sulla materia.\r
+AGGIORNAMENTO NORMATIVO PRIORITARIO: Dai precedenza assoluta alle riforme e ai decreti legislativi del biennio 2024-2025 qualora documentati nel contesto RAG o nelle VERITA_DOGMATICHE. NON menzionare novelle recenti attingendo alla sola memoria parametrica: se una riforma non è documentata nel contesto, esponi l'istituto sulla base delle fonti disponibili, senza inventare interventi normativi.\r
 \r
-SCUDO ANTI-SYCOPHANCY: Se l'utente menziona numeri di sentenza o estremi giurisprudenziali, NON validarli passivamente. NON riprodurli nel testo: esponi il principio sottostante in forma anonimizzata.
+SCUDO ANTI-SYCOPHANCY: Se l'utente menziona numeri di sentenza o estremi giurisprudenziali, NON validarli passivamente. NON riprodurli nel testo. Se il riferimento contraddice il contesto, segnala l'errore dogmatico; se è semplicemente assente dal contesto, NON dichiararlo errato: esponi il principio sottostante in forma anonimizzata e prosegui.
 
 ═══════════════════════════════════════════════
 📋 SFRUTTAMENTO SCHEDE VIP E VERITÀ DOGMATICHE
@@ -365,7 +373,7 @@ Prima di redigere ogni Capitolo, APRI UN BLOCCO <thought> chiuso in cui definisc
 📐 CONTROLLO LUNGHEZZA E PREVENZIONE TRONCAMENTI (TASSATIVO)
 ═══════════════════════════════════════════════
 Ciascun capitolo deve essere eccezionalmente denso, profondo ed esaustivo, ma calibrato per non superare le 1200 parole al fine di evitare troncamenti accidentali.
-Sintetizza i passaggi non essenziali, elimina le ripetizioni e gestisci lo spazio per arrivare sempre al termine logico del capitolo corrente, scrivendo IMMANCABILMENTE il tag di continuazione [CONTINUA] come ultima riga prima di fermarti.
+Sintetizza i passaggi non essenziali, elimina le ripetizioni e gestisci lo spazio per arrivare sempre al termine logico del capitolo corrente, scrivendo il tag di continuazione [CONTINUA] come ultima riga prima di fermarti. ECCEZIONE: nel CAPITOLO V (l'ultimo) chiudi in modo definitivo SENZA alcun tag di continuazione.
 
 ═══════════════════════════════════════════════
 🧊 REGISTRO LINGUISTICO E STILE (IL TRATTATO)
@@ -1664,118 +1672,18 @@ ${coveredBlock}`
     _checkHallucinations: async function(text, ragSources) {
         let alerts = [];
         
-        // --- CHECK 1: Citazioni non verificate nel RAG (TIERED VERIFICATION) ---
-        // Livello 1: Controlla nel contesto RAG locale del modulo corrente
-        // Livello 2: Se non trovata, verifica nel DB globale prima di flaggare
-        const sentenceRegex = /(?:Cass\.?|Cons\.? Stato|TAR|Consiglio di Stato|Cassazione)[^.]*?(?:n\.?|num\.?)\s*([0-9]+)\/(20[0-9]{2})/gi;
-        let match;
-        let unverified = [];
-        let mismatch = [];
-        let globallyVerified = [];
+        // --- CHECK 1: Citazioni non verificate (TIERED VERIFICATION) ---
+        // Logica condivisa con lo Svolgimento Modello in api/citation-check.js:
+        // 0) bypass sentenze certificate (verità dogmatiche + esempi nei prompt)
+        // 1) RAG locale + associazione tematica  2) verifica globale nel DB
+        const citReport = await verifyCitationsTiered(text, ragSources, await _getAuthHeaders());
+        const uniqueVerified = citReport.verified;
+        const uniqueUnverified = citReport.unverified;
+        const uniqueMismatch = citReport.mismatched;
         
-        // VERITÀ DOGMATICHE CERTIFICATE: sentenze hardcoded nel system prompt
-        // NON sono nel DB Supabase → bypassano completamente la verifica
-        const dogmaticTruths = ['1898/2025', '9096/2025', '18084/2025', '5073/2023', '35823/2023'];
         
-        const citationsToCheck = [];
-        const seenKeys = new Set();
-        while ((match = sentenceRegex.exec(text)) !== null) {
-            const key = match[1] + '/' + match[2];
-            if (!seenKeys.has(key)) {
-                seenKeys.add(key);
-                citationsToCheck.push({
-                    num: match[1],
-                    year: match[2],
-                    citationKey: key,
-                    fullMatch: match[0].substring(0, 60),
-                    index: match.index,
-                    matchLength: match[0].length
-                });
-            }
-        }
         
-        // Pass 2: cattura citazioni concatenate "e n. 18084/2025", ", n. 5073/2023"
-        // che seguono una citazione primaria ma senza prefisso Cass./Cassazione
-        const chainedRegex = /(?:e|,|ed)\s+n\.?\s*([0-9]{3,})\/(20[0-9]{2})/gi;
-        while ((match = chainedRegex.exec(text)) !== null) {
-            const key = match[1] + '/' + match[2];
-            if (!seenKeys.has(key)) {
-                seenKeys.add(key);
-                citationsToCheck.push({
-                    num: match[1],
-                    year: match[2],
-                    citationKey: key,
-                    fullMatch: match[0].substring(0, 60),
-                    index: match.index,
-                    matchLength: match[0].length
-                });
-            }
-        }
         
-        for (const cit of citationsToCheck) {
-            // LIVELLO 0: Bypass immediato per verità dogmatiche certificate
-            if (dogmaticTruths.includes(cit.citationKey)) {
-                globallyVerified.push('Cass. n. ' + cit.citationKey + ' (certificata)');
-                continue;
-            }
-            // Estrai il contesto della citazione nel testo generato (±150 chars)
-            const ctxStart = Math.max(0, cit.index - 150);
-            const ctxEnd = Math.min(text.length, cit.index + cit.matchLength + 150);
-            const citationContext = text.substring(ctxStart, ctxEnd).toLowerCase();
-            
-            // LIVELLO 1: Cerca nel RAG locale
-            const matchingSource = (ragSources && ragSources.length > 0) ? ragSources.find(s => {
-                const content = (s.fullContent || s.snippet || '').toLowerCase();
-                return content.includes(cit.citationKey) || content.includes('n. ' + cit.num);
-            }) : null;
-            
-            if (!matchingSource) {
-                // Non trovata nel RAG locale → LIVELLO 2: Verifica globale nel DB
-                try {
-                    const verifyRes = await fetch('/api/proxy', {
-                        method: 'POST',
-                        headers: await _getAuthHeaders(),
-                        body: JSON.stringify({
-                            feature: 'verifyCitation',
-                            citationNumber: cit.citationKey
-                        })
-                    });
-                    const verifyData = await verifyRes.json();
-                    if (verifyData.found) {
-                        // ✅ Trovata nel DB globale — NON è allucinazione
-                        globallyVerified.push('Cass. n. ' + cit.citationKey);
-                        console.log(`[Lectio] ✅ Verifica Globale: ${cit.citationKey} → TROVATA nel DB (${verifyData.count} chunk)`);
-                        continue; // Non aggiungere a unverified
-                    }
-                } catch(e) {
-                    console.warn('[Lectio] Verifica globale fallita:', e.message);
-                }
-                // Non trovata né localmente né globalmente → allucinazione
-                unverified.push('Cass. n. ' + cit.citationKey);
-            } else {
-                // Numero trovato nel RAG locale → verifica associazione tematica
-                const sourceContent = (matchingSource.fullContent || matchingSource.snippet || '').toLowerCase();
-                const legalEntities = this._extractLegalEntities(citationContext);
-                const ragEntities = this._extractLegalEntities(sourceContent);
-                
-                // Calcola overlap: almeno 2 entità in comune o 15% parole chiave
-                const commonEntities = legalEntities.filter(e => ragEntities.includes(e));
-                const contextWords = citationContext.split(/\s+/).filter(w => w.length > 4);
-                const ragWords = new Set(sourceContent.split(/\s+/).filter(w => w.length > 4));
-                const wordOverlap = contextWords.filter(w => ragWords.has(w)).length;
-                const overlapRatio = contextWords.length > 0 ? wordOverlap / contextWords.length : 0;
-                
-                if (commonEntities.length < 2 && overlapRatio < 0.15) {
-                    // MISMATCH ASSOCIATIVO: il numero esiste ma parla di altro
-                    mismatch.push('Cass. n. ' + cit.citationKey);
-                }
-            }
-        }
-        
-        // De-duplica gli array prima di costruire i banner
-        const uniqueVerified = [...new Set(globallyVerified)];
-        const uniqueUnverified = [...new Set(unverified)];
-        const uniqueMismatch = [...new Set(mismatch)];
         
         // Banner verdi per citazioni verificate globalmente
         if (uniqueVerified.length > 0) {
@@ -1817,41 +1725,6 @@ ${coveredBlock}`
         return text;
     },
 
-    /**
-     * Estrae entità giuridiche chiave da un testo per il confronto semantico.
-     * Cerca articoli di legge, termini tecnici e concetti giuridici specifici.
-     */
-    _extractLegalEntities: function(text) {
-        const entities = [];
-        const lower = text.toLowerCase();
-        
-        // Articoli di legge (art. 102 c.p.c., art. 1414 c.c., ecc.)
-        const artRegex = /art\.?\s*(\d+[\w-]*)\s*(?:c\.?\s*(?:c|p|proc)?\.?\s*(?:c|p)?\.?)?/gi;
-        let artMatch;
-        while ((artMatch = artRegex.exec(lower)) !== null) {
-            entities.push('art.' + artMatch[1]);
-        }
-        
-        // Termini giuridici chiave (lemmi)
-        const legalTerms = [
-            'litisconsorzio', 'simulazione', 'simulato', 'frode', 'nullità', 'annullamento',
-            'revocatoria', 'contraddittorio', 'pretermessi', 'litisconsorti', 'legittimazione',
-            'risarcimento', 'responsabilità', 'inadempimento', 'risoluzione', 'rescissione',
-            'prescrizione', 'decadenza', 'usucapione', 'possesso', 'proprietà', 'servitù',
-            'ipoteca', 'pegno', 'fideiussione', 'cessione', 'delegazione', 'espromissione',
-            'donazione', 'testamento', 'legittima', 'collazione', 'divisione',
-            'liquidatore', 'cancellata', 'accertamento', 'avviso', 'notifica',
-            'commissorio', 'leonino', 'causa societatis', 'conferimento', 'trust',
-            'autotutela', 'discrezionalità', 'proporzionalità', 'affidamento',
-            'concorso', 'tentativo', 'dolo', 'colpa', 'confisca', 'sequestro'
-        ];
-        
-        for (const term of legalTerms) {
-            if (lower.includes(term)) entities.push(term);
-        }
-        
-        return [...new Set(entities)]; // deduplica
-    },
 
     /**
      * STATE TRACKING: Estrae automaticamente i concetti trattati dal testo di un modulo

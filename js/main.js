@@ -371,7 +371,7 @@ export const app = {
             const result = await apiService.generateModelEssay(tracciaVirtuale, materia);
             if (result.success) {
                 Metering.consume('aiCalls');
-                AppState.modelEssay = { essay: result.essay, rag_sources: result.rag_sources || [], web_citations: result.web_citations || [] };
+                AppState.modelEssay = { essay: result.essay, citation_report: result.citation_report || null, rag_sources: result.rag_sources || [], web_citations: result.web_citations || [] };
                 showToast("Svolgimento modello generato!", "success");
             } else {
                 AppState.modelEssay = { error: result.error || 'Errore sconosciuto.' };
@@ -436,6 +436,7 @@ export const app = {
                 Metering.consume('aiCalls');
                 AppState.modelEssay = {
                     essay: result.essay,
+                    citation_report: result.citation_report || null,
                     rag_sources: result.rag_sources || [],
                     web_citations: result.web_citations || []
                 };
