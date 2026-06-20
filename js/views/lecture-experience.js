@@ -198,6 +198,9 @@ function _shellHTML(argomento, materia) {
                 </div>
             </div>
             <div class="lx-buttons">
+                <button class="lx-btn" data-act="prev-mod" title="Modulo precedente">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+                </button>
                 <button class="lx-btn" data-act="back15" title="Indietro 15s">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 17l-5-5 5-5"/><path d="M18 17l-5-5 5-5"/></svg>
                     <span class="lx-btn-sub">15</span>
@@ -216,6 +219,9 @@ function _shellHTML(argomento, materia) {
                 <button class="lx-btn" data-act="fwd15" title="Avanti 15s">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 17l5-5-5-5"/><path d="M6 17l5-5-5-5"/></svg>
                     <span class="lx-btn-sub">15</span>
+                </button>
+                <button class="lx-btn" data-act="next-mod" title="Modulo successivo">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
                 </button>
                 <button class="lx-btn lx-btn-replay" data-act="replay" title="Riascolta da capo">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 2v6h6"/><path d="M3 13a9 9 0 103-7.7L3 8"/></svg>
@@ -341,6 +347,8 @@ function _bindControls() {
                 case 'fwd15': AudioEngine.skip(15); break;
                 case 'prev': _gotoSlide(lastSlide - 1); break;
                 case 'next': _gotoSlide(lastSlide + 1); break;
+                case 'prev-mod': _gotoPrevModule(); break;
+                case 'next-mod': _gotoNextModule(); break;
                 case 'replay': AudioEngine.restart(); break;
             }
         });
@@ -370,6 +378,21 @@ function _bindControls() {
 function _gotoSlide(slideIndex) {
     const slide = content.slides[Math.max(0, Math.min(slideIndex, content.slides.length - 1))];
     if (slide) AudioEngine.seekToSegment(slide.blockStart);
+}
+
+function _gotoPrevModule() {
+    const curBlock = content.blocks[lastBlock < 0 ? 0 : lastBlock];
+    const curModuleNum = curBlock ? curBlock.moduleNum : 1;
+    let target = content.blocks.find(b => b.moduleNum === curModuleNum - 1);
+    if (!target) target = content.blocks.find(b => b.moduleNum === curModuleNum); // vai all'inizio del corrente se non c'è precedente
+    if (target) AudioEngine.seekToSegment(target.index);
+}
+
+function _gotoNextModule() {
+    const curBlock = content.blocks[lastBlock < 0 ? 0 : lastBlock];
+    const curModuleNum = curBlock ? curBlock.moduleNum : 1;
+    const target = content.blocks.find(b => b.moduleNum === curModuleNum + 1);
+    if (target) AudioEngine.seekToSegment(target.index);
 }
 
 function _setMode(next) {
@@ -419,8 +442,14 @@ function _bindScrubber() {
 function _keyHandler(e) {
     switch (e.code) {
         case 'Space': e.preventDefault(); AudioEngine.toggle(); break;
-        case 'ArrowLeft': AudioEngine.skip(-15); break;
-        case 'ArrowRight': AudioEngine.skip(15); break;
+        case 'ArrowLeft': 
+            if (e.shiftKey) { e.preventDefault(); _gotoPrevModule(); } 
+            else AudioEngine.skip(-15); 
+            break;
+        case 'ArrowRight': 
+            if (e.shiftKey) { e.preventDefault(); _gotoNextModule(); } 
+            else AudioEngine.skip(15); 
+            break;
         case 'ArrowUp': e.preventDefault(); _gotoSlide(lastSlide - 1); break;
         case 'ArrowDown': e.preventDefault(); _gotoSlide(lastSlide + 1); break;
         case 'KeyS': _setMode('studio'); break;
