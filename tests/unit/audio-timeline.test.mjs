@@ -4,7 +4,7 @@
    Node, ma TUTTA la logica di posizioni/seek vive qui ed è coperta. */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { AudioTimeline, estimateDuration } from '../../js/controllers/audio-timeline.js';
+import { AudioTimeline, estimateDuration, computeLevel } from '../../js/controllers/audio-timeline.js';
 
 test('start e total con durate stimate', () => {
     const tl = new AudioTimeline([{ estDuration: 10 }, { estDuration: 20 }, { estDuration: 5 }]);
@@ -70,4 +70,35 @@ test('estimateDuration: cresce col testo, minimo 1s, niente valori strani', () =
     assert.ok(estimateDuration('parola '.repeat(100)) > estimateDuration('parola '.repeat(10)));
     assert.equal(estimateDuration(''), 1, 'testo vuoto → minimo 1s');
     assert.equal(estimateDuration(null), 1);
+});
+
+test('computeLevel: silenzio (tutto 128) → 0', () => {
+    const silence = new Uint8Array(64).fill(128);
+    assert.equal(computeLevel(silence), 0);
+});
+
+test('computeLevel: deviazione massima → 1 (clampato)', () => {
+    const loud = new Uint8Array(64).fill(255); // |255-128|/128 ≈ 0.99, ×gain → clamp 1
+    assert.equal(computeLevel(loud, 4), 1);
+});
+
+test('computeLevel: più ampiezza → più livello, sempre in 0..1', () => {
+    const soft = new Uint8Array(64).fill(138);  // piccola deviazione
+    const mid = new Uint8Array(64).fill(160);   // deviazione media
+    const ls = computeLevel(soft);
+    const lm = computeLevel(mid);
+    assert.ok(ls > 0 && ls < lm, 'cresce con l\'ampiezza');
+    assert.ok(lm <= 1);
+});
+
+test('computeLevel: input vuoto/assente → 0, niente crash', () => {
+    assert.equal(computeLevel(new Uint8Array(0)), 0);
+    assert.equal(computeLevel(null), 0);
+    assert.equal(computeLevel(undefined), 0);
+});
+
+test('computeLevel: il gain amplifica (ma resta clampato a 1)', () => {
+    const sample = new Uint8Array(32).fill(140);
+    assert.ok(computeLevel(sample, 8) > computeLevel(sample, 2));
+    assert.ok(computeLevel(sample, 8) <= 1);
 });

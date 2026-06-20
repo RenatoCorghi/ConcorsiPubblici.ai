@@ -1660,11 +1660,16 @@ html.light-mode * {
 
 /* Orb avatar (placeholder Fase 2: pulsa col play; in Fase 4 diventa audio-reattiva) */
 .lx-orb { position: relative; width: 96px; height: 96px; flex-shrink: 0; }
+/* Core reattivo alla voce: scala e glow guidati da --lx-level (0..1),
+   impostato 60fps dal motore audio. La transition smussa tra i frame e
+   riporta dolcemente a riposo quando la voce si ferma (level → 0). */
 .lx-orb-core {
     position: absolute; inset: 24px;
     border-radius: 50%;
     background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--lp-accent) 90%, white), var(--lp-accent));
-    box-shadow: 0 0 30px -4px var(--lp-accent);
+    box-shadow: 0 0 calc(20px + var(--lx-level, 0) * 55px) -4px var(--lp-accent);
+    transform: scale(calc(1 + var(--lx-level, 0) * 0.55));
+    transition: transform 0.09s ease-out, box-shadow 0.12s ease-out;
 }
 .lx-orb-ring {
     position: absolute; inset: 0;
@@ -1672,13 +1677,9 @@ html.light-mode * {
     border: 2px solid color-mix(in srgb, var(--lp-accent) 40%, transparent);
     opacity: 0;
 }
-.lx-orb-active .lx-orb-core { animation: lxOrbPulse 2.4s ease-in-out infinite; }
+/* Anelli: emissione ambientale quando si ascolta (decorativa) */
 .lx-orb-active .lx-orb-ring { animation: lxOrbRing 2.4s ease-out infinite; }
 .lx-orb-active .lx-orb-ring2 { animation-delay: 1.2s; }
-@keyframes lxOrbPulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.12); }
-}
 @keyframes lxOrbRing {
     0% { transform: scale(0.7); opacity: 0.7; }
     100% { transform: scale(1.6); opacity: 0; }

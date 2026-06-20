@@ -272,9 +272,14 @@ function _onProgress(state) {
     ic('#lx-ic-play', !state.isLoading && !state.isPlaying);
     ic('#lx-ic-pause', !state.isLoading && state.isPlaying);
 
-    // Orb attiva quando si ascolta
+    // Orb audio-reattiva: attiva quando si ascolta, scala/glow dall'ampiezza
+    // reale della voce (state.level 0..1). Lo smussamento è affidato alla
+    // transition CSS, così tra un frame e l'altro il movimento è fluido.
     const orb = overlayEl.querySelector('#lx-orb');
-    if (orb) orb.classList.toggle('lx-orb-active', state.isPlaying);
+    if (orb) {
+        orb.classList.toggle('lx-orb-active', state.isPlaying);
+        orb.style.setProperty('--lx-level', (state.level || 0).toFixed(3));
+    }
 
     // Cambi discreti di blocco/slide (non a ogni frame)
     if (state.index !== lastBlock) {

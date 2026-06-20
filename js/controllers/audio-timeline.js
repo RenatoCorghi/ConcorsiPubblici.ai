@@ -25,6 +25,21 @@ export function estimateDuration(text) {
     return Math.max(1, words / WORDS_PER_SEC);
 }
 
+// Livello sonoro (0..1) dall'onda nel dominio del tempo: byte 0..255 centrati
+// su 128 (silenzio). Calcola l'RMS della deviazione e lo amplifica (gain) per
+// portarlo in un range visivo utile. Alimenta l'orb audio-reattivo (Fase 4):
+// pura e testabile a parte (l'AnalyserNode vive nel motore browser).
+export function computeLevel(bytes, gain = 4) {
+    if (!bytes || bytes.length === 0) return 0;
+    let sum = 0;
+    for (let i = 0; i < bytes.length; i++) {
+        const v = (bytes[i] - 128) / 128;
+        sum += v * v;
+    }
+    const rms = Math.sqrt(sum / bytes.length);
+    return Math.max(0, Math.min(1, rms * gain));
+}
+
 export class AudioTimeline {
     // segments: [{ estDuration: number }]
     constructor(segments = []) {

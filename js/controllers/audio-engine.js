@@ -20,15 +20,18 @@
    testata). Qui c'è solo la guida real-time del Web Audio.
    ============================================================ */
 
-import { AudioTimeline, estimateDuration } from './audio-timeline.js';
+import { AudioTimeline, estimateDuration, computeLevel } from './audio-timeline.js';
 import { getAuthHeaders } from '../api/helpers.js';
 
 const PREFETCH_CONCURRENCY = 2;            // decodifiche in background in parallelo
 const TTS_VOICE = 'it-IT-GiuseppeNeural';
 const TTS_RATE = '-5%';
+const LEVEL_GAIN = 4;                       // amplifica l'RMS della voce per l'orb reattivo
 
 export const AudioEngine = {
     audioContext: null,
+    analyser: null,        // tap d'ampiezza per l'orb audio-reattivo (Fase 4)
+    _levelData: null,
     timeline: null,
     segments: [],          // [{ text, buffer, status }]  status: idle|loading|ready|error
     _decodePromises: [],
@@ -68,6 +71,14 @@ export const AudioEngine = {
 
         if (!this.audioContext) {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        // Analyser nel grafo audio: i source si collegano qui, e da qui al
+        // destination. Legge l'ampiezza in tempo reale per l'orb reattivo.
+        if (!this.analyser) {
+            this.analyser = this.audioContext.createAnalyser();
+            this.analyser.fftSize = 256;
+            this.analyser.connect(this.audioContext.destination);
+            this._levelData = new Uint8Array(this.analyser.frequencyBinCount);
         }
 
         // Pre-carica tutto in background per consolidare le durate reali.
@@ -172,6 +183,13 @@ export const AudioEngine = {
         return this._buildPayload(false);
     },
 
+    // Livello sonoro corrente (0..1) per l'orb reattivo. 0 se in pausa/fermo.
+    getLevel() {
+        if (!this.analyser || !this.isPlaying || !this._levelData) return 0;
+        this.analyser.getByteTimeDomainData(this._levelData);
+        return computeLevel(this._levelData, LEVEL_GAIN);
+    },
+
     // ---- INTERNI ----
 
     async _startSegment(index, offset) {
@@ -205,7 +223,7 @@ export const AudioEngine = {
 
         const source = this.audioContext.createBufferSource();
         source.buffer = buffer;
-        source.connect(this.audioContext.destination);
+        source.connect(this.analyser || this.audioContext.destination);
         source.onended = () => {
             if (token !== this._seekToken) return;     // stop manuale: non auto-avanzare
             this.currentIndex = index + 1;
@@ -325,6 +343,7 @@ export const AudioEngine = {
             isPaused: this.isPaused,
             isLoading: this._isLoading,
             isFullyMeasured: this.timeline ? this.timeline.isFullyMeasured : false,
+            level: this.getLevel(),
             ended: !!ended
         };
     },
