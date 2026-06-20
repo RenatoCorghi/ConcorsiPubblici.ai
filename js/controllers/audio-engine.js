@@ -142,6 +142,14 @@ export const AudioEngine = {
         return this.seekTo(this.currentTime + deltaSeconds);
     },
 
+    // Salta all'inizio di un blocco/segmento (click sul testo in Studio,
+    // sui puntini in Presentazione).
+    seekToSegment(index) {
+        if (!this.timeline || this.timeline.length === 0) return Promise.resolve();
+        const i = Math.max(0, Math.min(index, this.timeline.length - 1));
+        return this.seekTo(this.timeline.globalTime(i, 0));
+    },
+
     restart() {
         return this.seekTo(0);
     },

@@ -1262,8 +1262,8 @@ ${coveredBlock}`
         var argomento = AppState.lezioneMeta?.argomento || 'Lezione';
         var materia = AppState.lezioneMeta?.materia || 'Civile';
         
-        import('../views/lecture-player.js').then(({ openLecturePlayer }) => {
-            openLecturePlayer(moduleTexts, argomento, materia);
+        import('../views/lecture-experience.js').then(({ openLectureExperience }) => {
+            openLectureExperience(moduleTexts, argomento, materia);
         });
     },
 
