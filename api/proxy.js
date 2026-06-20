@@ -1159,6 +1159,14 @@ export async function applyMetering(supabaseAdmin, token, requestedFeature) {
     return { ok: true, tier };
 }
 
+// I modelli Anthropic Opus 4.7/4.8 hanno DEPRECATO il parametro `temperature`:
+// inviarlo provoca un 400 ("`temperature` is deprecated for this model").
+// Sonnet 4.6 e Haiku 4.5 lo accettano ancora. Verificato via API il 2026-06-21.
+// Se Anthropic rilascia nuovi Opus, aggiungerli qui.
+export function anthropicSupportsTemperature(model) {
+    return !/^claude-opus-4-[78]\b/.test(model || '');
+}
+
 // --- HANDLER PRINCIPALE ---
 export default async function handler(req, res) {
     console.log(`\n[Proxy] 📥 RICHIESTA IN ARRIVO: ${req.method} | Provider: ${req.body?.provider || 'default'}`);
@@ -1448,9 +1456,13 @@ export default async function handler(req, res) {
             const anthropicPayload = {
                 model: validation.payload.model,
                 max_tokens: validation.payload.max_tokens,
-                temperature: Math.min(validation.payload.temperature, 1), // Anthropic accetta max 1.0
                 messages: mappedMessages
             };
+            // `temperature` solo per i modelli che lo supportano (Opus 4.7/4.8 lo
+            // hanno deprecato → 400). Anthropic accetta max 1.0.
+            if (anthropicSupportsTemperature(validation.payload.model) && typeof validation.payload.temperature === 'number') {
+                anthropicPayload.temperature = Math.min(validation.payload.temperature, 1);
+            }
 
             // Web Search: Claude Native Web Search Tool
             if (useWebSearch) {

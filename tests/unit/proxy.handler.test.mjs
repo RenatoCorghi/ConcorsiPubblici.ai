@@ -15,7 +15,7 @@ delete process.env.NODE_ENV;
 process.env.ANTHROPIC_API_KEY = 'sk-ant-test-dummy';
 process.env.OPENAI_API_KEY = 'sk-test-dummy';
 
-const { default: handler } = await import('../../api/proxy.js');
+const { default: handler, anthropicSupportsTemperature } = await import('../../api/proxy.js');
 
 let ipCounter = 0;
 function makeReq({ method = 'POST', origin = 'https://concorsipubblici.ai', body = {}, ip } = {}) {
@@ -268,4 +268,32 @@ test('web search Anthropic: il tool ha allowed_domains (enforcement HARD della w
     assert.ok(Array.isArray(tool.allowed_domains), 'allowed_domains deve essere impostato (filtro hard)');
     assert.ok(tool.allowed_domains.includes('normattiva.it'), 'whitelist GREEN LIGHT inclusa');
     assert.ok(!tool.allowed_domains.includes('dejure.it'), 'banche dati commerciali NON in allowed_domains');
+});
+
+test('anthropicSupportsTemperature: Opus 4.7/4.8 no, Sonnet/Haiku sì', () => {
+    assert.equal(anthropicSupportsTemperature('claude-opus-4-8'), false);
+    assert.equal(anthropicSupportsTemperature('claude-opus-4-7'), false);
+    assert.equal(anthropicSupportsTemperature('claude-sonnet-4-6'), true);
+    assert.equal(anthropicSupportsTemperature('claude-haiku-4-5-20251001'), true);
+    assert.equal(anthropicSupportsTemperature(''), true);     // ignoto → invialo (default storico)
+    assert.equal(anthropicSupportsTemperature(undefined), true);
+});
+
+test('Opus 4.8: il payload NON include temperature (il modello la rifiuta → era 400)', async (t) => {
+    const captured = [];
+    const fetchMock = mock.method(globalThis, 'fetch', async (url, opts) => {
+        captured.push({ url: String(url), opts });
+        return new Response(JSON.stringify({
+            content: [{ type: 'text', text: 'lezione' }],
+            usage: { input_tokens: 1, output_tokens: 1 }
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    });
+    t.after(() => fetchMock.mock.restore());
+
+    const res = makeRes();
+    await handler(makeReq({ body: guestBody({ model: 'claude-opus-4-8', temperature: 0.2 }) }), res);
+
+    assert.equal(res.statusCode, 200);
+    const sent = JSON.parse(captured[0].opts.body);
+    assert.equal('temperature' in sent, false, 'temperature NON deve essere inviata a Opus 4.8');
 });
