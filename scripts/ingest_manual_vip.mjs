@@ -26,6 +26,7 @@ async function getEmbedding(text, retry = 0) {
             body: JSON.stringify({
                 model: 'models/gemini-embedding-2',
                 content: { parts: [{ text }] },
+                taskType: 'RETRIEVAL_DOCUMENT',
                 outputDimensionality: 768
             })
         });
@@ -81,7 +82,8 @@ async function ingestFile(filePath) {
 
         // Get Embedding
         console.log("   Calcolo embedding vettoriale...");
-        const embedding = await getEmbedding(content);
+        const embedText = `Documento: ${titolo}\nMateria: ${materia}\n\n${content}`;
+        const embedding = await getEmbedding(embedText);
 
         // Insert Chunk
         const { error: chunkError } = await supabase.from('rag_chunks').upsert({

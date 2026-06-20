@@ -15,7 +15,13 @@
       "Bash(npm test *)",
       "Bash(node --test tests/unit)",
       "Bash(node --check js/controllers/lezione.js)",
-      "Bash(node scratch_diag_corpus.mjs)"
+      "Bash(node scratch_diag_corpus.mjs)",
+      "Bash(git rm *)",
+      "Bash(node --test tests/unit/lecture-slides.test.mjs)",
+      "Bash(node scratch_test_allowed_domains.mjs)",
+      "Bash(node scratch_repro_lezione.mjs)",
+      "Bash(node scratch_probe_temp.mjs)",
+      "Bash(node scratch_verify_fix.mjs)"
     ]
   }
 }

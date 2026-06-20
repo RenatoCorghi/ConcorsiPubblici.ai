@@ -39,6 +39,7 @@ BEGIN;
 CREATE OR REPLACE FUNCTION public.rag_materia_family(m text)
 RETURNS text
 LANGUAGE sql IMMUTABLE PARALLEL SAFE
+SET search_path = public, extensions
 AS $func$
     SELECT CASE
         WHEN m IS NULL OR m = 'Tutte le materie' THEN NULL
@@ -80,6 +81,7 @@ CREATE TABLE IF NOT EXISTS rag_family_stats (
 CREATE OR REPLACE FUNCTION public.rag_family_stats_maintain()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path = public, extensions
 AS $trig$
 DECLARE
     old_fam text;
@@ -168,6 +170,7 @@ RETURNS TABLE (
     hybrid_score float
 )
 LANGUAGE plpgsql
+SET search_path = public, extensions
 AS $$
 DECLARE
     ts_query tsquery;

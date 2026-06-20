@@ -54,7 +54,10 @@ CREATE INDEX IF NOT EXISTS idx_rag_chunks_fts ON rag_chunks USING GIN (fts);
 -- la colonna fts viene ricalcolata automaticamente.
 
 CREATE OR REPLACE FUNCTION update_rag_chunks_fts()
-RETURNS trigger AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, extensions
+AS $$
 BEGIN
     NEW.fts := 
         setweight(to_tsvector('italian', COALESCE(NEW.materia, '')), 'A') ||

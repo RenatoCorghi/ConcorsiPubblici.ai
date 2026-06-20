@@ -26,6 +26,7 @@ const sql = [
     '  similarity float',
     ')',
     'LANGUAGE plpgsql',
+    'SET search_path = public, extensions',
     'AS $$',
     'BEGIN',
     '  RETURN QUERY',

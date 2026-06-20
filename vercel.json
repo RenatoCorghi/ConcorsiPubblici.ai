@@ -1,6 +1,9 @@
 {
   "buildCommand": "npm test && npm run build",
   "outputDirectory": "dist",
+  "env": {
+    "RAG_QUERY_TASK_TYPE": "RETRIEVAL_QUERY"
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",

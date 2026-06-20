@@ -4,7 +4,10 @@
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION update_rag_chunks_fts()
-RETURNS trigger AS $$
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public, extensions
+AS $$
 BEGIN
     NEW.fts := 
         setweight(to_tsvector('italian', COALESCE(NEW.materia, '')), 'A') ||

@@ -41,7 +41,7 @@ async function migrate() {
       LIMIT result_limit
       OFFSET result_offset;
     END;
-    $$ LANGUAGE plpgsql SECURITY DEFINER;
+    $$ LANGUAGE plpgsql SECURITY INVOKER SET search_path = public, extensions;
     `;
 
     // Nota: Supabase non permette di eseguire DDL arbitrario via RPC 'sql' di solito 
