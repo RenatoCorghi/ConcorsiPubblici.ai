@@ -1249,7 +1249,7 @@ ${coveredBlock}`
     /**
      * Apre il Lecture Player full-screen (audio + slide).
      */
-    openLectureMode: function() {
+    openLectureMode: function(startModuleNum) {
         if (!AppState.lezioneChat || AppState.lezioneChat.length === 0) return;
         
         // Estrai solo i messaggi AI (i moduli della lezione)
@@ -1263,8 +1263,24 @@ ${coveredBlock}`
         var materia = AppState.lezioneMeta?.materia || 'Civile';
         
         import('../views/lecture-experience.js').then(({ openLectureExperience }) => {
-            openLectureExperience(moduleTexts, argomento, materia);
+            openLectureExperience(moduleTexts, argomento, materia, startModuleNum);
         });
+    },
+
+    /**
+     * Apre l'esperienza lezione posizionata su un modulo specifico.
+     * Chiamato dai bottoni "Ascolta questo modulo" su ogni messaggio AI.
+     * @param {string} msgId - L'ID del messaggio AI
+     */
+    openLectureAtModule: function(msgId) {
+        var aiMessages = (AppState.lezioneChat || []).filter(m => m.role === 'ai');
+        var moduleNum = aiMessages.findIndex(m => m.id === msgId) + 1;
+        if (moduleNum > 0) {
+            this.openLectureMode(moduleNum);
+        } else {
+            // Fallback: apri dall'inizio se il messaggio non è trovato
+            this.openLectureMode();
+        }
     },
 
     /**
@@ -1396,9 +1412,9 @@ ${coveredBlock}`
             if (!isWaitMsg) {
                 ttsBtn = `
                 <div class="mt-4 pt-3 border-t border-gray-700/30">
-                    <button onclick="window.Lezione?._playMessageTTS(this, '${msg.id}')" 
+                    <button onclick="window.Lezione?.openLectureAtModule('${msg.id}')" 
                         class="tts-msg-btn w-full flex items-center justify-center gap-2 text-sm font-semibold text-amber-300 hover:text-white bg-amber-500/10 hover:bg-amber-500/25 border border-amber-500/30 hover:border-amber-400/60 transition-all duration-200 px-4 py-2.5 rounded-xl group"
-                        title="Ascolta questo messaggio">
+                        title="Apri l'esperienza lezione su questo modulo">
                         <svg class="w-5 h-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
                         <span>🎧 Ascolta questo modulo</span>
                     </button>

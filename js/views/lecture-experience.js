@@ -37,7 +37,7 @@ let lastSlide = -1;
 let isDragging = false;
 let overlayEl = null;
 
-export function openLectureExperience(moduleTexts, argomento, materia) {
+export function openLectureExperience(moduleTexts, argomento, materia, startModuleNum) {
     content = buildLecture(moduleTexts);
     if (!content.blocks.length) {
         console.error('[LectureExperience] Nessun blocco generato dalla lezione');
@@ -66,6 +66,17 @@ export function openLectureExperience(moduleTexts, argomento, materia) {
     AudioEngine.onProgress(AudioEngine.getState());
 
     requestAnimationFrame(() => overlayEl.classList.add('lx-visible'));
+
+    // Se richiesto un modulo specifico (es. click su "Ascolta questo modulo"),
+    // posiziona l'audio e avvia la riproduzione automatica su quel modulo.
+    if (startModuleNum && startModuleNum > 0) {
+        const targetBlock = content.blocks.find(b => b.moduleNum === startModuleNum);
+        if (targetBlock) {
+            AudioEngine.seekToSegment(targetBlock.index).then(() => {
+                AudioEngine.play();
+            });
+        }
+    }
 
     // Fase 3: migliora le slide con l'AI in background (non blocca l'apertura).
     _enhanceSlides(moduleTexts);
