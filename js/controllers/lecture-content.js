@@ -172,13 +172,79 @@ export function buildLecture(moduleTexts) {
     }
 
     // Arricchisce ogni slide (titolo, bullet, articoli) dal testo dei suoi blocchi.
+    // Questi sono i valori EURISTICI di partenza: la Fase 3 li sostituisce con
+    // titolo/bullet generati dall'AI (mergeAISlides), tenendo gli articoli (estratti
+    // con regex, affidabili). Se l'AI fallisce, questi restano come fallback.
     slides.forEach(s => {
         const own = blocks.slice(s.blockStart, s.blockEnd + 1);
         const plain = own.map(b => b.ttsText).join(' ');
         s.title = slideTitle(own) || `Slide ${s.index + 1}`;
         s.bullets = extractBullets(plain);
         s.articles = extractArticles(plain);
+        s.aiEnhanced = false;
     });
 
     return { blocks, slides };
+}
+
+const SLIDE_EXCERPT_CHARS = 900; // testo per slide nel prompt (bound dimensione)
+
+// Testo completo (plain) coperto da una slide.
+function slideText(slide, blocks) {
+    return blocks.slice(slide.blockStart, slide.blockEnd + 1).map(b => b.ttsText).join(' ');
+}
+
+/**
+ * Prompt per far riscrivere all'AI titolo + bullet di OGNI slide, basandosi
+ * SOLO sul testo della slide (niente invenzioni). Risposta richiesta come
+ * oggetto JSON { "slides": [ { "i": 1, "title": "...", "bullets": ["..."] } ] }
+ * così extractJSON() (orientato agli oggetti) la estrae pulita.
+ */
+export function buildSlidePrompt(slides, blocks) {
+    const corpo = slides.map(s => {
+        const txt = slideText(s, blocks).substring(0, SLIDE_EXCERPT_CHARS);
+        return `### SLIDE ${s.index + 1}\n${txt}`;
+    }).join('\n\n');
+
+    return `Sei un magistrato che prepara le slide di una lezione di diritto per concorsi.
+Per OGNI slide qui sotto, produci:
+- "title": un titolo sintetico ed efficace (max 8 parole), che catturi il TEMA GIURIDICO della slide;
+- "bullets": 2-4 punti chiave, ciascuno una frase breve e densa (principi, distinzioni, norme, ratio).
+
+REGOLE TASSATIVE:
+1. Basati ESCLUSIVAMENTE sul testo fornito per quella slide. NON inventare nulla, NON aggiungere numeri di sentenza o estremi non presenti.
+2. Linguaggio tecnico-giuridico, asciutto, niente fronzoli. Niente markdown nei valori.
+3. Restituisci SOLO un oggetto JSON valido in questo formato esatto:
+{"slides":[{"i":1,"title":"...","bullets":["...","..."]}]}
+Un elemento per OGNI slide, con "i" = numero della slide.
+
+SLIDE DA SINTETIZZARE:
+${corpo}`;
+}
+
+/**
+ * Fonde la risposta AI (parsed.slides) nelle slide: sostituisce title/bullets
+ * dove validi, marca aiEnhanced. Mantiene gli articoli (estratti via regex).
+ * Difensiva: dati mancanti o malformati → quella slide resta euristica.
+ * @returns {number} quante slide sono state effettivamente migliorate.
+ */
+export function mergeAISlides(slides, parsed) {
+    const arr = parsed && Array.isArray(parsed.slides) ? parsed.slides : null;
+    if (!arr) return 0;
+    let merged = 0;
+    for (const item of arr) {
+        const idx = parseInt(item?.i, 10) - 1;
+        const slide = slides[idx];
+        if (!slide) continue;
+        const title = typeof item.title === 'string' ? item.title.trim() : '';
+        const bullets = Array.isArray(item.bullets)
+            ? item.bullets.map(b => String(b).trim()).filter(Boolean).slice(0, 4)
+            : [];
+        if (!title && bullets.length === 0) continue; // niente di utile
+        if (title) slide.title = title.substring(0, 90);
+        if (bullets.length) slide.bullets = bullets;
+        slide.aiEnhanced = true;
+        merged++;
+    }
+    return merged;
 }

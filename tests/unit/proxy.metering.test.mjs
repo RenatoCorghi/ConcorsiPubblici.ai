@@ -42,7 +42,7 @@ const currentMonth = () => {
 test('FREE_LIMITS: la specifica dei limiti Free non cambia per sbaglio', () => {
     assert.deepEqual(FREE_LIMITS, {
         aiCalls: 3, oralSessions: 0, tutorChats: 5, aiTraces: 0,
-        pdfExports: 0, aiQuiz: 5, phantomTutor: 0, normeTooltip: 30
+        pdfExports: 0, aiQuiz: 5, phantomTutor: 0, normeTooltip: 30, lectureSlides: 30
     });
 });
 

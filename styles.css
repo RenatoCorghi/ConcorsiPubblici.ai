@@ -1703,6 +1703,7 @@ html.light-mode * {
     font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
     color: var(--lp-accent); background: var(--lp-glow);
 }
+.lx-ai-badge { opacity: 0.85; }
 .lx-slide-title {
     margin: 0 0 1.25rem; font-size: 1.7rem; font-weight: 800; line-height: 1.2;
     color: #fff; font-family: 'Outfit', sans-serif;

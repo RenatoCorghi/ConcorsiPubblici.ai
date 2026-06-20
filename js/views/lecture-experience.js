@@ -13,8 +13,14 @@
    ============================================================ */
 
 import { AudioEngine } from '../controllers/audio-engine.js';
-import { buildLecture } from '../controllers/lecture-content.js';
+import { buildLecture, buildSlidePrompt, mergeAISlides } from '../controllers/lecture-content.js';
 import { escapeHtml } from '../utils.js';
+import { APP_CONFIG } from '../config.js';
+import { getAuthHeaders, extractJSON } from '../api/helpers.js';
+
+// Cache delle slide AI per firma-lezione: riaprire la stessa lezione nella
+// sessione non rigenera (niente latenza né costo ripetuto).
+const aiSlidesCache = new Map();
 
 const MATERIA_COLORS = {
     'Civile': { accent: '#60a5fa', glow: 'rgba(96,165,250,0.15)' },
@@ -60,6 +66,56 @@ export function openLectureExperience(moduleTexts, argomento, materia) {
     AudioEngine.onProgress(AudioEngine.getState());
 
     requestAnimationFrame(() => overlayEl.classList.add('lx-visible'));
+
+    // Fase 3: migliora le slide con l'AI in background (non blocca l'apertura).
+    _enhanceSlides(moduleTexts);
+}
+
+// Arricchisce titolo/bullet delle slide via AI. Fallback silenzioso: se
+// qualcosa va storto restano le slide euristiche. Cache per firma-lezione.
+async function _enhanceSlides(moduleTexts) {
+    const sig = _signature(moduleTexts);
+    try {
+        let parsed = aiSlidesCache.get(sig);
+        if (!parsed) {
+            const prompt = buildSlidePrompt(content.slides, content.blocks);
+            const response = await fetch('/api/proxy', {
+                method: 'POST',
+                headers: await getAuthHeaders(),
+                body: JSON.stringify({
+                    provider: APP_CONFIG.ACTIVE_AI_STACK,
+                    model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].GEN,
+                    feature: 'lectureSlides',
+                    messages: [{ role: 'user', content: prompt }],
+                    temperature: 0.3,
+                    max_tokens: 4000,
+                    skipExpansion: true   // niente RAG/expansion: è una sintesi del testo dato
+                })
+            });
+            if (!response.ok) return; // silenzioso: tieni le euristiche
+            const data = await response.json();
+            const raw = data?.choices?.[0]?.message?.content;
+            if (!raw) return;
+            parsed = JSON.parse(extractJSON(raw));
+            aiSlidesCache.set(sig, parsed);
+        }
+        const n = mergeAISlides(content.slides, parsed);
+        if (n > 0 && overlayEl) {
+            _renderSlide(lastSlide < 0 ? 0 : lastSlide); // riflette i nuovi testi
+            console.log(`[LectureExperience] ✨ ${n} slide ottimizzate dall'AI`);
+        }
+    } catch (e) {
+        console.warn('[LectureExperience] Ottimizzazione slide non riuscita (uso euristiche):', e.message);
+    }
+}
+
+function _signature(moduleTexts) {
+    const joined = (moduleTexts || []).join('|');
+    let h = 0;
+    for (let i = 0; i < joined.length; i++) {
+        h = (Math.imul(31, h) + joined.charCodeAt(i)) | 0;
+    }
+    return `${joined.length}:${h}`;
 }
 
 export function closeLectureExperience() {
@@ -175,7 +231,7 @@ function _renderSlide(slideIndex) {
     if (!slide) return;
     const slideEl = overlayEl.querySelector('#lx-slide');
     slideEl.innerHTML = `
-        <div class="lx-slide-module">Modulo ${slide.moduleNum} · Slide ${slideIndex + 1} / ${content.slides.length}</div>
+        <div class="lx-slide-module">Modulo ${slide.moduleNum} · Slide ${slideIndex + 1} / ${content.slides.length}${slide.aiEnhanced ? ' · <span class="lx-ai-badge">✨ AI</span>' : ''}</div>
         <h3 class="lx-slide-title">${escapeHtml(slide.title)}</h3>
         ${slide.bullets.length ? `<ul class="lx-slide-bullets">${slide.bullets.map(b => `<li>${escapeHtml(b)}</li>`).join('')}</ul>` : ''}
         ${slide.articles.length ? `<div class="lx-slide-articles">${slide.articles.map(a => `<span class="lx-art-tag">${escapeHtml(a)}</span>`).join('')}</div>` : ''}

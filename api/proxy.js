@@ -1062,7 +1062,7 @@ export function sanitizePayload(body) {
 
 // --- METERING SERVER-SIDE ---
 // Limiti mensili del tier Free. 0 = feature esclusiva Pro.
-export const FREE_LIMITS = { aiCalls: 3, oralSessions: 0, tutorChats: 5, aiTraces: 0, pdfExports: 0, aiQuiz: 5, phantomTutor: 0, normeTooltip: 30 };
+export const FREE_LIMITS = { aiCalls: 3, oralSessions: 0, tutorChats: 5, aiTraces: 0, pdfExports: 0, aiQuiz: 5, phantomTutor: 0, normeTooltip: 30, lectureSlides: 30 };
 
 // Valida il JWT, controlla il tier e consuma un credito per gli utenti Free.
 // Il client Supabase è iniettato come parametro per poter testare la logica senza rete.
