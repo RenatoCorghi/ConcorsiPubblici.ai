@@ -240,13 +240,27 @@ function _shellHTML(argomento, materia) {
 function _renderStudio() {
     const host = overlayEl.querySelector('#lx-studio');
     let lastModule = 0;
-    host.innerHTML = content.blocks.map(b => {
+    const blocksHtml = content.blocks.map(b => {
         const moduleDivider = b.moduleNum !== lastModule
             ? `<div class="lx-module-divider">Modulo ${b.moduleNum}</div>`
             : '';
         lastModule = b.moduleNum;
         return `${moduleDivider}<div class="lx-block" data-block="${b.index}">${b.html}</div>`;
     }).join('');
+
+    const nextBtnHtml = `
+        <div class="lx-generate-next" onclick="window._triggerGenerateNext()">
+            ✨ L'AI ha completato questi moduli. Clicca per generare il successivo.
+        </div>
+    `;
+
+    let contentEl = host.querySelector('.lx-studio-content');
+    if (!contentEl) {
+        contentEl = document.createElement('div');
+        contentEl.className = 'lx-studio-content';
+        host.appendChild(contentEl);
+    }
+    contentEl.innerHTML = blocksHtml + nextBtnHtml;
 }
 
 function _renderSlide(slideIndex) {
@@ -397,8 +411,20 @@ function _gotoNextModule() {
     const curBlock = content.blocks[lastBlock < 0 ? 0 : lastBlock];
     const curModuleNum = curBlock ? curBlock.moduleNum : 1;
     const target = content.blocks.find(b => b.moduleNum === curModuleNum + 1);
-    if (target) AudioEngine.seekToSegment(target.index);
+    if (target) {
+        AudioEngine.seekToSegment(target.index);
+    } else {
+        if (window._triggerGenerateNext) window._triggerGenerateNext();
+    }
 }
+
+window._triggerGenerateNext = function() {
+    closeLectureExperience();
+    if (window.app?.sendLezioneQuickAction) {
+        window._lezione_auto_reopen = true; // Imposta il flag per la riapertura automatica
+        window.app.sendLezioneQuickAction('Avanti, prosegui con il prossimo modulo.');
+    }
+};
 
 function _setMode(next) {
     if (next === mode) return;

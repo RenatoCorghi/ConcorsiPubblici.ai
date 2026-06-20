@@ -1431,6 +1431,15 @@ ${coveredBlock}`
                     ${ttsBtn}
                 </div>
             </div>`;
+            
+            if (window._lezione_auto_reopen) {
+                window._lezione_auto_reopen = false;
+                setTimeout(() => {
+                    if (window.Lezione?.openLectureAtModule) {
+                        window.Lezione.openLectureAtModule(msg.id);
+                    }
+                }, 800);
+            }
         }
 
         lucide.createIcons();

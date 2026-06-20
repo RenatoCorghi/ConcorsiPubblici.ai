@@ -1810,3 +1810,25 @@ html.light-mode * {
     .lx-btn { width: 44px; height: 44px; }
     .lx-btn-play { width: 58px; height: 58px; }
 }
+
+.lx-generate-next {
+    max-width: 720px;
+    margin: 2rem auto 1rem;
+    padding: 1.2rem;
+    border-radius: 16px;
+    background: linear-gradient(145deg, rgba(245,158,11,0.1), rgba(217,119,6,0.15));
+    border: 1px solid rgba(245,158,11,0.3);
+    text-align: center;
+    color: #fcd34d;
+    font-weight: 700;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+.lx-generate-next:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(145deg, rgba(245,158,11,0.15), rgba(217,119,6,0.25));
+    border-color: rgba(245,158,11,0.5);
+    color: #fff;
+}
