@@ -246,3 +246,26 @@ test('verifyCitation: numero assente dal corpus → found false', async (t) => {
     assert.equal(res.statusCode, 200);
     assert.equal(res.body.found, false);
 });
+
+test('web search Anthropic: il tool ha allowed_domains (enforcement HARD della whitelist)', async (t) => {
+    const captured = [];
+    const fetchMock = mock.method(globalThis, 'fetch', async (url, opts) => {
+        captured.push({ url: String(url), opts });
+        return new Response(JSON.stringify({
+            content: [{ type: 'text', text: 'risposta' }],
+            usage: { input_tokens: 1, output_tokens: 1 }
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    });
+    t.after(() => fetchMock.mock.restore());
+
+    const res = makeRes();
+    await handler(makeReq({ body: guestBody({ useWebSearch: true }) }), res);
+
+    assert.equal(res.statusCode, 200);
+    const sent = JSON.parse(captured[0].opts.body);
+    const tool = sent.tools.find(tl => tl.type === 'web_search_20250305');
+    assert.ok(tool, 'il web search tool deve essere presente');
+    assert.ok(Array.isArray(tool.allowed_domains), 'allowed_domains deve essere impostato (filtro hard)');
+    assert.ok(tool.allowed_domains.includes('normattiva.it'), 'whitelist GREEN LIGHT inclusa');
+    assert.ok(!tool.allowed_domains.includes('dejure.it'), 'banche dati commerciali NON in allowed_domains');
+});

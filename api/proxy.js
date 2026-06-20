@@ -219,6 +219,60 @@ const RATE_LIMIT_MAX_REQUESTS = 60;      // 60 richieste per finestra
 //   RED LIGHT   = ToS restrittivi / paywall / opt-out attivo → VIETATE
 //   YELLOW LIGHT = Licenza NC (Non-Commerciale) → VIETATE (app monetizzata)
 // Il modello viene istruito a cercare ESCLUSIVAMENTE su fonti GREEN LIGHT.
+
+// ENFORCEMENT HARD (non solo prompt): domini passati al parametro allowed_domains
+// del web search tool di Anthropic — il modello NON può ricevere risultati da
+// fuori questa lista. DEVE rispecchiare §1 (GREEN LIGHT) del prompt qui sotto:
+// se aggiorni una, aggiorna l'altra. Per le fonti consentite solo su un percorso
+// (es. SentenzeWeb, Cardozo) si include il path: la root resta esclusa.
+const WEB_SEARCH_ALLOWED_DOMAINS = [
+    // Istituzionali (Open Data / consultazione libera)
+    'gazzettaufficiale.it',
+    'normattiva.it',
+    'eur-lex.europa.eu',
+    'cortecostituzionale.it',
+    'curia.europa.eu',
+    'giustizia-amministrativa.it',      // include il sottodominio openga.*
+    'italgiure.giustizia.it/sncass',    // SOLO SentenzeWeb: la root italgiure è VIETATA
+    'cortedicassazione.it',
+    'scuolamagistratura.it',
+    'agenas.gov.it',
+    'camera.it',
+    'senato.it',
+    // Riviste scientifiche con licenza compatibile (CC BY / Open Access pieno)
+    'rivista.eurojus.it',
+    'ojs.unito.it/index.php/cardozo',   // SOLO Cardozo Electronic Law Bulletin
+    'theitalianlawjournal.it',
+    'pmc.ncbi.nlm.nih.gov',
+    'mdpi.com',
+    'amsacta.unibo.it',
+    'giureta.unipa.it',
+    'dirittoepoliticadeitrasporti.it'
+];
+
+// Verifica se un URL ricade in un dominio consentito (sottodomini inclusi,
+// path rispettato dove specificato). Usata come rete di sicurezza sulle
+// citazioni mostrate. Pura e testabile.
+export function isWebDomainAllowed(url, allowed = WEB_SEARCH_ALLOWED_DOMAINS) {
+    let host, path;
+    try {
+        const u = new URL(url);
+        host = u.hostname.toLowerCase().replace(/^www\./, '');
+        path = u.pathname.toLowerCase();
+    } catch {
+        return false;
+    }
+    return allowed.some(entry => {
+        const slash = entry.indexOf('/');
+        const eHost = (slash === -1 ? entry : entry.slice(0, slash)).toLowerCase().replace(/^www\./, '');
+        const ePath = slash === -1 ? '' : entry.slice(slash).toLowerCase();
+        const hostOk = host === eHost || host.endsWith('.' + eHost);
+        if (!hostOk) return false;
+        if (!ePath) return true;
+        return path === ePath || path.startsWith(ePath + '/');
+    });
+}
+
 const WEB_SEARCH_WHITELIST_PROMPT = `
 ═══════════════════════════════════════════════════════════════════
 🌐 ACCESSO INTERNET ATTIVO — PROTOCOLLO WHITELIST BLINDATA v2.0
@@ -1341,6 +1395,12 @@ export default async function handler(req, res) {
             }
 
             // Web Search: Gemini Grounding with Google Search
+            // ⚠️ ATTENZIONE COMPLIANCE: il tool googleSearch NON supporta una
+            // restrizione di dominio (non esiste un allowed_domains) e le citazioni
+            // tornano come URL-redirect di Google, quindi nemmeno un filtro a
+            // posteriori è affidabile. Qui la whitelist è SOLO soft (prompt): il
+            // modello può sforare. Per la ricerca web a norma usare lo stack
+            // Anthropic (ACTIVE_AI_STACK='anthropic'), dove allowed_domains è hard.
             if (useWebSearch) {
                 geminiPayload.tools = [{ googleSearch: {} }];
                 // Inject whitelist instruction into system instruction
@@ -1398,7 +1458,11 @@ export default async function handler(req, res) {
                     {
                         type: "web_search_20250305",
                         name: "web_search",
-                        max_uses: 3  // Cost control: max 3 ricerche per chiamata
+                        max_uses: 3,  // Cost control: max 3 ricerche per chiamata
+                        // ENFORCEMENT HARD: il tool restituisce SOLO risultati da questi
+                        // domini. La whitelist nel prompt resta come guida, ma qui è il
+                        // filtro tecnico che impedisce davvero fonti fuori lista.
+                        allowed_domains: WEB_SEARCH_ALLOWED_DOMAINS
                     }
                 ];
                 // Direttiva statica: accodata al PRIMO blocco system (il prompt statico),
@@ -1537,13 +1601,19 @@ export default async function handler(req, res) {
                 contentText = data.content[0].text;
             }
 
-            // Deduplica citazioni web per URL
+            // Deduplica per URL + rete di sicurezza: scarta eventuali citazioni
+            // fuori whitelist (allowed_domains dovrebbe già impedirle a monte).
             const seenUrls = new Set();
+            const beforeFilter = webCitations.length;
             webCitations = webCitations.filter(c => {
                 if (!c.url || seenUrls.has(c.url)) return false;
+                if (!isWebDomainAllowed(c.url)) return false;
                 seenUrls.add(c.url);
                 return true;
             });
+            if (beforeFilter !== webCitations.length) {
+                console.warn(`[WebSearch] Anthropic: scartate ${beforeFilter - webCitations.length} citazioni fuori whitelist`);
+            }
 
             normalizedResponse = {
                 choices: [{
