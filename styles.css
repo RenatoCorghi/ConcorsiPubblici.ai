@@ -1685,6 +1685,25 @@ html.light-mode * {
     100% { transform: scale(1.6); opacity: 0; }
 }
 
+.lx-orb-floating {
+    position: sticky;
+    top: 1rem;
+    float: right;
+    margin-right: max(1rem, calc(50vw - 360px - 60px));
+    transform: scale(0.55);
+    transform-origin: top right;
+    z-index: 10;
+    pointer-events: none;
+    opacity: 0.95;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
+}
+@media (max-width: 640px) {
+    .lx-orb-floating {
+        transform: scale(0.4);
+        margin-right: 0.5rem;
+    }
+}
+
 .lx-slide {
     width: 100%; max-width: 720px;
     padding: 2.25rem 2.5rem;

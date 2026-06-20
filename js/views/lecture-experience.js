@@ -171,7 +171,13 @@ function _shellHTML(argomento, materia) {
 
         <div class="lx-stage">
             <!-- STUDIO -->
-            <section class="lx-studio" id="lx-studio" aria-label="Testo della lezione"></section>
+            <section class="lx-studio" id="lx-studio" aria-label="Testo della lezione">
+                <div class="lx-orb lx-orb-floating" id="lx-orb-studio">
+                    <div class="lx-orb-core"></div>
+                    <div class="lx-orb-ring"></div>
+                    <div class="lx-orb-ring lx-orb-ring2"></div>
+                </div>
+            </section>
 
             <!-- PRESENTAZIONE -->
             <section class="lx-presentazione" id="lx-presentazione" hidden>
@@ -292,11 +298,10 @@ function _onProgress(state) {
     // Orb audio-reattiva: attiva quando si ascolta, scala/glow dall'ampiezza
     // reale della voce (state.level 0..1). Lo smussamento è affidato alla
     // transition CSS, così tra un frame e l'altro il movimento è fluido.
-    const orb = overlayEl.querySelector('#lx-orb');
-    if (orb) {
+    overlayEl.querySelectorAll('.lx-orb').forEach(orb => {
         orb.classList.toggle('lx-orb-active', state.isPlaying);
         orb.style.setProperty('--lx-level', (state.level || 0).toFixed(3));
-    }
+    });
 
     // Cambi discreti di blocco/slide (non a ogni frame)
     if (state.index !== lastBlock) {
