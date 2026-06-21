@@ -1363,7 +1363,7 @@ ${coveredBlock}`
         });
 
         var formatted = escapeHtml(cleanContent)
-            .replace(/&lt;(thought|think|ragionamento)&gt;([\s\S]*?)(?:&lt;\/\1&gt;|$)/gi, function(match, tag, innerText) {
+            .replace(/&lt;(thought|think|thinking|ragionamento)&gt;([\s\S]*?)(?:&lt;\/\1&gt;|$)/gi, function(match, tag, innerText) {
                 return '<THOUGHT_BLOCK>' + innerText + '</THOUGHT_BLOCK>';
             })
             .replace(/&lt;scaletta&gt;([\s\S]*?)(?:&lt;\/scaletta&gt;|$)/gi, function(match, innerText) {
@@ -1389,7 +1389,7 @@ ${coveredBlock}`
         formatted = formatted.replace(/<SCALETTA_BLOCK>([\s\S]*?)<\/SCALETTA_BLOCK>/gi, function(match, innerText) {
             return `<details class="mt-2 mb-4 bg-gray-900/40 rounded-lg border border-gray-700/50 overflow-hidden shadow-sm">
                 <summary class="cursor-pointer px-4 py-2.5 text-xs font-medium text-blue-500/80 hover:text-blue-400 bg-gray-800/80 hover:bg-gray-700/80 transition-colors select-none flex items-center gap-2 outline-none">
-                    📋 Scaletta preparatoria
+                    📋 Inventario Fonti presenti nel RAG
                 </summary>
                 <div class="p-4 text-xs text-gray-400 border-t border-gray-700/50 leading-relaxed italic opacity-90 bg-black/20 max-h-96 overflow-y-auto">
                     ${innerText}
