@@ -69,8 +69,8 @@ function inline(text) {
 // Rimuove blocchi di servizio (ragionamento interno, scaletta, marcatori).
 function stripServiceBlocks(text) {
     return (text || '')
-        .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
-        .replace(/<scaletta>[\s\S]*?<\/scaletta>/gi, '')
+        .replace(/<(thought|think|thinking|ragionamento)\b[^>]*>[\s\S]*?(?:<\/\1>|$)/gi, '')
+        .replace(/<(scaletta|inventario)\b[^>]*>[\s\S]*?(?:<\/\1>|$)/gi, '')
         .replace(/\[CONTINUA[^\]]*\]/gi, '')
         .replace(/^\s*[-—]{3,}\s*$/gm, '')
         .trim();

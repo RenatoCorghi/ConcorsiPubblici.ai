@@ -432,8 +432,8 @@ LUNGHEZZA: Calibra l'elaborato per una lunghezza tra le 1200 e le 1800 parole, d
             let essay = data.choices[0].message.content.trim();
 
             // Rimuovi eventuali blocchi <thought> o <scaletta> che il modello potrebbe aver lasciato visibili
-            essay = essay.replace(/<thought>[\s\S]*?<\/thought>/gi, '').trim();
-            essay = essay.replace(/<scaletta>[\s\S]*?<\/scaletta>/gi, '').trim();
+            essay = essay.replace(/<(thought|think|thinking|ragionamento)\b[^>]*>[\s\S]*?(?:<\/\1>|$)/gi, '').trim();
+            essay = essay.replace(/<(scaletta|inventario)\b[^>]*>[\s\S]*?(?:<\/\1>|$)/gi, '').trim();
 
             // Verifica citazioni post-generazione (stessa pipeline tiered della Lezione):
             // il tema è l'artefatto più sensibile — lo studente lo imita per l'esame

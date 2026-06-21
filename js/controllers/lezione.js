@@ -155,7 +155,7 @@ MAI inventare numeri di sentenza, date, sezioni o estremi giurisprudenziali.
 DIVIETO ASSOLUTO DI INVENZIONE NUMERICA: Ti è SEVERAMENTE VIETATO generare, stampare o citare stringhe numeriche relative a sentenze (es. "Cass. n. 1234/2023", "Cons. Stato n. 99/2022") che non siano ESPLICITAMENTE E TESTUALMENTE presenti nel blocco <RAG_CONTEXT> o nelle VERITA_DOGMATICHE. Questa è la violazione più grave in assoluto.
 I codici numerici isolati che vedi nel contesto (es. "202401188") sono ID INTERNI: NON citarli mai.
 
-📋 PLANNING MODE OBBLIGATORIO (SCALETTA PREVENTIVA):
+📋 PLANNING MODE OBBLIGATORIO (INVENTARIO DELLE FONTI PRESENTI NEL RAG):
 Prima di scrivere QUALSIASI contenuto del modulo, DEVI generare un blocco <scaletta> visibile. Questo blocco serve come verifica strutturale e DEVE contenere:
 1. INVENTARIO FONTI CON CITAZIONE TESTUALE: Per OGNI sentenza presente nel <RAG_CONTEXT>, copia VERBATIM le prime 2-3 righe del testo accanto al numero. NON etichettare l'argomento a memoria — LEGGILO dal testo. Formato obbligatorio:
    "Cass. Civ., Sez. II, n. 20274/2023 — TESTO: '[prime 2-3 righe copiate]' → ARGOMENTO EFFETTIVO: [urbanistica/simulazione/ecc.] → UTILIZZABILE: sì/no"
@@ -163,7 +163,7 @@ Prima di scrivere QUALSIASI contenuto del modulo, DEVI generare un blocco <scale
 2. TESI IN CAMPO: Identifica le tesi contrapposte o gli orientamenti da trattare in questo modulo.
 3. MAPPA FONTI→TESI: Associa ogni fonte UTILIZZABILE alla tesi che supporta.
 4. STRUTTURA ARGOMENTATIVA: Schema del sillogismo giuridico (premessa maggiore → premessa minore → conclusione) che il modulo svilupperà.
-Solo DOPO aver completato la scaletta, procedi con la stesura del modulo.
+Solo DOPO aver completato l'inventario delle fonti, procedi con la stesura del modulo.
 </scaletta>
 
 🔒 PROTOCOLLO DI STRICT GROUNDING (VARIABILI QUANTITATIVE):
@@ -1363,10 +1363,10 @@ ${coveredBlock}`
         });
 
         var formatted = escapeHtml(cleanContent)
-            .replace(/&lt;(thought|think|thinking|ragionamento)&gt;([\s\S]*?)(?:&lt;\/\1&gt;|$)/gi, function(match, tag, innerText) {
+            .replace(/&lt;(thought|think|thinking|ragionamento)\b[^&gt;]*&gt;([\s\S]*?)(?:&lt;\/\s*\1\s*&gt;|$)/gi, function(match, tag, innerText) {
                 return '<THOUGHT_BLOCK>' + innerText + '</THOUGHT_BLOCK>';
             })
-            .replace(/&lt;scaletta&gt;([\s\S]*?)(?:&lt;\/scaletta&gt;|$)/gi, function(match, innerText) {
+            .replace(/&lt;(scaletta|inventario)\b[^&gt;]*&gt;([\s\S]*?)(?:&lt;\/\s*\1\s*&gt;|$)/gi, function(match, tag, innerText) {
                 return '<SCALETTA_BLOCK>' + innerText + '</SCALETTA_BLOCK>';
             });
 
@@ -1388,8 +1388,8 @@ ${coveredBlock}`
 
         formatted = formatted.replace(/<SCALETTA_BLOCK>([\s\S]*?)<\/SCALETTA_BLOCK>/gi, function(match, innerText) {
             return `<details class="mt-2 mb-4 bg-gray-900/40 rounded-lg border border-gray-700/50 overflow-hidden shadow-sm">
-                <summary class="cursor-pointer px-4 py-2.5 text-xs font-medium text-blue-500/80 hover:text-blue-400 bg-gray-800/80 hover:bg-gray-700/80 transition-colors select-none flex items-center gap-2 outline-none">
-                    📋 Inventario Fonti presenti nel RAG
+                <summary class="cursor-pointer px-4 py-2.5 text-xs font-medium text-green-500/80 hover:text-green-400 bg-gray-800/80 hover:bg-gray-700/80 transition-colors select-none flex items-center gap-2 outline-none">
+                    📋 Inventario delle fonti presenti nel Rag
                 </summary>
                 <div class="p-4 text-xs text-gray-400 border-t border-gray-700/50 leading-relaxed italic opacity-90 bg-black/20 max-h-96 overflow-y-auto">
                     ${innerText}
