@@ -109,12 +109,22 @@ export const AudioEngine = {
 
     async play() {
         if (!this.timeline || this.timeline.length === 0) return;
-        if (this.audioContext.state === 'suspended') await this.audioContext.resume();
+        try {
+            if (this.audioContext.state === 'suspended') await this.audioContext.resume();
+        } catch (e) {
+            console.warn('[AudioEngine] Impossibile fare resume del contesto audio:', e);
+            throw e; // Rilancia per far catturare al chiamante
+        }
         if (this.isPlaying) return;
         this.isPaused = false;
         this.isPlaying = true;
         this._startRaf();
-        await this._startSegment(this.currentIndex, this._segmentOffset);
+        try {
+            await this._startSegment(this.currentIndex, this._segmentOffset);
+        } catch (e) {
+            console.error('[AudioEngine] Errore avvio segmento:', e);
+            this._finish();
+        }
     },
 
     pause() {

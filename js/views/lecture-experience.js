@@ -73,8 +73,10 @@ export function openLectureExperience(moduleTexts, argomento, materia, startModu
         const targetBlock = content.blocks.find(b => b.moduleNum === startModuleNum);
         if (targetBlock) {
             AudioEngine.seekToSegment(targetBlock.index).then(() => {
-                AudioEngine.play();
-            });
+                AudioEngine.play().catch(err => {
+                    console.warn('[LectureExperience] Auto-play bloccato dal browser (richiede interazione utente).', err);
+                });
+            }).catch(e => console.error('[LectureExperience] Errore seek:', e));
         }
     }
 
