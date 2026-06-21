@@ -1363,10 +1363,10 @@ ${coveredBlock}`
         });
 
         var formatted = escapeHtml(cleanContent)
-            .replace(/&lt;thought&gt;([\s\S]*?)&lt;\/thought&gt;/gi, function(match, innerText) {
+            .replace(/&lt;(thought|think|ragionamento)&gt;([\s\S]*?)(?:&lt;\/\1&gt;|$)/gi, function(match, tag, innerText) {
                 return '<THOUGHT_BLOCK>' + innerText + '</THOUGHT_BLOCK>';
             })
-            .replace(/&lt;scaletta&gt;([\s\S]*?)&lt;\/scaletta&gt;/gi, function(match, innerText) {
+            .replace(/&lt;scaletta&gt;([\s\S]*?)(?:&lt;\/scaletta&gt;|$)/gi, function(match, innerText) {
                 return '<SCALETTA_BLOCK>' + innerText + '</SCALETTA_BLOCK>';
             });
 
@@ -1380,7 +1380,7 @@ ${coveredBlock}`
                 <summary class="cursor-pointer px-4 py-2.5 text-xs font-medium text-amber-500/80 hover:text-amber-400 bg-gray-800/80 hover:bg-gray-700/80 transition-colors select-none flex items-center gap-2 outline-none">
                     🧠 Ragionamento interno
                 </summary>
-                <div class="p-4 text-xs text-gray-400 border-t border-gray-700/50 leading-relaxed italic opacity-90 bg-black/20">
+                <div class="p-4 text-xs text-gray-400 border-t border-gray-700/50 leading-relaxed italic opacity-90 bg-black/20 max-h-96 overflow-y-auto">
                     ${innerText}
                 </div>
             </details>`;
@@ -1391,7 +1391,7 @@ ${coveredBlock}`
                 <summary class="cursor-pointer px-4 py-2.5 text-xs font-medium text-blue-500/80 hover:text-blue-400 bg-gray-800/80 hover:bg-gray-700/80 transition-colors select-none flex items-center gap-2 outline-none">
                     📋 Scaletta preparatoria
                 </summary>
-                <div class="p-4 text-xs text-gray-400 border-t border-gray-700/50 leading-relaxed italic opacity-90 bg-black/20">
+                <div class="p-4 text-xs text-gray-400 border-t border-gray-700/50 leading-relaxed italic opacity-90 bg-black/20 max-h-96 overflow-y-auto">
                     ${innerText}
                 </div>
             </details>`;
