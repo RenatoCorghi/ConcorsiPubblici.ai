@@ -41,6 +41,22 @@ function makeRes() {
     };
 }
 
+// Anthropic ora risponde in streaming (stream:true): questo helper costruisce un
+// Response con corpo SSE equivalente alla vecchia risposta JSON, così i test
+// riflettono il comportamento reale del proxy (che riaggrega i delta).
+function anthropicSSE(text, { input_tokens = 1, output_tokens = 1 } = {}) {
+    const events = [
+        { type: 'message_start', message: { usage: { input_tokens, output_tokens: 0 } } },
+        { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
+        { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } },
+        { type: 'content_block_stop', index: 0 },
+        { type: 'message_delta', usage: { output_tokens } },
+        { type: 'message_stop' }
+    ];
+    const sse = events.map(e => `event: ${e.type}\ndata: ${JSON.stringify(e)}\n\n`).join('');
+    return new Response(sse, { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
+}
+
 const guestBody = (extra = {}) => ({
     provider: 'anthropic',
     feature: 'aiCalls',
@@ -115,10 +131,7 @@ test('happy path Anthropic: payload trasformato e risposta normalizzata in forma
     const captured = [];
     const fetchMock = mock.method(globalThis, 'fetch', async (url, opts) => {
         captured.push({ url: String(url), opts });
-        return new Response(JSON.stringify({
-            content: [{ type: 'text', text: 'La legittima difesa ex art. 52 c.p. ...' }],
-            usage: { input_tokens: 100, output_tokens: 50 }
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return anthropicSSE('La legittima difesa ex art. 52 c.p. ...', { input_tokens: 100, output_tokens: 50 });
     });
     t.after(() => fetchMock.mock.restore());
 
@@ -132,6 +145,7 @@ test('happy path Anthropic: payload trasformato e risposta normalizzata in forma
 
     const sent = JSON.parse(captured[0].opts.body);
     assert.equal(sent.model, 'claude-sonnet-4-6');
+    assert.equal(sent.stream, true, 'streaming attivo per Anthropic (evita il taglio a ~60s)');
     assert.equal(sent.temperature, 1, 'temperature deve essere clampata a 1.0 per Anthropic');
     assert.equal(sent.max_tokens, 8000, 'max_tokens deve essere cappato a 8000');
     assert.equal(sent.system[0].cache_control.type, 'ephemeral', 'prompt caching attivo sul system');
@@ -184,10 +198,7 @@ test('Anthropic: due messaggi system → due blocchi cache separati (prompt stat
     const captured = [];
     const fetchMock = mock.method(globalThis, 'fetch', async (url, opts) => {
         captured.push({ url: String(url), opts });
-        return new Response(JSON.stringify({
-            content: [{ type: 'text', text: 'ok' }],
-            usage: { input_tokens: 1, output_tokens: 1 }
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return anthropicSSE('ok');
     });
     t.after(() => fetchMock.mock.restore());
 
@@ -251,10 +262,7 @@ test('web search Anthropic: il tool ha allowed_domains (enforcement HARD della w
     const captured = [];
     const fetchMock = mock.method(globalThis, 'fetch', async (url, opts) => {
         captured.push({ url: String(url), opts });
-        return new Response(JSON.stringify({
-            content: [{ type: 'text', text: 'risposta' }],
-            usage: { input_tokens: 1, output_tokens: 1 }
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return anthropicSSE('risposta');
     });
     t.after(() => fetchMock.mock.restore());
 
