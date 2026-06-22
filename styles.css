@@ -1626,8 +1626,10 @@ html.light-mode * {
     pointer-events: none;
     background-image: var(--lx-avatar, url('/maestro-holo.png'));
     background-repeat: no-repeat;
-    background-position: center 18%;
-    background-size: var(--lx-avatar-size, cover);
+    background-position: center center;
+    /* 'contain' = il volto ci sta SEMPRE tutto dentro, a qualunque zoom/viewport
+       (con 'cover' veniva ritagliato sopra/sotto e serviva zoomare al 50%). */
+    background-size: var(--lx-avatar-size, contain);
     mix-blend-mode: screen;
     opacity: calc(var(--lx-avatar-opacity, 0.22) + var(--lx-level, 0) * 0.18);
     transform: scale(calc(1 + var(--lx-level, 0) * 0.03));
