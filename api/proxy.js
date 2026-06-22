@@ -1168,6 +1168,12 @@ export function anthropicSupportsTemperature(model) {
 }
 
 // --- HANDLER PRINCIPALE ---
+// In produzione su Vercel la funzione viene comunque uccisa al raggiungimento di
+// maxDuration (default 60s): lo streaming evita il taglio lato Anthropic ma NON
+// quello della piattaforma, quindi alziamo il tetto per le lezioni Opus lunghe.
+// (Richiede piano Vercel Pro; su Hobby resta cappato a 60s.)
+export const maxDuration = 300;
+
 export default async function handler(req, res) {
     console.log(`\n[Proxy] 📥 RICHIESTA IN ARRIVO: ${req.method} | Provider: ${req.body?.provider || 'default'}`);
     
@@ -1508,6 +1514,14 @@ export default async function handler(req, res) {
                 lastMsg.content = [{ type: "text", text: lastMsg.content, cache_control: { type: "ephemeral" } }];
             }
 
+            // STREAMING obbligatorio: con output lunghi (lezioni Opus fino a 4000
+            // token) la chiamata NON-streaming viene troncata da Anthropic intorno
+            // ai ~60s → la generazione muore a metà e il client vede "Errore di
+            // connessione". Con stream:true la connessione resta viva per tutta la
+            // durata; qui sotto riaggreghiamo i delta e restituiamo al frontend lo
+            // STESSO JSON di prima (nessuna modifica lato client).
+            anthropicPayload.stream = true;
+
             fetchBody = JSON.stringify(anthropicPayload);
         }
         else {
@@ -1545,7 +1559,12 @@ export default async function handler(req, res) {
             });
         }
 
-        const data = await response.json();
+        // Anthropic risponde in SSE (stream:true): riaggreghiamo i delta in un
+        // oggetto con la STESSA forma della risposta non-streaming, così tutta la
+        // normalizzazione qui sotto resta identica. Gli altri provider invariati.
+        const data = (provider === 'anthropic')
+            ? await readAnthropicStream(response)
+            : await response.json();
 
         // Normalizza Anthropic e Google in formato OpenAI
         let normalizedResponse = data;
@@ -1656,4 +1675,65 @@ export default async function handler(req, res) {
         console.error('[Proxy] Internal Error:', error.message);
         return res.status(500).json({ error: 'System Error: ' + error.message });
     }
+}
+
+// Legge lo stream SSE di Anthropic (stream:true) e lo riaggrega in un oggetto con
+// la STESSA forma della risposta non-streaming: { content: [blocchi], usage }.
+// In questo modo la normalizzazione nel handler resta invariata. Ricostruisce i
+// blocchi 'text' (con relative citations del web search) e accumula i token usati;
+// i blocchi tool_use/server_tool_use vengono ignorati a valle, come prima.
+async function readAnthropicStream(response) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    const blocks = [];                                    // indicizzati per evt.index
+    const usage = { input_tokens: 0, output_tokens: 0 };
+
+    const handleEvent = (raw) => {
+        let evt;
+        try { evt = JSON.parse(raw); } catch { return; }
+        switch (evt.type) {
+            case 'message_start':
+                if (evt.message?.usage) {
+                    usage.input_tokens = evt.message.usage.input_tokens || 0;
+                    usage.output_tokens = evt.message.usage.output_tokens || 0;
+                }
+                break;
+            case 'content_block_start':
+                blocks[evt.index] = (evt.content_block?.type === 'text')
+                    ? { type: 'text', text: evt.content_block.text || '', citations: [] }
+                    : { type: evt.content_block?.type || 'other' };
+                break;
+            case 'content_block_delta': {
+                const b = blocks[evt.index];
+                if (!b) break;
+                if (evt.delta?.type === 'text_delta') {
+                    b.text = (b.text || '') + (evt.delta.text || '');
+                } else if (evt.delta?.type === 'citations_delta' && evt.delta.citation) {
+                    (b.citations = b.citations || []).push(evt.delta.citation);
+                }
+                break;
+            }
+            case 'message_delta':
+                if (evt.usage?.output_tokens != null) usage.output_tokens = evt.usage.output_tokens;
+                break;
+        }
+    };
+
+    for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let sep;
+        while ((sep = buffer.indexOf('\n\n')) !== -1) {
+            const chunk = buffer.slice(0, sep);
+            buffer = buffer.slice(sep + 2);
+            for (const line of chunk.split('\n')) {
+                const t = line.trim();
+                if (t.startsWith('data:')) handleEvent(t.slice(5).trim());
+            }
+        }
+    }
+
+    return { content: blocks.filter(Boolean), usage };
 }
