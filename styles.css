@@ -1613,6 +1613,38 @@ html.light-mode * {
 /* --- Stage --- */
 .lx-stage { flex: 1; position: relative; overflow: hidden; display: flex; }
 
+/* --- Avatar olografico di sfondo (Opzione 2) ---
+   Immagine luminosa su nero, compositata in 'screen': il nero sparisce e
+   resta solo il bagliore sul fondo scuro dell'overlay. "Respira" con la voce
+   (--lx-level dal motore audio). Cambiare volto = sostituire /maestro-holo.png
+   o ridefinire --lx-avatar. Manopole: --lx-avatar-opacity, --lx-avatar-size,
+   --lx-avatar-tint (velo colore-materia, 0 = off). */
+.lx-avatar-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: var(--lx-avatar, url('/maestro-holo.png'));
+    background-repeat: no-repeat;
+    background-position: center 18%;
+    background-size: var(--lx-avatar-size, cover);
+    mix-blend-mode: screen;
+    opacity: calc(var(--lx-avatar-opacity, 0.22) + var(--lx-level, 0) * 0.18);
+    transform: scale(calc(1 + var(--lx-level, 0) * 0.03));
+    transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+}
+.lx-avatar-bg::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--lp-accent);
+    mix-blend-mode: color;
+    opacity: var(--lx-avatar-tint, 0);
+}
+/* Testo e slide sempre sopra l'ologramma */
+.lx-studio, .lx-presentazione { position: relative; z-index: 1; }
+/* In modalità avatar l'orb non serve: il volto È l'avatar (una riga per riattivarlo) */
+.lx-mode-avatar .lx-orb { display: none; }
+
 /* --- STUDIO --- */
 .lx-studio {
     flex: 1;

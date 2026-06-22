@@ -154,7 +154,7 @@ export function closeLectureExperience() {
 function _shellHTML(argomento, materia) {
     const c = MATERIA_COLORS[materia] || MATERIA_COLORS['Civile'];
     return `
-    <div class="lx-container" style="--lp-accent:${c.accent}; --lp-glow:${c.glow}">
+    <div class="lx-container lx-mode-avatar" style="--lp-accent:${c.accent}; --lp-glow:${c.glow}">
         <header class="lx-header">
             <button class="lx-icon-btn" data-act="close" title="Chiudi (Esc)">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -176,6 +176,7 @@ function _shellHTML(argomento, materia) {
         </header>
 
         <div class="lx-stage">
+            <div class="lx-avatar-bg" aria-hidden="true"></div>
             <!-- STUDIO -->
             <section class="lx-studio" id="lx-studio" aria-label="Testo della lezione">
                 <div class="lx-orb lx-orb-floating" id="lx-orb-studio">
@@ -322,6 +323,14 @@ function _onProgress(state) {
         orb.classList.toggle('lx-orb-active', state.isPlaying);
         orb.style.setProperty('--lx-level', (state.level || 0).toFixed(3));
     });
+
+    // Avatar olografico di sfondo (Opzione 2): "respira" con la voce — stesso
+    // segnale level dell'orb, ma applicato a opacità/scala dell'immagine.
+    const avatar = overlayEl.querySelector('.lx-avatar-bg');
+    if (avatar) {
+        avatar.classList.toggle('lx-avatar-active', state.isPlaying);
+        avatar.style.setProperty('--lx-level', (state.level || 0).toFixed(3));
+    }
 
     // Cambi discreti di blocco/slide (non a ogni frame)
     if (state.index !== lastBlock) {
