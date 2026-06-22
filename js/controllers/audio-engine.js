@@ -139,7 +139,7 @@ export const AudioEngine = {
 
     toggle() {
         if (this.isPlaying) this.pause();
-        else this.play();
+        else this.play().catch(e => console.warn('[AudioEngine] play() fallito su toggle:', e));
     },
 
     // Salta a un tempo globale (click sulla barra). Mantiene lo stato

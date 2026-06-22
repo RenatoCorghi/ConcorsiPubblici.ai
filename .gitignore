@@ -30,6 +30,10 @@ massimario_vip/
 corte_conti_vip_schede/
 schede_tributario_vip/
 manuali_oa_schede_v3/
+ssm_schede_vip*
+
+# Archives (heavy / personal — never commit)
+*.rar
 
 # Scraper & pipeline artifacts (NEVER commit)
 scraper_cassazione/

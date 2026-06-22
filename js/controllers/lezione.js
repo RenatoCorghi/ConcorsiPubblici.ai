@@ -1251,7 +1251,12 @@ ${coveredBlock}`
      */
     openLectureMode: function(startModuleNum) {
         if (!AppState.lezioneChat || AppState.lezioneChat.length === 0) return;
-        
+
+        // L'audio passa da /api/tts, che richiede un account: un ospite prenderebbe
+        // 401 su ogni segmento → lezione muta. Lo invitiamo ad accedere, esattamente
+        // come per l'avvio della lezione (stesso modale + toast).
+        if (!Metering.requireRegistration('Lezione Audio')) return;
+
         // Estrai solo i messaggi AI (i moduli della lezione)
         var moduleTexts = AppState.lezioneChat
             .filter(m => m.role === 'ai')

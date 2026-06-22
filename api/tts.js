@@ -74,8 +74,13 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: `Testo troppo lungo (max ${MAX_TEXT_LENGTH} caratteri)` });
     }
 
-    const voiceName = voice || 'it-IT-GiuseppeNeural';
-    const prosodyRate = rate || '-5%';
+    // voice/rate finiscono in attributi SSML delimitati da apici singoli: vanno
+    // validati a whitelist di formato, altrimenti un client può iniettare SSML
+    // (es. <audio src='...'> → Azure scarica URL arbitrari = SSRF/abuso).
+    const SAFE_VOICE = /^[a-z]{2,3}-[A-Z]{2,}-[A-Za-z0-9]+$/;   // es. it-IT-GiuseppeNeural
+    const SAFE_RATE = /^[+-]?\d{1,3}%$/;                         // es. -5%, +10%, 0%
+    const voiceName = SAFE_VOICE.test(voice || '') ? voice : 'it-IT-GiuseppeNeural';
+    const prosodyRate = SAFE_RATE.test(rate || '') ? rate : '-5%';
 
     const AZURE_KEY = process.env.AZURE_SPEECH_KEY;
     const AZURE_REGION = process.env.AZURE_SPEECH_REGION || 'italynorth';

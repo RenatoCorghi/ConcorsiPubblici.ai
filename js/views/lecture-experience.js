@@ -87,11 +87,14 @@ export function openLectureExperience(moduleTexts, argomento, materia, startModu
 // Arricchisce titolo/bullet delle slide via AI. Fallback silenzioso: se
 // qualcosa va storto restano le slide euristiche. Cache per firma-lezione.
 async function _enhanceSlides(moduleTexts) {
+    const myContent = content;          // aggancia QUESTA lezione: se l'utente nel
+                                        // frattempo ne apre un'altra, non vogliamo
+                                        // fondere i dati AI sul content sbagliato.
     const sig = _signature(moduleTexts);
     try {
         let parsed = aiSlidesCache.get(sig);
         if (!parsed) {
-            const prompt = buildSlidePrompt(content.slides, content.blocks);
+            const prompt = buildSlidePrompt(myContent.slides, myContent.blocks);
             const response = await fetch('/api/proxy', {
                 method: 'POST',
                 headers: await getAuthHeaders(),
@@ -112,7 +115,8 @@ async function _enhanceSlides(moduleTexts) {
             parsed = JSON.parse(extractJSON(raw));
             aiSlidesCache.set(sig, parsed);
         }
-        const n = mergeAISlides(content.slides, parsed);
+        if (content !== myContent) return;  // un'altra lezione ha preso il posto
+        const n = mergeAISlides(myContent.slides, parsed);
         if (n > 0 && overlayEl) {
             _renderSlide(lastSlide < 0 ? 0 : lastSlide); // riflette i nuovi testi
             console.log(`[LectureExperience] ✨ ${n} slide ottimizzate dall'AI`);
@@ -473,6 +477,7 @@ function _bindScrubber() {
 // ============================
 
 function _keyHandler(e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return; // non sequestrare le scorciatoie del browser (Ctrl+S, Cmd+P…)
     switch (e.code) {
         case 'Space': e.preventDefault(); AudioEngine.toggle(); break;
         case 'ArrowLeft': 
