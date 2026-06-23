@@ -967,18 +967,17 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
 
             // RE-RANK LLM: secondo parere di Gemini Flash sui top 24 candidati.
             // Solo quando c'è davvero una scelta da fare (più di 8 candidati);
-            // se fallisce si tiene l'ordine boostato (rerankCandidates → null).
-            // NOTA: disabilitato temporaneamente — il re-ranker aggiunge 5-8s
-            // di latenza e spesso fallisce su Vercel Hobby (10s limit).
-            // Il ranking boostato (authority + recency + hybrid_score) è già
-            // efficace (top match ~67-80%). Riabilitare su piano Pro.
+            // se fallisce/scade si tiene l'ordine boostato (rerankCandidates → null,
+            // con AbortSignal interno di sicurezza). Migliora la pertinenza scartando
+            // i falsi positivi semantici.
+            // RIATTIVATO (giu 2026): su Vercel Pro (maxDuration 300s) + heartbeat c'è
+            // budget di tempo, quindi il +5-8s è accettabile. Era stato disabilitato
+            // solo per il limite di 60s del piano Hobby.
             let reranked = null;
-            /* RE-RANKER DISABLED — Hobby plan constraint
             if (matches.length > 8) {
                 reranked = await rerankCandidates(userMessageText, matches.slice(0, 24), googleKey);
                 if (reranked) console.log(`[RAG] 🧠 Re-rank LLM applicato su ${Math.min(matches.length, 24)} candidati`);
             }
-            */
             const topMatches = (reranked || matches).slice(0, 8);
 
             topMatches.forEach((m, i) => {
