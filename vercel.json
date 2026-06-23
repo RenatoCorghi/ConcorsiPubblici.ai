@@ -4,6 +4,9 @@
   "env": {
     "RAG_QUERY_TASK_TYPE": "RETRIEVAL_QUERY"
   },
+  "functions": {
+    "api/proxy.js": { "maxDuration": 300 }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
