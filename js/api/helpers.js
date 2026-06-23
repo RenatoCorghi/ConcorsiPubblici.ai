@@ -87,10 +87,13 @@ export async function getAuthHeaders() {
  * AI non rispondono. Lancia un AbortError se il timeout scade.
  * @param {string} url - URL della richiesta
  * @param {object} options - Opzioni fetch standard
- * @param {number} [timeoutMs=120000] - Timeout in millisecondi (default 2 minuti)
+ * @param {number} [timeoutMs=290000] - Timeout in ms (default ~5 min, appena sotto
+ *   il maxDuration=300s di Vercel Pro: le generazioni lunghe Opus — magistrale,
+ *   tema con max_tokens 8000 — possono superare i 2 minuti. Il server aborta a 280s,
+ *   quindi il client (290s) riceve sempre una risposta/errore prima di scadere.
  * @returns {Promise<Response>}
  */
-export function fetchWithTimeout(url, options = {}, timeoutMs = 120000) {
+export function fetchWithTimeout(url, options = {}, timeoutMs = 290000) {
     const controller = new AbortController();
     const existingSignal = options.signal;
 

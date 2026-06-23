@@ -1550,7 +1550,11 @@ export default async function handler(req, res) {
         }
 
         // Esegui Chiamata Server-to-Server
-        const response = await fetch(fetchUrl, { method: 'POST', headers: fetchHeaders, body: fetchBody, signal: AbortSignal.timeout(120000) });
+        // Timeout 280s: appena sotto maxDuration=300 di Vercel Pro, così abortiamo la
+        // chiamata al provider e restituiamo un errore pulito PRIMA che Vercel stacchi
+        // la funzione. (Era 120s, retaggio del piano Hobby: tagliava le generazioni
+        // lunghe Opus — magistrale/tema — ora che Pro concede 300s.)
+        const response = await fetch(fetchUrl, { method: 'POST', headers: fetchHeaders, body: fetchBody, signal: AbortSignal.timeout(280000) });
 
         if (!response.ok) {
             const errorText = await response.text();
