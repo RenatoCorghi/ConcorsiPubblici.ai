@@ -656,9 +656,8 @@ export const LezioneController = {
                 })
             });
 
-            this._hideTyping();
-
             if (!response.ok) {
+                this._hideTyping();
                 this._addMessage('ai', 'Mi scuso, ma non riesco a collegarmi al server in questo momento. Riprovi tra qualche istante.');
                 return;
             }
@@ -671,7 +670,10 @@ export const LezioneController = {
 
             Metering.consume('tutorChats');
             Metering.consumeFreeLifetime('lezione'); // Segna la socratica come usata per sempre
-            this._addMessage('ai', await this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
+            // Barra visibile anche durante la verifica anti-allucinazione (vedi startLectio).
+            var socrReply = await this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []);
+            this._hideTyping();
+            this._addMessage('ai', socrReply);
             this._speakIfEnabled(reply);
 
         } catch (err) {
@@ -761,9 +763,8 @@ export const LezioneController = {
                 })
             });
 
-            this._hideTyping();
-
             if (!response.ok) {
+                this._hideTyping();
                 var errBody = '';
                 try { errBody = await response.text(); } catch(_e) {}
                 console.error('[Lectio] Proxy error:', response.status, errBody);
@@ -780,7 +781,11 @@ export const LezioneController = {
 
             Metering.consume('tutorChats');
             Metering.consumeFreeLifetime('lectio'); // Segna la lectio come usata per sempre
-            this._addMessage('ai', await this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
+            // Barra visibile anche durante la verifica anti-allucinazione (altra chiamata
+            // di rete): la togliamo solo quando il modulo è pronto, così non sembra bloccato.
+            var lectioReply = await this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []);
+            this._hideTyping();
+            this._addMessage('ai', lectioReply);
             this.currentModule = 1;
             this._updateProgressBar(1);
 
@@ -876,9 +881,8 @@ export const LezioneController = {
                 })
             });
 
-            this._hideTyping();
-
             if (!response.ok) {
+                this._hideTyping();
                 var errBody = '';
                 try { errBody = await response.text(); } catch(_e) {}
                 console.error('[Smart] Proxy error:', response.status, errBody);
@@ -895,7 +899,10 @@ export const LezioneController = {
 
             Metering.consume('tutorChats');
             Metering.consumeFreeLifetime('lectio'); // Condivide il credito lifetime con la Lectio
-            this._addMessage('ai', await this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
+            // Barra visibile anche durante la verifica anti-allucinazione (vedi startLectio).
+            var smartReply = await this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []);
+            this._hideTyping();
+            this._addMessage('ai', smartReply);
             this.currentModule = 1;
             this._updateProgressBar(1);
 
@@ -1086,9 +1093,8 @@ ${coveredBlock}`
                 })
             });
 
-            this._hideTyping();
-
             if (!response.ok) {
+                this._hideTyping();
                 var errBody = '';
                 try { errBody = await response.text(); } catch(_e) {}
                 console.error('[Lectio] Modulo continuazione manuale errore:', response.status, errBody);
@@ -1109,7 +1115,10 @@ ${coveredBlock}`
             }
 
             Metering.consume('tutorChats');
-            this._addMessage('ai', await this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []));
+            // Barra visibile anche durante la verifica anti-allucinazione (vedi startLectio).
+            var contReply = await this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []);
+            this._hideTyping();
+            this._addMessage('ai', contReply);
 
             // Analizza la risposta per mostrare il pulsante del modulo successivo o chiudere
             this._handleLectioResponse(reply);
