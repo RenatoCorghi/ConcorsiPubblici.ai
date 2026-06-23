@@ -206,27 +206,21 @@
     <!-- Scripts — ES Module Architecture -->
     <script type="module" src="js/main.js?v=5"></script>
 
-    <!-- PWA Service Worker Registration -->
+    <!-- PWA Service Worker RIMOSSO (giu 2026) -->
+    <!-- Il vecchio SW usava Stale-While-Revalidate e inchiodava gli utenti a build
+         vecchie: serviva un index.html cachato che puntava a chunk hashati ormai
+         404 → "Failed to fetch dynamically imported module". Qui de-registriamo
+         qualsiasi SW residuo e svuotiamo le cache. NON registriamo piu nulla
+         (niente register → niente loop). Il /sw.js auto-distruggente in public/
+         copre i client il cui vecchio SW non passa subito da questo index. -->
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').then(reg => {
-                    console.log('Service Worker Registrato!', reg);
-
-                    // Controlla se c'è un aggiornamento in attesa
-                    reg.addEventListener('updatefound', () => {
-                        const newWorker = reg.installing;
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
-                                // C'è una nuova versione pronta
-                                if (typeof showToast === 'function') showToast("Nuova versione disponibile! Ricarica per aggiornare.", "info");
-                            }
-                        });
-                    });
-                }).catch(err => {
-                    console.log('Error registering SW', err);
-                });
-            });
+            navigator.serviceWorker.getRegistrations()
+                .then(regs => regs.forEach(r => r.unregister()))
+                .catch(() => {});
+        }
+        if (window.caches && caches.keys) {
+            caches.keys().then(keys => keys.forEach(k => caches.delete(k))).catch(() => {});
         }
     </script>
 </body>
