@@ -14,6 +14,8 @@ export const cloud = {
 
     initAuthListener: function() {
         const handleSession = async (session) => {
+            // È un login NUOVO o solo un TOKEN_REFRESHED / ri-emissione su focus tab?
+            const isNewLogin = !cloud.user || cloud.user.id !== session.user.id;
             cloud.user = session.user;
             console.log("Utente Autenticato via Supabase:", session.user.email);
             
@@ -41,8 +43,10 @@ export const cloud = {
             // Sincronizzazione autoritativa del tier dal database (Il Cloud Vince)
             await cloud.syncProfile();
             
-            cloud.syncHistory(); // Scarica lo storico al login
-            cloud.syncCommunityPosts(); // Scarica la community al login
+            if (isNewLogin) {
+                cloud.syncHistory(); // Scarica lo storico (solo a un login nuovo, non a ogni refresh token)
+                cloud.syncCommunityPosts(); // Scarica la community (idem)
+            }
 
             // Nascondi il bottone "Accedi" dalla navbar e mostra avatar
             var authBtn = document.getElementById('nav-auth-btn');
@@ -65,8 +69,11 @@ export const cloud = {
                 window.history.replaceState(null, document.title, window.location.pathname);
             }
             
-            // Forza l'aggiornamento dell'UI per mostrare il nuovo profilo
-            renderView();
+            // Re-render SOLO a un login nuovo. Su TOKEN_REFRESHED e sulle ri-emissioni
+            // di SIGNED_IN al focus della tab NON ri-renderizziamo: cancellava la barra
+            // di avanzamento di una generazione in corso (sembrava bloccata) e causava
+            // flicker. Il tier resta aggiornato comunque via syncProfile() qui sopra.
+            if (isNewLogin) renderView();
         };
 
         supabaseClient.auth.onAuthStateChange((event, session) => {
