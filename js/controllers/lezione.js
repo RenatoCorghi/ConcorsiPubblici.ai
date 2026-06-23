@@ -1734,7 +1734,7 @@ ${coveredBlock}`
                 '<div id="lezione-stream-body"><span class="italic text-gray-400">🧠 Il Maestro ragiona e consulta le fonti…</span></div>' +
                 '<div id="lezione-stream-foot" class="mt-2 text-[10px] text-gray-500"></div>' +
             '</div>';
-        if (container) { container.appendChild(wrap); if (window.lucide) lucide.createIcons(); container.scrollTop = container.scrollHeight; }
+        if (container) { container.appendChild(wrap); if (window.lucide) lucide.createIcons(); wrap.scrollIntoView({ block: 'start' }); }
 
         var self = this;
         var raw = '', ragSources = [], webCitations = [], errored = false;
@@ -1751,7 +1751,7 @@ ${coveredBlock}`
             } else {
                 el.innerHTML = self._lightFormat(vis) + '<span class="inline-block w-2 h-4 bg-amber-400/70 ml-0.5 align-middle animate-pulse"></span>';
             }
-            if (container) container.scrollTop = container.scrollHeight;
+            // niente auto-scroll a ogni delta: l'utente legge dall'alto, il testo cresce sotto
         };
 
         try {
