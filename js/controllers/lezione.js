@@ -731,7 +731,7 @@ export const LezioneController = {
 
         // Messaggio iniziale
         this._addMessage('user', `📖 Lectio Magistralis su: **${argomento}** (${materia})`);
-        this._showTyping("Inizializzazione della Lectio Magistralis...");
+        // (niente _showTyping: lo streaming mostra la sua bolla "dal vivo")
 
         var userPrompt = `Argomento della Lectio Magistralis: "${argomento}" (Materia: ${materia}). Genera ora il **MODULO 1**. 
 ⚠️ IMPORTANTE: Calibra la lunghezza in modo da non superare ASSOLUTAMENTE le 1000 parole per evitare troncamenti accidentali della risposta dell'API. Arriva sempre alla conclusione logica del modulo e chiudilo scrivendo l'apposito tag di continuazione in fondo.`;
@@ -743,48 +743,41 @@ export const LezioneController = {
                 systemPrompt += `\nNOTA: L'uditorio si prepara per il concorso in ${concorso}. ${CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]}`;
             }
 
-            var response = await fetchWithTimeout('/api/proxy', {
-                method: 'POST',
-                headers: await _getAuthHeaders(),
-                body: JSON.stringify({
-                    feature: 'tutorChats',
-                    provider: APP_CONFIG.ACTIVE_AI_STACK,
-                    model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
-                    useRAG: true,
-                    useWebSearch: AppState.webSearchEnabled,
-                    materia: materia,
-                    ragQuery: this._getExpandedRAGQuery(argomento, 1),
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userPrompt }
-                    ],
-                    temperature: 0.2,
-                    max_tokens: 8000
-                })
-            });
+            // STREAMING dal vivo (_streamLessonRequest): il testo scorre in una bolla
+            // provvisoria mentre genera. ragQuery presente → niente query expansion nel proxy.
+            var streamRes = await this._streamLessonRequest({
+                feature: 'tutorChats',
+                provider: APP_CONFIG.ACTIVE_AI_STACK,
+                model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
+                useRAG: true,
+                useWebSearch: AppState.webSearchEnabled,
+                materia: materia,
+                ragQuery: this._getExpandedRAGQuery(argomento, 1),
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ],
+                temperature: 0.2,
+                max_tokens: 8000
+            }, "Lectio Magistralis");
 
-            if (!response.ok) {
-                this._hideTyping();
-                var errBody = '';
-                try { errBody = await response.text(); } catch(_e) {}
-                console.error('[Lectio] Proxy error:', response.status, errBody);
-                this._addMessage('ai', `Errore dal server (${response.status}). Dettagli in console.`);
+            var reply = (streamRes.reply || '').trim();
+            if (!reply) {
+                this._removeStreamLive();
+                this._addMessage('ai', 'Mi scuso, la generazione non è andata a buon fine. Riprovi tra qualche istante.');
                 this.autoGenerating = false;
                 return;
             }
 
-            var data = await response.json();
-            var reply = data.choices[0].message.content.trim();
-
             // Salva le fonti RAG per la verifica anti-allucinazione
-            if (data.rag_sources) AppState.lezioneMeta.ragSources = data.rag_sources;
+            if (streamRes.ragSources && streamRes.ragSources.length) AppState.lezioneMeta.ragSources = streamRes.ragSources;
 
             Metering.consume('tutorChats');
             Metering.consumeFreeLifetime('lectio'); // Segna la lectio come usata per sempre
-            // Barra visibile anche durante la verifica anti-allucinazione (altra chiamata
-            // di rete): la togliamo solo quando il modulo è pronto, così non sembra bloccato.
+            // La bolla "dal vivo" resta durante la verifica anti-allucinazione, poi la
+            // sostituiamo col messaggio finale formattato (thought→details, banner, TTS).
             var lectioReply = await this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []);
-            this._hideTyping();
+            this._removeStreamLive();
             this._addMessage('ai', lectioReply);
             this.currentModule = 1;
             this._updateProgressBar(1);
@@ -1692,6 +1685,121 @@ ${coveredBlock}`
         this.generationStartTime = null;
         this.generatingLabel = null;
         var el = document.getElementById('lezione-typing');
+        if (el) el.remove();
+    },
+
+    // Porzione VISIBILE del testo durante lo streaming: nasconde i blocchi
+    // thought/scaletta (completi) e, se un tag è ancora aperto, taglia da lì in poi
+    // (sta ancora generando il ragionamento invisibile).
+    _visibleStreaming: function(raw) {
+        var s = raw || '';
+        s = s.replace(/<(thought|think|thinking|ragionamento|scaletta|inventario)\b[^>]*>[\s\S]*?<\/\1>/gi, '');
+        var openIdx = s.search(/<(thought|think|thinking|ragionamento|scaletta|inventario)\b[^>]*>/i);
+        if (openIdx !== -1) s = s.slice(0, openIdx);
+        return s;
+    },
+
+    // Formattazione leggera per l'anteprima viva (la formattazione finale completa
+    // — thought→details, banner, TTS — la fa _addMessage a fine generazione).
+    _lightFormat: function(text) {
+        return escapeHtml(text || '')
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/\n/g, '<br/>');
+    },
+
+    // Esegue la richiesta lezione in STREAMING (streamToClient) mostrando il testo
+    // dal vivo in una bolla provvisoria. Ritorna { reply, ragSources, webCitations }.
+    // Lascia la bolla a schermo (con footer "verifica fonti…") finché il chiamante,
+    // dopo _checkHallucinations, non la rimuove e mette il messaggio finale formattato.
+    _streamLessonRequest: async function(body, label) {
+        var container = document.getElementById('lezione-messages');
+        this.isGenerating = true;
+        this.generatingLabel = label;
+        this.generationStartTime = Date.now();
+
+        // ripulisci eventuali indicatori precedenti
+        this._stopTypingProgress();
+        var oldT = document.getElementById('lezione-typing'); if (oldT) oldT.remove();
+        var oldL = document.getElementById('lezione-stream-live'); if (oldL) oldL.remove();
+
+        var wrap = document.createElement('div');
+        wrap.id = 'lezione-stream-live';
+        wrap.className = 'flex gap-3 max-w-[95%] fade-in';
+        wrap.innerHTML =
+            '<div class="w-8 h-8 rounded-full shrink-0 flex items-center justify-center bg-gradient-to-tr from-amber-600 to-orange-500 mt-1 shadow-lg shadow-amber-500/20">' +
+                '<i data-lucide="graduation-cap" class="w-4 h-4 text-white"></i>' +
+            '</div>' +
+            '<div class="bg-gray-800/80 border border-gray-700/50 text-gray-200 rounded-2xl rounded-tl-sm px-5 py-4 shadow-md relative leading-relaxed text-sm format-content w-full md:max-w-2xl">' +
+                '<div id="lezione-stream-body"><span class="italic text-gray-400">🧠 Il Maestro ragiona e consulta le fonti…</span></div>' +
+                '<div id="lezione-stream-foot" class="mt-2 text-[10px] text-gray-500"></div>' +
+            '</div>';
+        if (container) { container.appendChild(wrap); if (window.lucide) lucide.createIcons(); container.scrollTop = container.scrollHeight; }
+
+        var self = this;
+        var raw = '', ragSources = [], webCitations = [], errored = false;
+        var lastRender = 0;
+        var render = function(force) {
+            var now = Date.now();
+            if (!force && now - lastRender < 60) return; // throttle
+            lastRender = now;
+            var el = document.getElementById('lezione-stream-body');
+            if (!el) return;
+            var vis = self._visibleStreaming(raw);
+            if (vis.trim().length === 0) {
+                el.innerHTML = '<span class="italic text-gray-400">🧠 Il Maestro ragiona e consulta le fonti…</span>';
+            } else {
+                el.innerHTML = self._lightFormat(vis) + '<span class="inline-block w-2 h-4 bg-amber-400/70 ml-0.5 align-middle animate-pulse"></span>';
+            }
+            if (container) container.scrollTop = container.scrollHeight;
+        };
+
+        try {
+            var resp = await fetchWithTimeout('/api/proxy', {
+                method: 'POST',
+                headers: await _getAuthHeaders(),
+                body: JSON.stringify(Object.assign({}, body, { streamToClient: true }))
+            });
+            if (!resp.ok || !resp.body) throw new Error('HTTP ' + resp.status);
+
+            var reader = resp.body.getReader();
+            var decoder = new TextDecoder();
+            var buf = '';
+            for (;;) {
+                var r = await reader.read();
+                if (r.done) break;
+                buf += decoder.decode(r.value, { stream: true });
+                var sep;
+                while ((sep = buf.indexOf('\n\n')) !== -1) {
+                    var chunk = buf.slice(0, sep); buf = buf.slice(sep + 2);
+                    var lines = chunk.split('\n');
+                    for (var i = 0; i < lines.length; i++) {
+                        var t = lines[i].trim();
+                        if (t.indexOf('data:') !== 0) continue;
+                        var evt; try { evt = JSON.parse(t.slice(5).trim()); } catch (e) { continue; }
+                        if (evt.type === 'delta') { raw += (evt.text || ''); render(false); }
+                        else if (evt.type === 'done') { ragSources = evt.rag_sources || []; webCitations = evt.web_citations || []; }
+                        else if (evt.type === 'error') { errored = true; }
+                    }
+                }
+            }
+            render(true);
+        } catch (e) {
+            var liveErr = document.getElementById('lezione-stream-live'); if (liveErr) liveErr.remove();
+            this.isGenerating = false; this.generationStartTime = null; this.generatingLabel = null;
+            throw e;
+        }
+
+        // Successo: lascio la bolla a schermo col testo, footer "verifica fonti…".
+        // Il chiamante la rimuoverà dopo _checkHallucinations e metterà il messaggio finale.
+        var foot = document.getElementById('lezione-stream-foot');
+        if (foot) foot.innerHTML = '<span class="italic">✓ Testo generato — verifica delle fonti in corso…</span>';
+        this.isGenerating = false; this.generationStartTime = null; this.generatingLabel = null;
+        return { reply: raw.trim(), ragSources: ragSources, webCitations: webCitations, errored: errored };
+    },
+
+    _removeStreamLive: function() {
+        var el = document.getElementById('lezione-stream-live');
         if (el) el.remove();
     },
 
