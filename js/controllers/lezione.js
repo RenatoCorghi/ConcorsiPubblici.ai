@@ -636,43 +636,38 @@ export const LezioneController = {
                 systemPrompt += `\nNOTA: Lo studente si prepara per il concorso in ${concorso}. ${CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]}`;
             }
 
-            var response = await fetchWithTimeout('/api/proxy', {
-                method: 'POST',
-                headers: await _getAuthHeaders(),
-                body: JSON.stringify({
-                    feature: 'tutorChats',
-                    provider: APP_CONFIG.ACTIVE_AI_STACK,
-                    model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
-                    useRAG: true,
-                    useWebSearch: AppState.webSearchEnabled,
-                    materia: materia,
-                    ragQuery: this._getExpandedRAGQuery(argomento, 1),
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userPrompt }
-                    ],
-                    temperature: 0.2,
-                    max_tokens: 4000
-                })
-            });
+            // STREAMING dal vivo (vedi _streamLessonRequest). _showTyping resta acceso
+            // sopra finché _streamLessonRequest non subentra (copre la fetch RAG client-side).
+            var streamRes = await this._streamLessonRequest({
+                feature: 'tutorChats',
+                provider: APP_CONFIG.ACTIVE_AI_STACK,
+                model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
+                useRAG: true,
+                useWebSearch: AppState.webSearchEnabled,
+                materia: materia,
+                ragQuery: this._getExpandedRAGQuery(argomento, 1),
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ],
+                temperature: 0.2,
+                max_tokens: 4000
+            }, "Lezione su misura");
 
-            if (!response.ok) {
-                this._hideTyping();
+            var reply = (streamRes.reply || '').trim();
+            if (!reply) {
+                this._removeStreamLive();
                 this._addMessage('ai', 'Mi scuso, ma non riesco a collegarmi al server in questo momento. Riprovi tra qualche istante.');
                 return;
             }
 
-            var data = await response.json();
-            var reply = data.choices[0].message.content.trim();
-
             // Salva le fonti RAG per la verifica anti-allucinazione
-            if (data.rag_sources) AppState.lezioneMeta.ragSources = data.rag_sources;
+            if (streamRes.ragSources && streamRes.ragSources.length) AppState.lezioneMeta.ragSources = streamRes.ragSources;
 
             Metering.consume('tutorChats');
             Metering.consumeFreeLifetime('lezione'); // Segna la socratica come usata per sempre
-            // Barra visibile anche durante la verifica anti-allucinazione (vedi startLectio).
             var socrReply = await this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []);
-            this._hideTyping();
+            this._removeStreamLive();
             this._addMessage('ai', socrReply);
             this._speakIfEnabled(reply);
 
@@ -842,7 +837,7 @@ export const LezioneController = {
 
         // Messaggio iniziale
         this._addMessage('user', `📚 Trattato Giuridico su: **${argomento}** (${materia})`);
-        this._showTyping("Inizializzazione del Trattato Giuridico Avanzato...");
+        // (niente _showTyping: lo streaming mostra la sua bolla "dal vivo")
 
         var userPrompt = `Argomento del Trattato: "${argomento}" (Materia: ${materia}). Genera ora il **CAPITOLO I**. 
 ⚠️ IMPORTANTE: Calibra la lunghezza in modo da non superare ASSOLUTAMENTE le 1000 parole per evitare troncamenti accidentali della risposta dell'API. Arriva sempre alla conclusione logica del capitolo e chiudilo scrivendo l'apposito tag di continuazione in fondo.`;
@@ -854,47 +849,38 @@ export const LezioneController = {
                 systemPrompt += `\nNOTA: L'uditorio si prepara per il concorso in ${concorso}. ${CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]}`;
             }
 
-            var response = await fetchWithTimeout('/api/proxy', {
-                method: 'POST',
-                headers: await _getAuthHeaders(),
-                body: JSON.stringify({
-                    feature: 'tutorChats',
-                    provider: APP_CONFIG.ACTIVE_AI_STACK,
-                    model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
-                    useRAG: true,
-                    useWebSearch: AppState.webSearchEnabled,
-                    materia: materia,
-                    ragQuery: this._getExpandedRAGQuery(argomento, 1),
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userPrompt }
-                    ],
-                    temperature: 0.2,
-                    max_tokens: 8000
-                })
-            });
+            // STREAMING dal vivo (vedi _streamLessonRequest).
+            var streamRes = await this._streamLessonRequest({
+                feature: 'tutorChats',
+                provider: APP_CONFIG.ACTIVE_AI_STACK,
+                model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
+                useRAG: true,
+                useWebSearch: AppState.webSearchEnabled,
+                materia: materia,
+                ragQuery: this._getExpandedRAGQuery(argomento, 1),
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ],
+                temperature: 0.2,
+                max_tokens: 8000
+            }, "Trattato Giuridico");
 
-            if (!response.ok) {
-                this._hideTyping();
-                var errBody = '';
-                try { errBody = await response.text(); } catch(_e) {}
-                console.error('[Smart] Proxy error:', response.status, errBody);
-                this._addMessage('ai', `Errore dal server (${response.status}). Dettagli in console.`);
+            var reply = (streamRes.reply || '').trim();
+            if (!reply) {
+                this._removeStreamLive();
+                this._addMessage('ai', 'Mi scuso, la generazione non è andata a buon fine. Riprovi tra qualche istante.');
                 this.autoGenerating = false;
                 return;
             }
 
-            var data = await response.json();
-            var reply = data.choices[0].message.content.trim();
-
             // Salva le fonti RAG per la verifica anti-allucinazione
-            if (data.rag_sources) AppState.lezioneMeta.ragSources = data.rag_sources;
+            if (streamRes.ragSources && streamRes.ragSources.length) AppState.lezioneMeta.ragSources = streamRes.ragSources;
 
             Metering.consume('tutorChats');
             Metering.consumeFreeLifetime('lectio'); // Condivide il credito lifetime con la Lectio
-            // Barra visibile anche durante la verifica anti-allucinazione (vedi startLectio).
             var smartReply = await this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []);
-            this._hideTyping();
+            this._removeStreamLive();
             this._addMessage('ai', smartReply);
             this.currentModule = 1;
             this._updateProgressBar(1);
@@ -1040,7 +1026,7 @@ export const LezioneController = {
         var uLabel = this.isSmart ? 'Capitolo' : 'Modulo';
         console.log(`[${this.isSmart ? 'Smart' : 'Lectio'}] Generazione Manuale ${uLabel} ${nextModNum}: ${nextModTitle}`);
 
-        this._showTyping(`Stesura ${uLabel} ${nextModNum}: ${nextModTitle}...`);
+        // (niente _showTyping: lo streaming mostra la sua bolla "dal vivo")
 
         try {
             var currentMateria = AppState.lezioneMeta?.materia || 'Diritto Civile';
@@ -1068,49 +1054,40 @@ export const LezioneController = {
 ${coveredBlock}`
             });
 
-            var response = await fetchWithTimeout('/api/proxy', {
-                method: 'POST',
-                headers: await _getAuthHeaders(),
-                body: JSON.stringify({
-                    feature: 'tutorChats',
-                    provider: APP_CONFIG.ACTIVE_AI_STACK,
-                    model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
-                    useRAG: true,
-                    useWebSearch: AppState.webSearchEnabled,
-                    materia: AppState.lezioneMeta?.materia || null,
-                    ragQuery: this._getExpandedRAGQuery(AppState.lezioneMeta?.argomento, nextModNum),
-                    skipExpansion: true, // ragQuery già mirata al modulo: salta la decomposizione Gemini nel proxy (~1-2s)
-                    messages: messages,
-                    temperature: 0.2,
-                    max_tokens: 8000
-                })
-            });
+            // STREAMING dal vivo (vedi _streamLessonRequest).
+            var streamRes = await this._streamLessonRequest({
+                feature: 'tutorChats',
+                provider: APP_CONFIG.ACTIVE_AI_STACK,
+                model: APP_CONFIG.AI_MODELS[APP_CONFIG.ACTIVE_AI_STACK].LESSON,
+                useRAG: true,
+                useWebSearch: AppState.webSearchEnabled,
+                materia: AppState.lezioneMeta?.materia || null,
+                ragQuery: this._getExpandedRAGQuery(AppState.lezioneMeta?.argomento, nextModNum),
+                skipExpansion: true, // ragQuery già mirata al modulo: salta la decomposizione Gemini nel proxy
+                messages: messages,
+                temperature: 0.2,
+                max_tokens: 8000
+            }, `Stesura ${uLabel} ${nextModNum}: ${nextModTitle}`);
 
-            if (!response.ok) {
-                this._hideTyping();
-                var errBody = '';
-                try { errBody = await response.text(); } catch(_e) {}
-                console.error('[Lectio] Modulo continuazione manuale errore:', response.status, errBody);
-                this._addMessage('ai', `Errore nella generazione del modulo successivo (${response.status}). Riprova tra qualche istante.`);
+            var reply = (streamRes.reply || '').trim();
+            if (!reply) {
+                this._removeStreamLive();
+                this._addMessage('ai', 'Errore nella generazione del modulo successivo. Riprova tra qualche istante.');
                 return;
             }
 
-            var data = await response.json();
-            var reply = data.choices[0].message.content.trim();
-
             // Aggiorna le fonti RAG per verifica (merge senza duplicati)
-            if (data.rag_sources) {
+            if (streamRes.ragSources && streamRes.ragSources.length) {
                 if (!AppState.lezioneMeta.ragSources) AppState.lezioneMeta.ragSources = [];
-                for (const src of data.rag_sources) {
+                for (const src of streamRes.ragSources) {
                     const exists = AppState.lezioneMeta.ragSources.some(s => s.tipo === src.tipo && s.snippet === src.snippet);
                     if (!exists) AppState.lezioneMeta.ragSources.push(src);
                 }
             }
 
             Metering.consume('tutorChats');
-            // Barra visibile anche durante la verifica anti-allucinazione (vedi startLectio).
             var contReply = await this._checkHallucinations(reply, AppState.lezioneMeta?.ragSources || []);
-            this._hideTyping();
+            this._removeStreamLive();
             this._addMessage('ai', contReply);
 
             // Analizza la risposta per mostrare il pulsante del modulo successivo o chiudere
