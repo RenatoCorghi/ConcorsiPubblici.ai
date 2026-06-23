@@ -1575,6 +1575,20 @@ export default async function handler(req, res) {
             });
         }
 
+        // STREAMING SSE AL CLIENT (UX "dal vivo"): se il client lo richiede esplicitamente
+        // (streamToClient), inoltriamo i delta di testo man mano che arrivano. I delta
+        // stessi tengono viva la connessione (niente heartbeat necessario). I metadati
+        // (rag_sources, usage, citazioni web) vanno in un evento finale 'done'. È GATED:
+        // tutti gli altri path/feature restano sul JSON bufferizzato qui sotto, invariati.
+        if (req.body.streamToClient === true && provider === 'anthropic') {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+            res.setHeader('Cache-Control', 'no-cache, no-transform');
+            res.setHeader('X-Accel-Buffering', 'no'); // niente buffering intermedio dell'SSE
+            await streamAnthropicToClient(response, res, ragSources);
+            return res.end();
+        }
+
         // HEARTBEAT anti-disconnessione: l'edge di Vercel chiude la connessione del
         // client dopo ~60s se la funzione non invia byte. La nostra risposta è
         // bufferizzata (nessun byte finché la generazione Opus non finisce, anche 2-3
@@ -1777,4 +1791,82 @@ async function readAnthropicStream(response) {
     }
 
     return { content: blocks.filter(Boolean), usage };
+}
+
+// Inoltra lo stream SSE di Anthropic DIRETTAMENTE al client come SSE, evento per
+// evento: per ogni text_delta emette {type:'delta',text}, e alla fine un evento
+// {type:'done', rag_sources, usage, web_citations}. Gestisce gli errori internamente
+// (emette {type:'error'} + done con quel che ha) così il client riceve sempre un
+// 'done' e può finalizzare. Il testo grezzo include il blocco <thought>: è il client
+// a gestirne la visualizzazione (placeholder finché non è chiuso).
+async function streamAnthropicToClient(response, res, ragSources) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    const usage = { input_tokens: 0, output_tokens: 0 };
+    const webCitations = [];
+    const send = (obj) => { try { res.write('data: ' + JSON.stringify(obj) + '\n\n'); } catch (_e) {} };
+
+    const handleEvent = (raw) => {
+        let evt;
+        try { evt = JSON.parse(raw); } catch { return; }
+        switch (evt.type) {
+            case 'message_start':
+                if (evt.message?.usage) {
+                    usage.input_tokens = evt.message.usage.input_tokens || 0;
+                    usage.output_tokens = evt.message.usage.output_tokens || 0;
+                }
+                break;
+            case 'content_block_delta':
+                if (evt.delta?.type === 'text_delta' && evt.delta.text) {
+                    send({ type: 'delta', text: evt.delta.text });
+                } else if (evt.delta?.type === 'citations_delta'
+                           && evt.delta.citation?.type === 'web_search_result_location') {
+                    const c = evt.delta.citation;
+                    webCitations.push({
+                        titolo: c.title || (c.cited_text || '').substring(0, 120) || 'Fonte web',
+                        url: c.url || '',
+                        snippet: (c.cited_text || '').substring(0, 200),
+                        tipo: 'web_search', materia: 'Ricerca Web'
+                    });
+                }
+                break;
+            case 'message_delta':
+                if (evt.usage?.output_tokens != null) usage.output_tokens = evt.usage.output_tokens;
+                break;
+        }
+    };
+
+    try {
+        for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            let sep;
+            while ((sep = buffer.indexOf('\n\n')) !== -1) {
+                const chunk = buffer.slice(0, sep);
+                buffer = buffer.slice(sep + 2);
+                for (const line of chunk.split('\n')) {
+                    const t = line.trim();
+                    if (t.startsWith('data:')) handleEvent(t.slice(5).trim());
+                }
+            }
+        }
+    } catch (e) {
+        send({ type: 'error', error: 'Streaming interrotto: ' + e.message });
+    }
+
+    // Deduplica citazioni web fuori whitelist (rete di sicurezza)
+    const seen = new Set();
+    const cleanCitations = webCitations.filter(c => {
+        if (!c.url || seen.has(c.url) || !isWebDomainAllowed(c.url)) return false;
+        seen.add(c.url); return true;
+    });
+
+    send({
+        type: 'done',
+        rag_sources: ragSources || [],
+        usage: { total_tokens: (usage.input_tokens || 0) + (usage.output_tokens || 0) },
+        web_citations: cleanCitations
+    });
 }
