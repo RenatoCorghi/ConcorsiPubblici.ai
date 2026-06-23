@@ -1184,7 +1184,8 @@ export const maxDuration = 300;
 
 export default async function handler(req, res) {
     console.log(`\n[Proxy] 📥 RICHIESTA IN ARRIVO: ${req.method} | Provider: ${req.body?.provider || 'default'}`);
-    
+    let heartbeat = null;  // keepalive per le generazioni lunghe (impostato più sotto)
+
     // --- CORS: Origin Whitelist ---
     const origin = req.headers.origin || '';
     const allowedOrigin = isOriginAllowed(origin) ? origin : ALLOWED_ORIGINS[0];
@@ -1575,12 +1576,25 @@ export default async function handler(req, res) {
             });
         }
 
-        // Anthropic risponde in SSE (stream:true): riaggreghiamo i delta in un
-        // oggetto con la STESSA forma della risposta non-streaming, così tutta la
-        // normalizzazione qui sotto resta identica. Gli altri provider invariati.
-        const data = (provider === 'anthropic')
-            ? await readAnthropicStream(response)
-            : await response.json();
+        // HEARTBEAT anti-disconnessione: l'edge di Vercel chiude la connessione del
+        // client dopo ~60s se la funzione non invia byte. La nostra risposta è
+        // bufferizzata (nessun byte finché la generazione Opus non finisce, anche 2-3
+        // min) → il client veniva staccato a 60s (HTTP 000), pur con maxDuration=300.
+        // Soluzione: appena il provider risponde OK, inviamo uno spazio ogni 15s. Il
+        // corpo finale resta JSON valido (JSON.parse ignora gli spazi iniziali), quindi
+        // il client NON cambia: response.json() funziona come prima.
+        const longGen = (provider === 'anthropic');  // unico path con stream:true / output lungo
+        if (longGen) {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.write(' ');
+            heartbeat = setInterval(() => { try { res.write(' '); } catch (_e) {} }, 15000);
+        }
+
+        // Anthropic risponde in SSE (stream:true): riaggreghiamo i delta in un oggetto
+        // con la STESSA forma della risposta non-streaming, così la normalizzazione qui
+        // sotto resta identica. Gli altri provider invariati.
+        const data = longGen ? await readAnthropicStream(response) : await response.json();
 
         // Normalizza Anthropic e Google in formato OpenAI
         let normalizedResponse = data;
@@ -1685,10 +1699,22 @@ export default async function handler(req, res) {
             normalizedResponse.rag_sources = ragSources;
         }
 
+        if (heartbeat) {
+            clearInterval(heartbeat);
+            res.write(JSON.stringify(normalizedResponse));  // accodato dopo gli spazi di keepalive
+            return res.end();
+        }
         return res.status(200).json(normalizedResponse);
 
     } catch (error) {
         console.error('[Proxy] Internal Error:', error.message);
+        if (heartbeat) clearInterval(heartbeat);
+        // Se il keepalive ha già inviato gli header non possiamo usare res.status().json():
+        // accodiamo l'errore come JSON (il client lo legge comunque con response.json()).
+        if (res.headersSent) {
+            try { res.write(JSON.stringify({ error: 'System Error: ' + error.message })); } catch (_e) {}
+            return res.end();
+        }
         return res.status(500).json({ error: 'System Error: ' + error.message });
     }
 }

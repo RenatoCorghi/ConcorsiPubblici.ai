@@ -34,10 +34,20 @@ function makeRes() {
         body: null,
         headers: {},
         ended: false,
+        _chunks: '',
         setHeader(k, v) { this.headers[k] = v; },
         status(code) { this.statusCode = code; return this; },
-        json(obj) { this.body = obj; return this; },
-        end() { this.ended = true; return this; }
+        json(obj) { this.body = obj; if (this.statusCode == null) this.statusCode = 200; return this; },
+        // Path streaming/keepalive: il handler scrive spazi + JSON finale via write()+end()
+        write(chunk) { this._chunks += chunk; return true; },
+        end(chunk) {
+            if (chunk) this._chunks += chunk;
+            if (this.body === null && this._chunks.trim()) {
+                try { this.body = JSON.parse(this._chunks); } catch (_e) { /* corpo non-JSON */ }
+            }
+            this.ended = true;
+            return this;
+        }
     };
 }
 
