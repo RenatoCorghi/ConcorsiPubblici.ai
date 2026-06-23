@@ -3,7 +3,7 @@
    ============================================================ */
 import { APP_CONFIG } from '../config.js';
 import { AppState } from '../state.js';
-import { handleProxyError, getAuthHeaders } from './helpers.js';
+import { handleProxyError, getAuthHeaders, fetchWithTimeout } from './helpers.js';
 
 /**
  * Parser robusto per il formato quiz testuale dell'AI.
@@ -76,7 +76,7 @@ A) Prima opzione
 ...`;
 
         try {
-            const response = await fetch('/api/proxy', {
+            const response = await fetchWithTimeout('/api/proxy', {
                 method: 'POST',
                 headers: await getAuthHeaders(),
                 body: JSON.stringify({
@@ -145,7 +145,7 @@ SPIEGAZIONE: Breve spiegazione del perché A è corretta in base al caso.
 DOMANDA: Testo della seconda domanda?
 ...`;
 
-            const response = await fetch('/api/proxy', {
+            const response = await fetchWithTimeout('/api/proxy', {
                 method: 'POST',
                 headers: await getAuthHeaders(),
                 body: JSON.stringify({

@@ -1,0 +1,53 @@
+🧾 METADATI RAG
+* Tipo Documento: Scheda VIP Concorsuale
+* Riferimento: Artt. 1218, 2697 c.c.; Cass. Civ., Sez. III, 11 novembre 2019, n. 28992
+* Istituto Principale: Riparto dell'onere probatorio e "doppio ciclo causale" nella responsabilità medica
+* Materia: Diritto Civile
+* Fonte Originale: Deep Research giurisprudenziale 2026
+
+---
+
+### 1. Dato Normativo e Principio di Diritto
+L'architettura della responsabilità contrattuale delineata dall'articolo 1218 del codice civile ha subìto una profonda opera di scomposizione e affinamento dogmatico allorquando è stata calata nell'alveo delle obbligazioni di *facere* professionale qualificato, quale è per eccellenza la prestazione medico-sanitaria. Nelle obbligazioni ordinarie (di dare o di fare generico), l'inadempimento del debitore si sovrappone e coincide plasticamente con la lesione dell'interesse del creditore, determinando un automatico assorbimento della causalità materiale nell'allegazione dell'inadempimento stesso. Nel territorio clinico, viceversa, l'interesse primario del creditore (la salute e l'integrità psico-fisica) costituisce un bene preesistente e presupposto rispetto all'assunzione dell'obbligazione di cura. L'esigibilità della prestazione sanitaria non ha in alcun modo ad oggetto il risultato della guarigione del paziente, bensì il diligente e perito perseguimento delle *leges artis*. Ne discende l'impossibilità sistematica di applicare meccanicamente l'articolo 1218 del codice civile: la mera allegazione di un inadempimento (ad esempio, una non perfetta sterilizzazione) accompagnata dal peggioramento delle condizioni di salute non esaurisce affatto la fattispecie, poiché tale aggravamento potrebbe benissimo derivare dal fisiologico e inarrestabile decorso naturale della patologia pregressa ovvero da fattori eziologici del tutto estranei alla sfera di controllo del professionista. Sorge pertanto la necessità di un criterio ermeneutico che, in ossequio all'articolo 2697 del codice civile, ripartisca il rischio della causa ignota impedendo che la presunzione di colpa si tramuti in una presunzione di nesso eziologico materiale.
+
+### 2. Contrasto Giurisprudenziale (Tesi A vs Tesi B)
+Il dibattito pretorio antecedente all'intervento sistematizzatore della Suprema Corte ruotava attorno all'esatta perimetrazione degli oneri di allegazione e prova incombenti sulle parti del giudizio per responsabilità sanitaria, con esiti sovente difformi nelle aule di merito.
+La tesi della presunzione assorbente (favorevole al paziente), ponendo un'enfasi assoluta sull'articolo 1218 del codice civile, sosteneva che al danneggiato bastasse allegare l'esistenza del contratto, la patologia insorta (o aggravatasi) e un inadempimento astrattamente idoneo a provocarla. Fatto ciò, gravava integralmente sull'ente ospedaliero e sul medico l'onere titanico di fornire la prova liberatoria, ossia dimostrare non solo l'assenza di colpa, ma anche l'esatta causa (a loro non imputabile) che aveva generato il danno, ivi compresa l'eziologia delle infezioni nosocomiali.
+La tesi della separazione eziologica (favorevole al sanitario), recepita dai giudici di merito nel caso di specie, propugnava una scissione rigorosa: la presunzione di colpa del debitore non può in alcun modo supplire alla mancanza di prova sull'eziologia materiale del danno. Secondo questo orientamento, è il paziente a dover fornire la prova certa (o quantomeno probabilistica) che sussista un nesso di causalità ininterrotto tra l'azione del medico e l'evento avverso. In caso di insufficienza probatoria su questo segmento, come accertato dalle CTU, l'azione risarcitoria doveva ineluttabilmente essere rigettata senza nemmeno scrutinare l'inadempimento del sanitario.
+
+### 3. Ratio Decidendi della Sentenza Risolutrice
+Il contrasto è stato mirabilmente ricomposto dalla Corte di Cassazione, Sezione III Civile, con la sentenza dell'11 novembre 2019, n. 28992, incastonata nel celebre "Decalogo di San Martino" del 2019. Chiamata a pronunciarsi sul ricorso del signor C.L., che chiedeva oltre 392.000 euro di risarcimento per una grave sepsi da stafilococco insorta dopo due interventi ortopedici (una meniscectomia e un'artroprotesi al ginocchio) eseguiti dal Dr. V.R. presso l'Istituto Clinico San Siro (poi Galeazzi), la Suprema Corte ha rigettato il ricorso, cristallizzando e sistematizzando la dottrina del "doppio ciclo causale".
+La *ratio decidendi* impone una separazione strutturale e sequenziale del giudizio:
+Il primo ciclo (quello della causalità materiale) incombe sul paziente danneggiato. Egli ha l'onere di provare, anche in via presuntiva, la sussistenza di un nesso eziologico rigoroso tra la condotta attiva od omissiva del sanitario e l'evento di danno (aggravamento o nuova patologia). Laddove, al termine dell'istruttoria, la causa reale dell'evento lesivo rimanga ignota o totalmente incerta (come nel caso del signor C.L., in cui non si provò che lo stafilococco fosse stato veicolato dai ferri o dall'artrocentesi), il rischio processuale resta a carico del creditore, determinando l'invalicabile rigetto della domanda.
+Il secondo ciclo (quello della causalità giuridica e della colpa) si attiva soltanto se il paziente ha superato positivamente il primo scoglio. In tale fase, l'onere si ribalta sul debitore (medico o clinica), il quale dovrà dimostrare l'esatto adempimento della propria prestazione o che l'inadempimento è dipeso da causa a lui non imputabile secondo le *leges artis*. Se in questo secondo ciclo è la causa dell'impossibilità oggettiva a restare ignota, il rischio grava sul debitore, che soccombe ed è tenuto al risarcimento.
+
+### 4. Obiter Dicta e Aperture Prospettiche
+Attraverso un *obiter dictum* di profonda valenza organizzativa per le amministrazioni sanitarie, la pronuncia delinea un orizzonte rigoroso in tema di prevenzione delle infezioni nosocomiali e di *risk management*. Emerge infatti come, laddove il paziente riesca a dimostrare (primo ciclo) che l'infezione è stata contratta eziologicamente all'interno del nosocomio e in correlazione con l'intervento subìto, il passaggio al secondo ciclo impone alla struttura sanitaria un onere probatorio estremamente gravoso. Per andare esente da responsabilità, l'ospedale non potrà limitarsi a opporre generiche prassi di sterilizzazione, ma sarà tenuto a documentare in modo puntuale e tracciabile la perfetta asepsi degli ambienti, degli strumenti e l'assoluto rispetto dei protocolli preventivi al momento esatto dell'intervento, subendo in caso contrario la condanna per la causa ignota che ha determinato il fallimento dell'organizzazione.
+
+### 5. Questioni Aperte e Profili Critici
+La giurisprudenza successiva e la dottrina medico-legale continuano a confrontarsi duramente sulle concrete modalità di assolvimento dell'onere probatorio del primo ciclo da parte del paziente. La prova del nesso causale materiale, specialmente nelle complicanze infettive, impone di affidarsi quasi esclusivamente allo strumento delle presunzioni semplici desumibili dalla Consulenza Tecnica d'Ufficio (CTU). Il confine tra un'infezione endogena (imputabile allo stato immunitario compromesso del paziente) e un'infezione esogena nosocomiale (imputabile alla struttura) è talmente sottile da rendere l'esito della causa drammaticamente dipendente dal livello di approfondimento e dall'interpretazione della probabilità logica (*più probabile che non*) operata dal collegio peritale.
+
+### 6. Matite Blu — Errori Dogmatici Fatali
+*   **Affermare che l'onere di provare il nesso causale materiale gravi sul medico:** Costituisce un grave errore di diritto ribaltare l'impostazione del doppio ciclo causale, sostenendo che l'articolo 1218 del codice civile imponga alla struttura di dimostrare che non vi è collegamento eziologico tra il proprio operato e l'aggravamento del paziente. Il nesso fenomenico grava sempre sull'attore ex art. 2697 c.c.
+*   **Confondere le conseguenze della "causa ignota" nei due cicli:** È dogmaticamente inescusabile non distinguere l'incertezza probatoria a seconda della fase. Se è ignota la causa *materiale* del danno (primo ciclo), la domanda del paziente viene rigettata. Se è ignota la causa *impossibilitante* della prestazione diligente (secondo ciclo), la clinica viene condannata.
+*   **Sovrapporre obbligazioni di fare generico a quelle di fare qualificato:** Argomentare la responsabilità medica con gli stessi schemi probatori applicabili all'inadempimento di un contratto d'appalto edile, non cogliendo la preesistenza del bene-salute rispetto al programma obbligatorio.
+
+### 7. Profili Processuali
+Sotto il profilo istruttorio e probatorio, l'attore (paziente) deve allegare l'inadempimento c.d. "qualificato" (astrattamente idoneo a causare il danno) e fornire la prova del contratto e del nesso eziologico tra condotta ed evento avverso. Strumento cardine di questa fase è la Consulenza Tecnica d'Ufficio, che il giudice è tenuto a disporre valutandone i risultati non come mera prova scientifica inoppugnabile, ma attraverso il prisma giuridico del "più probabile che non". Il mancato assolvimento dell'onere del primo ciclo preclude al giudice la disamina dell'eventuale comportamento imperito o negligente del medico, in quanto irrilevante ai fini del risarcimento in assenza di un comprovato ponte causale, conducendo al rigetto *in limine* nel merito. L'incertezza peritale irrisolvibile si traduce processualmente nella regola di soccombenza a sfavore di chi detiene l'onere della prova in quel frangente.
+
+### 8. Rete Sistematica — Collegamenti con altri Istituti
+L'architettura del doppio ciclo causale incrocia indissolubilmente il principio generale del riparto probatorio nelle obbligazioni codificato dall'articolo 2697 del codice civile in concorso con l'articolo 1218 del codice civile. Si interfaccia con la tematica della responsabilità da contatto sociale qualificato e con la profonda dicotomia dogmatica tra obbligazioni di mezzi e obbligazioni di risultato, evidenziando la specificità delle prestazioni di natura intellettuale e medica (articolo 2236 del codice civile). Sul versante del nesso eziologico, si raccorda storicamente con le differenze tra la causalità civile (la preponderanza dell'evidenza) e la causalità penale (oltre ogni ragionevole dubbio ex artt. 40 e 41 c.p.).
+
+### 9. Tags
+*   Doppio ciclo causale
+*   Riparto onere della prova
+*   Articolo 1218 c.c.
+*   Articolo 2697 c.c.
+*   Nesso di causalità materiale
+*   Causalità giuridica e colpa
+*   Obbligazioni di facere professionale
+*   Infezioni nosocomiali
+*   Causa ignota
+*   Cassazione 28992/2019
+*   Rischio processuale
+*   Responsabilità medica

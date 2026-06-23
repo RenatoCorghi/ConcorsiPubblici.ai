@@ -3,7 +3,7 @@
    ============================================================ */
 import { APP_CONFIG } from '../config.js';
 import { AppState } from '../state.js';
-import { handleProxyError, fixJSONNewlines, extractJSON, getAuthHeaders } from './helpers.js';
+import { handleProxyError, fixJSONNewlines, extractJSON, getAuthHeaders, fetchWithTimeout } from './helpers.js';
 import { CICERO_EXPERT_SYSTEM } from './prompts.js';
 import { verifyCitationsTiered } from './citation-check.js';
 
@@ -105,7 +105,7 @@ Struttura ESATTA richiesta:
         promptUser += `\nELABORATO DEL CANDIDATO DA VALUTARE:\n"""\n${userText}\n"""\n\nApplica la Regola del 12. Restituisci SOLO il JSON, senza preamboli.`;
 
         try {
-            const response = await fetch('/api/proxy', {
+            const response = await fetchWithTimeout('/api/proxy', {
                 method: 'POST',
                 headers: await getAuthHeaders(),
                 body: JSON.stringify({
@@ -258,7 +258,7 @@ IMPORTANTE: Produci testi molto corposi e densissimi. I valori del JSON non devo
         promptUser += "\nGenera il Briefing Strategico Operativo per questa traccia. Restituisci esclusivamente il JSON.";
 
         try {
-            const response = await fetch('/api/proxy', {
+            const response = await fetchWithTimeout('/api/proxy', {
                 method: 'POST',
                 headers: await getAuthHeaders(),
                 body: JSON.stringify({
@@ -407,7 +407,7 @@ LUNGHEZZA: Calibra l'elaborato per una lunghezza tra le 1200 e le 1800 parole, d
         if (traceObj && traceObj.elementi_chiave) promptUser += `\nELEMENTI CHIAVE da integrare: ${traceObj.elementi_chiave.join(', ')}`;
 
         try {
-            const response = await fetch('/api/proxy', {
+            const response = await fetchWithTimeout('/api/proxy', {
                 method: 'POST',
                 headers: await getAuthHeaders(),
                 body: JSON.stringify({

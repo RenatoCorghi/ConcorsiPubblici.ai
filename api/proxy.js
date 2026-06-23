@@ -597,6 +597,7 @@ REGOLE TASSATIVE:
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                signal: AbortSignal.timeout(4000),
                 body: JSON.stringify({
                     contents: [{ parts: [{ text: prompt }] }],
                     generationConfig: { 
@@ -639,7 +640,7 @@ export async function rerankCandidates(query, candidates, googleKey) {
             {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                signal: AbortSignal.timeout(8000),
+                signal: AbortSignal.timeout(5000),
                 body: JSON.stringify({
                     contents: [{ parts: [{ text: prompt }] }],
                     generationConfig: { temperature: 0, maxOutputTokens: 1024, responseMimeType: 'application/json' }
@@ -730,6 +731,7 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
             fetch(embedUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                signal: AbortSignal.timeout(5000),
                 body: JSON.stringify({
                     model: 'models/gemini-embedding-2',
                     content: { parts: [{ text: materiaPrefix + sq }] },
@@ -966,11 +968,17 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
             // RE-RANK LLM: secondo parere di Gemini Flash sui top 24 candidati.
             // Solo quando c'è davvero una scelta da fare (più di 8 candidati);
             // se fallisce si tiene l'ordine boostato (rerankCandidates → null).
+            // NOTA: disabilitato temporaneamente — il re-ranker aggiunge 5-8s
+            // di latenza e spesso fallisce su Vercel Hobby (10s limit).
+            // Il ranking boostato (authority + recency + hybrid_score) è già
+            // efficace (top match ~67-80%). Riabilitare su piano Pro.
             let reranked = null;
+            /* RE-RANKER DISABLED — Hobby plan constraint
             if (matches.length > 8) {
                 reranked = await rerankCandidates(userMessageText, matches.slice(0, 24), googleKey);
                 if (reranked) console.log(`[RAG] 🧠 Re-rank LLM applicato su ${Math.min(matches.length, 24)} candidati`);
             }
+            */
             const topMatches = (reranked || matches).slice(0, 8);
 
             topMatches.forEach((m, i) => {
@@ -1335,7 +1343,11 @@ export default async function handler(req, res) {
                 const queryText = explicitRagQuery || lastUserMessage;
                 
                 // Cerca nel DB usando il filtro materia (se presente)
-                const ragResult = await fetchRAGContext(queryText, requestedMateria, req.body.skipExpansion === true, requestedFeature);
+                // Se il client ha fornito una ragQuery esplicita (già mirata),
+                // skippa la query expansion server-side per risparmiare ~2s
+                // (critico su Vercel Hobby con limite 10s)
+                const shouldSkipExpansion = req.body.skipExpansion === true || !!explicitRagQuery;
+                const ragResult = await fetchRAGContext(queryText, requestedMateria, shouldSkipExpansion, requestedFeature);
                 
                 if (ragResult) {
                     // Il RAG va in un messaggio system SEPARATO, non concatenato al prompt:
@@ -1538,7 +1550,7 @@ export default async function handler(req, res) {
         }
 
         // Esegui Chiamata Server-to-Server
-        const response = await fetch(fetchUrl, { method: 'POST', headers: fetchHeaders, body: fetchBody });
+        const response = await fetch(fetchUrl, { method: 'POST', headers: fetchHeaders, body: fetchBody, signal: AbortSignal.timeout(120000) });
 
         if (!response.ok) {
             const errorText = await response.text();

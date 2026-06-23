@@ -3,7 +3,7 @@
    ============================================================ */
 import { APP_CONFIG } from '../config.js';
 import { AppState } from '../state.js';
-import { handleProxyError, getAuthHeaders } from './helpers.js';
+import { handleProxyError, getAuthHeaders, fetchWithTimeout } from './helpers.js';
 
 export const tutorApi = {
     tutorChat: async function(apiKey, historyMessages, userSummary, concorso) {
@@ -40,7 +40,7 @@ CONTESTO UTENTE: ${userSummary}`;
         });
 
         try {
-            const response = await fetch('/api/proxy', {
+            const response = await fetchWithTimeout('/api/proxy', {
                 method: 'POST',
                 headers: await getAuthHeaders(),
                 body: JSON.stringify({
@@ -65,7 +65,7 @@ CONTESTO UTENTE: ${userSummary}`;
     checkLiveDraft: async function(apiKey, draftText, materia) {
         var prompt = `Sei un severissimo Tutor. Lo studente sta scrivendo un saggio di ${materia}. Leggi QUESTO frammento in scrittura: "${draftText}". SE noti un GRAVE ORRORE CONCETTUALE giuridico o un GRAVE ERRORE COSTRUTTIVO O COLLOQUIALE, rispondi con un brevissimo consiglio di max 20 parole. SE invece è sufficientemente corretto, rispondi ESATTAMENTE E SOLO CON LA PAROLA "OK".`;
         try {
-            const response = await fetch('/api/proxy', {
+            const response = await fetchWithTimeout('/api/proxy', {
                 method: 'POST',
                 headers: await getAuthHeaders(),
                 body: JSON.stringify({

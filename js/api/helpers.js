@@ -80,3 +80,27 @@ export async function getAuthHeaders() {
     }
     return headers;
 }
+
+/**
+ * Wrapper fetch con timeout automatico.
+ * Previene fetch che pendono all'infinito quando il server o il provider
+ * AI non rispondono. Lancia un AbortError se il timeout scade.
+ * @param {string} url - URL della richiesta
+ * @param {object} options - Opzioni fetch standard
+ * @param {number} [timeoutMs=120000] - Timeout in millisecondi (default 2 minuti)
+ * @returns {Promise<Response>}
+ */
+export function fetchWithTimeout(url, options = {}, timeoutMs = 120000) {
+    const controller = new AbortController();
+    const existingSignal = options.signal;
+
+    // Se il chiamante ha già un signal, combina entrambi
+    if (existingSignal) {
+        existingSignal.addEventListener('abort', () => controller.abort(existingSignal.reason));
+    }
+
+    const timeoutId = setTimeout(() => controller.abort(new DOMException('Timeout: il server non ha risposto in tempo.', 'TimeoutError')), timeoutMs);
+
+    return fetch(url, { ...options, signal: controller.signal })
+        .finally(() => clearTimeout(timeoutId));
+}

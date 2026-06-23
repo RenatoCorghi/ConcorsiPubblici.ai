@@ -9,6 +9,7 @@
    2) Verifica globale nel DB via /api/proxy (feature verifyCitation)
    ============================================================ */
 import veritaDogmaticheData from '../../data/verita_dogmatiche.json';
+import { fetchWithTimeout } from './helpers.js';
 
 // Sentenze citate come ESEMPI nei prompt di sistema: il modello può riprodurle,
 // non vanno flaggate come allucinazioni.
@@ -137,7 +138,7 @@ export async function verifyCitationsTiered(text, ragSources, authHeaders) {
         if (!matchingSource) {
             // LIVELLO 2: verifica globale nel DB
             try {
-                const verifyRes = await fetch('/api/proxy', {
+                const verifyRes = await fetchWithTimeout('/api/proxy', {
                     method: 'POST',
                     headers: authHeaders,
                     body: JSON.stringify({ feature: 'verifyCitation', citationNumber: cit.citationKey })

@@ -3,7 +3,7 @@
    ============================================================ */
 import { APP_CONFIG } from '../config.js';
 import { AppState } from '../state.js';
-import { handleProxyError, fixJSONNewlines, extractJSON, getAuthHeaders } from './helpers.js';
+import { handleProxyError, fixJSONNewlines, extractJSON, getAuthHeaders, fetchWithTimeout } from './helpers.js';
 
 export const oraleApi = {
 
@@ -23,7 +23,7 @@ Restituisci SOLO un JSON: {"voto": numero_da_0_a_10, "feedback": "giudizio anali
         var promptUser = "TRASCRIZIONE DELL'ESAME:\n" + transcript + "\n\nValuta la trascrizione e restituisci il JSON.";
 
         try {
-            const response = await fetch('/api/proxy', {
+            const response = await fetchWithTimeout('/api/proxy', {
                 method: 'POST',
                 headers: await getAuthHeaders(),
                 body: JSON.stringify({
@@ -82,7 +82,7 @@ REGOLA: Mantieni le tue risposte sotto le 60-80 parole. Usa un lessico tecnico i
         });
 
         try {
-            const response = await fetch('/api/proxy', {
+            const response = await fetchWithTimeout('/api/proxy', {
                 method: 'POST',
                 headers: await getAuthHeaders(),
                 body: JSON.stringify({

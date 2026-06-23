@@ -8,6 +8,7 @@ import { APP_CONFIG } from '../config.js';
 import { Metering } from '../metering.js';
 import { escapeHtml, showToast } from '../utils.js';
 import { verifyCitationsTiered } from '../api/citation-check.js';
+import { fetchWithTimeout } from '../api/helpers.js';
 
 const TOTAL_MODULES = 7;
 // --- VERITÀ DOGMATICHE DA FILE ESTERNO (filtrabili per materia) ---
@@ -522,7 +523,7 @@ export const LezioneController = {
             // Aggiungi istruzione speciale per la lezione da traccia
             systemPrompt += `\n\nISTRUZIONE SPECIALE: Questa lezione è PROPEDEUTICA a un tema d'esame. Al termine del Modulo 5, ricorda allo studente che può tornare al briefing per iniziare la simulazione scrivendo "Sono pronto per il tema".`;
 
-            var response = await fetch('/api/proxy', {
+            var response = await fetchWithTimeout('/api/proxy', {
                 method: 'POST',
                 headers: await _getAuthHeaders(),
                 body: JSON.stringify({
@@ -635,7 +636,7 @@ export const LezioneController = {
                 systemPrompt += `\nNOTA: Lo studente si prepara per il concorso in ${concorso}. ${CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]}`;
             }
 
-            var response = await fetch('/api/proxy', {
+            var response = await fetchWithTimeout('/api/proxy', {
                 method: 'POST',
                 headers: await _getAuthHeaders(),
                 body: JSON.stringify({
@@ -740,7 +741,7 @@ export const LezioneController = {
                 systemPrompt += `\nNOTA: L'uditorio si prepara per il concorso in ${concorso}. ${CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]}`;
             }
 
-            var response = await fetch('/api/proxy', {
+            var response = await fetchWithTimeout('/api/proxy', {
                 method: 'POST',
                 headers: await _getAuthHeaders(),
                 body: JSON.stringify({
@@ -855,7 +856,7 @@ export const LezioneController = {
                 systemPrompt += `\nNOTA: L'uditorio si prepara per il concorso in ${concorso}. ${CICERO_EXPERT_SYSTEM.CONCORSI_SPECIFIC[concorso]}`;
             }
 
-            var response = await fetch('/api/proxy', {
+            var response = await fetchWithTimeout('/api/proxy', {
                 method: 'POST',
                 headers: await _getAuthHeaders(),
                 body: JSON.stringify({
@@ -1067,7 +1068,7 @@ export const LezioneController = {
 ${coveredBlock}`
             });
 
-            var response = await fetch('/api/proxy', {
+            var response = await fetchWithTimeout('/api/proxy', {
                 method: 'POST',
                 headers: await _getAuthHeaders(),
                 body: JSON.stringify({
@@ -1193,7 +1194,7 @@ ${coveredBlock}`
         });
 
         try {
-            var response = await fetch('/api/proxy', {
+            var response = await fetchWithTimeout('/api/proxy', {
                 method: 'POST',
                 headers: await _getAuthHeaders(),
                 body: JSON.stringify({
@@ -1522,7 +1523,7 @@ ${coveredBlock}`
 
             if (cleanText.length > 5000) cleanText = cleanText.substring(0, 5000);
 
-            var response = await fetch('/api/tts', {
+            var response = await fetchWithTimeout('/api/tts', {
                 method: 'POST',
                 headers: headers,
                 body: JSON.stringify({
