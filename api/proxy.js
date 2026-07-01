@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { cacheKeyL1, semCacheGetL1, semCacheGetL2, semCacheStore } from './_semcache.js';
 
 // --- TOPIC TAXONOMY (per enrichment query expansion) ---
 // Inline per compatibilità Vercel serverless (no filesystem access)
@@ -707,51 +708,119 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
         console.warn("[RAG] ⚠️ Configurazione incompleta (URL, Key o GoogleKey mancante). Salto RAG.");
         return null;
     }
-    try {
-        // 1. QUERY EXPANSION: decomponi titoli complessi in sotto-query atomiche.
-        // Saltata se il client dichiara una ragQuery già mirata (continuazioni di
-        // modulo): risparmia una chiamata Gemini Flash (~1-2s) a richiesta.
-        let subQueries = skipExpansion ? [userMessageText] : await expandQuery(userMessageText, materiaFilter, googleKey);
-        
-        // 1b. TAXONOMY ENRICHMENT: arricchisci con sotto-query forzate dalla tassonomia
-        subQueries = enrichWithTaxonomy(subQueries, userMessageText, materiaFilter);
-        
-        // 2. Genera embedding per query principale + sotto-query (in parallelo)
-        const embedUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key=${googleKey}`;
-        const materiaPrefix = materiaFilter ? `${normalizeMateria(materiaFilter)}: ` : '';
 
+    // Normalizzazioni condivise da cache semantica e retrieval
+    const normalizedMateria = materiaFilter ? normalizeMateria(materiaFilter) : null;
+    const cacheEnabled = process.env.RAG_SEMANTIC_CACHE === '1';
+    const cacheFamily = cacheEnabled ? materiaFamily(normalizedMateria) : null;
+    const cacheKey = cacheEnabled ? cacheKeyL1(userMessageText, normalizedMateria, skipExpansion) : null;
+    let rawVector = null;  // embedding della query grezza (riusato da cache L2 e ricerca)
+
+    try {
+        // 0. CACHE SEMANTICA — L1, chiave esatta (env RAG_SEMANTIC_CACHE=1):
+        // hit → si salta TUTTA la pipeline (expansion, embedding, ricerca,
+        // re-rank LLM). Il costo sul miss è un roundtrip Redis (~20-60ms).
+        if (cacheEnabled) {
+            const t0 = Date.now();
+            const cached = await semCacheGetL1(cacheKey, { family: cacheFamily });
+            if (cached && cached.contextText && Array.isArray(cached.sources)) {
+                console.log(`[RAG-CACHE] ⚡ L1 HIT in ${Date.now() - t0}ms (${cached.sources.length} fonti) — pipeline retrieval saltata`);
+                logRagQuality(supabaseKey, {
+                    feature,
+                    query: String(userMessageText || '').substring(0, 300),
+                    materia: normalizedMateria,
+                    sub_query_count: null,
+                    skip_expansion: skipExpansion,
+                    reranked: false,
+                    result_count: cached.sources.length,
+                    top_score: cached._meta?.topScore ?? null,
+                    top_tipo: cached._meta?.topTipo ?? null,
+                    top_titolo: cached.sources[0] ? String(cached.sources[0].titolo || '').substring(0, 200) : null,
+                    cache_status: 'l1_hit'
+                });
+                return { contextText: cached.contextText, sources: cached.sources };
+            }
+        }
+
+        // Helper embedding (query grezza per la cache L2 + sotto-query).
         // Embedding asimmetrico (query vs documento): impostare su Vercel
         // RAG_QUERY_TASK_TYPE=RETRIEVAL_QUERY SOLO DOPO aver completato il
         // re-embed del corpus con scripts/reembed_task_type.mjs — i task type
         // diversi vivono in spazi vettoriali leggermente diversi e mischiare
         // query tipizzate con un corpus non tipizzato peggiora il retrieval.
+        const embedUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key=${googleKey}`;
+        const materiaPrefix = materiaFilter ? `${normalizeMateria(materiaFilter)}: ` : '';
         const queryTaskType = process.env.RAG_QUERY_TASK_TYPE || null;
-
-        const allEmbedRequests = subQueries.map(sq =>
-            fetch(embedUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                signal: AbortSignal.timeout(5000),
-                body: JSON.stringify({
-                    model: 'models/gemini-embedding-2',
-                    content: { parts: [{ text: materiaPrefix + sq }] },
-                    outputDimensionality: 768,
-                    ...(queryTaskType ? { taskType: queryTaskType } : {})
-                })
-            }).then(r => r.json()).then(data => {
-                if (data.error) console.error("[RAG] ❌ Embed Error:", data.error);
-                return data;
-            }).catch(err => {
-                console.error("[RAG] ❌ Embed Fetch Error:", err);
-                return null;
+        const embedOne = (text) => fetch(embedUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(5000),
+            body: JSON.stringify({
+                model: 'models/gemini-embedding-2',
+                content: { parts: [{ text }] },
+                outputDimensionality: 768,
+                ...(queryTaskType ? { taskType: queryTaskType } : {})
             })
+        }).then(r => r.json()).then(data => {
+            if (data.error) console.error("[RAG] ❌ Embed Error:", data.error);
+            return data?.embedding?.values || null;
+        }).catch(err => {
+            console.error("[RAG] ❌ Embed Fetch Error:", err);
+            return null;
+        });
+
+        // 0b. CACHE SEMANTICA — L2 (firma LSH + verifica coseno ≥ 0.97): riusa
+        // il retrieval di query formulate diversamente ma equivalenti. Richiede
+        // l'embedding della query grezza, che sul miss NON è sprecato: viene
+        // riusato come vettore di ricerca quando la query non va in expansion.
+        if (cacheEnabled) {
+            rawVector = await embedOne(materiaPrefix + userMessageText);
+            if (rawVector) {
+                const t0 = Date.now();
+                const cached = await semCacheGetL2(rawVector, normalizedMateria, { family: cacheFamily });
+                if (cached && cached.contextText && Array.isArray(cached.sources)) {
+                    console.log(`[RAG-CACHE] ⚡ L2 HIT in ${Date.now() - t0}ms (${cached.sources.length} fonti) — query equivalente già risolta`);
+                    logRagQuality(supabaseKey, {
+                        feature,
+                        query: String(userMessageText || '').substring(0, 300),
+                        materia: normalizedMateria,
+                        sub_query_count: null,
+                        skip_expansion: skipExpansion,
+                        reranked: false,
+                        result_count: cached.sources.length,
+                        top_score: cached._meta?.topScore ?? null,
+                        top_tipo: cached._meta?.topTipo ?? null,
+                        top_titolo: cached.sources[0] ? String(cached.sources[0].titolo || '').substring(0, 200) : null,
+                        cache_status: 'l2_hit'
+                    });
+                    // Write-through L1: la prossima query IDENTICA salta anche l'embedding
+                    semCacheStore(cacheKey, rawVector, normalizedMateria, cached, { family: cacheFamily });
+                    return { contextText: cached.contextText, sources: cached.sources };
+                }
+            }
+        }
+
+        // 1. QUERY EXPANSION: decomponi titoli complessi in sotto-query atomiche.
+        // Saltata se il client dichiara una ragQuery già mirata (continuazioni di
+        // modulo): risparmia una chiamata Gemini Flash (~1-2s) a richiesta.
+        let subQueries = skipExpansion ? [userMessageText] : await expandQuery(userMessageText, materiaFilter, googleKey);
+
+        // 1b. TAXONOMY ENRICHMENT: arricchisci con sotto-query forzate dalla tassonomia
+        subQueries = enrichWithTaxonomy(subQueries, userMessageText, materiaFilter);
+
+        // 2. Genera embedding per le sotto-query (in parallelo); la query grezza,
+        // se già embeddata per la cache L2, si riusa senza rifare la chiamata
+        const allEmbedRequests = subQueries.map(sq =>
+            (rawVector && sq === userMessageText)
+                ? Promise.resolve(rawVector)
+                : embedOne(materiaPrefix + sq)
         );
-        
+
         const embedResults = await Promise.all(allEmbedRequests);
         // Accoppia PRIMA di filtrare: filtrare prima fa scalare gli indici e
         // assocerebbe i vettori alle sotto-query sbagliate quando un embedding fallisce
         const vectors = embedResults
-            .map((r, i) => ({ vector: r?.embedding?.values, query: subQueries[i] }))
+            .map((vec, i) => ({ vector: vec, query: subQueries[i] }))
             .filter(v => v.vector);
 
         if (vectors.length === 0) return null;
@@ -772,7 +841,6 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
         // B) Premium search (con vettore primario) → garanzia fonti autorevoli
         let matches = [];
         let usedHybrid = false;
-        const normalizedMateria = materiaFilter ? normalizeMateria(materiaFilter) : null;
         if (normalizedMateria) console.log(`[RAG] 🎯 Filtro materia attivo: ${normalizedMateria}`);
 
         try {
@@ -1055,8 +1123,22 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
                 result_count: topMatches.length,
                 top_score: topMatches[0] ? Number(topMatches[0].boostedScore.toFixed(4)) : null,
                 top_tipo: topMatches[0]?.tipo || null,
-                top_titolo: topMatches[0] ? String(topMatches[0].titolo || '').substring(0, 200) : null
+                top_titolo: topMatches[0] ? String(topMatches[0].titolo || '').substring(0, 200) : null,
+                cache_status: cacheEnabled ? 'miss' : null
             });
+
+            // CACHE SEMANTICA: scrivi l'entry (fire-and-forget, come il log:
+            // viaggia mentre il provider genera, mai sul percorso di risposta)
+            if (cacheEnabled && topMatches.length > 0) {
+                semCacheStore(cacheKey, rawVector, normalizedMateria, {
+                    contextText,
+                    sources,
+                    _meta: {
+                        topTipo: topMatches[0]?.tipo || null,
+                        topScore: topMatches[0] ? Number(topMatches[0].boostedScore.toFixed(4)) : null
+                    }
+                }, { family: cacheFamily });
+            }
 
             return { contextText, sources };
         } else {
@@ -1071,7 +1153,8 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
                 result_count: 0,
                 top_score: null,
                 top_tipo: null,
-                top_titolo: null
+                top_titolo: null,
+                cache_status: cacheEnabled ? 'miss' : null
             });
         }
     } catch (e) {
