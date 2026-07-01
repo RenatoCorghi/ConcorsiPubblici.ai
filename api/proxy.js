@@ -810,18 +810,32 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
                         }));
                     }).catch(() => null);
                 } else {
-                    const hybridUrl = `${process.env.SUPABASE_URL}/rest/v1/rpc/match_documents_hybrid`;
-                    return fetch(hybridUrl, {
+                    // CASCATA BINARIA (migration 013, attivata da env RAG_CASCADE=1):
+                    // coarse search esatta sugli sketch binari della sidecar rag_chunks_bq
+                    // (96 B/riga, sta in shared_buffers) + rescore float32 stratificato per
+                    // autorità della fonte. Stessa firma e shape della hybrid → drop-in.
+                    // Misurato (bench_cascade.mjs, 2026-07-01): recall@8 92,7% vs 80,2%
+                    // della hybrid senza filtro materia; con filtro le famiglie grandi
+                    // passano da 0,15-6,2s a ~25ms. Se la RPC manca o errora (risposta
+                    // non-array), fallback automatico alla hybrid.
+                    const rpcBody = JSON.stringify({
+                        query_embedding: v.vector,
+                        query_text: v.query,
+                        filter_materia: normalizedMateria,
+                        match_count: Math.ceil(15 / vectors.length) + 3,
+                        match_threshold: 0.40
+                    });
+                    const callRpc = (name) => fetch(`${process.env.SUPABASE_URL}/rest/v1/rpc/${name}`, {
                         method: 'POST',
                         headers: rpcHeaders,
-                        body: JSON.stringify({
-                            query_embedding: v.vector,
-                            query_text: v.query,
-                            filter_materia: normalizedMateria,
-                            match_count: Math.ceil(15 / vectors.length) + 3,
-                            match_threshold: 0.40
-                        })
-                    }).then(r => r.json()).catch(() => null);
+                        body: rpcBody
+                    }).then(r => r.json());
+                    if (process.env.RAG_CASCADE === '1') {
+                        return callRpc('match_documents_cascade')
+                            .then(data => Array.isArray(data) ? data : callRpc('match_documents_hybrid'))
+                            .catch(() => null);
+                    }
+                    return callRpc('match_documents_hybrid').catch(() => null);
                 }
             });
             
@@ -995,7 +1009,7 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
                 // Etichetta speciale per boost
                 let sourceLabel = m.materia;
                 if (m.tipo === 'teoria_massimario') sourceLabel = `📚 [RIVISTA VIP / DOTTRINA]`;
-                else if (m.tipo === 'massimario_cassazione') sourceLabel = `📖 [MASSIMARIO DELLA CASSAZIONE]`;
+                else if (m.tipo === 'massimario_cassazione') sourceLabel = `📖 [ANALISI GIURISPRUDENZIALE IA]`;
                 else if (m.tipo === 'nomofilachia_ssuu') sourceLabel = `🏛️ [NOMOFILACHIA / SS.UU.]`;
                 else if (m.tipo === 'sentenza_ssuu') sourceLabel = `⚖️ [SS.UU. CASSAZIONE]`;
                 else if (m.tipo === 'sentenza_sez_semplici_vip' || m.tipo === 'giurisprudenza_sez_semplici') sourceLabel = `⚖️ [SCHEDA VIP — CASSAZIONE]`;
