@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { cacheKeyL1, semCacheGetL1, semCacheGetL2, semCacheStore } from './_semcache.js';
+import { compressContext } from './_context-compress.js';
+import { createRetrievalBudget } from './_retrieval-budget.js';
 
 // --- TOPIC TAXONOMY (per enrichment query expansion) ---
 // Inline per compatibilità Vercel serverless (no filesystem access)
@@ -700,9 +702,10 @@ function logRagQuality(supabaseKey, entry) {
 // Ritorna { contextText, sources } — contextText per il prompt, sources per il frontend
 // USA: match_documents_hybrid RPC (vector 70% + full-text 30%, con metadata filtering)
 // FALLBACK: match_rag_chunks (vector-only) se la hybrid RPC non è ancora deployata
-async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpansion = false, feature = null) {
+async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpansion = false, feature = null, requestStartMs = null) {
     const googleKey = process.env.GOOGLE_AI_KEY || process.env.GEMINI_API_KEY;
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
+    const retrievalT0 = Date.now();  // per retrieval_ms nei log qualità
     
     if (!process.env.SUPABASE_URL || !supabaseKey || !googleKey) {
         console.warn("[RAG] ⚠️ Configurazione incompleta (URL, Key o GoogleKey mancante). Salto RAG.");
@@ -715,6 +718,19 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
     const cacheFamily = cacheEnabled ? materiaFamily(normalizedMateria) : null;
     const cacheKey = cacheEnabled ? cacheKeyL1(userMessageText, normalizedMateria, skipExpansion) : null;
     let rawVector = null;  // embedding della query grezza (riusato da cache L2 e ricerca)
+
+    // SCHEDULER DEADLINE-AWARE (env RAG_DEADLINE=1): budget di latenza unico
+    // per gli stadi del retrieval, con degradazione controllata (salta
+    // expansion/re-rank, cappa sotto-query e timeout) invece di sforare.
+    // Il budget effettivo rispetta anche la deadline di piattaforma (maxDuration)
+    // al netto della riserva per la generazione. Spento = pass-through totale.
+    const budget = createRetrievalBudget({
+        enabled: process.env.RAG_DEADLINE === '1',
+        totalMs: parseInt(process.env.RAG_RETRIEVAL_BUDGET_MS || '9000', 10),
+        requestStartMs,
+        maxDurationMs: maxDuration * 1000,
+        generationReserveMs: 60000
+    });
 
     try {
         // 0. CACHE SEMANTICA — L1, chiave esatta (env RAG_SEMANTIC_CACHE=1):
@@ -736,7 +752,8 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
                     top_score: cached._meta?.topScore ?? null,
                     top_tipo: cached._meta?.topTipo ?? null,
                     top_titolo: cached.sources[0] ? String(cached.sources[0].titolo || '').substring(0, 200) : null,
-                    cache_status: 'l1_hit'
+                    cache_status: 'l1_hit',
+                    retrieval_ms: Date.now() - retrievalT0
                 });
                 return { contextText: cached.contextText, sources: cached.sources };
             }
@@ -754,7 +771,7 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
         const embedOne = (text) => fetch(embedUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            signal: AbortSignal.timeout(5000),
+            signal: AbortSignal.timeout(budget.clampTimeout(5000, 1500)),
             body: JSON.stringify({
                 model: 'models/gemini-embedding-2',
                 content: { parts: [{ text }] },
@@ -791,7 +808,8 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
                         top_score: cached._meta?.topScore ?? null,
                         top_tipo: cached._meta?.topTipo ?? null,
                         top_titolo: cached.sources[0] ? String(cached.sources[0].titolo || '').substring(0, 200) : null,
-                        cache_status: 'l2_hit'
+                        cache_status: 'l2_hit',
+                        retrieval_ms: Date.now() - retrievalT0
                     });
                     // Write-through L1: la prossima query IDENTICA salta anche l'embedding
                     semCacheStore(cacheKey, rawVector, normalizedMateria, cached, { family: cacheFamily });
@@ -802,11 +820,23 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
 
         // 1. QUERY EXPANSION: decomponi titoli complessi in sotto-query atomiche.
         // Saltata se il client dichiara una ragQuery già mirata (continuazioni di
-        // modulo): risparmia una chiamata Gemini Flash (~1-2s) a richiesta.
-        let subQueries = skipExpansion ? [userMessageText] : await expandQuery(userMessageText, materiaFilter, googleKey);
+        // modulo) o se il budget di latenza non copre la stima (~2.5s).
+        let subQueries;
+        if (skipExpansion || !budget.canAfford('expansion', 2500)) {
+            subQueries = [userMessageText];
+        } else {
+            subQueries = await budget.spend('expansion', () => expandQuery(userMessageText, materiaFilter, googleKey));
+        }
 
         // 1b. TAXONOMY ENRICHMENT: arricchisci con sotto-query forzate dalla tassonomia
         subQueries = enrichWithTaxonomy(subQueries, userMessageText, materiaFilter);
+
+        // Degradazione: con budget agli sgoccioli, meno sotto-query = meno
+        // embedding e meno RPC di ricerca in parallelo
+        if (budget.enabled && subQueries.length > 2 && budget.remaining() < 3000) {
+            subQueries = subQueries.slice(0, 2);
+            budget.degrade('cap_subqueries');
+        }
 
         // 2. Genera embedding per le sotto-query (in parallelo); la query grezza,
         // se già embeddata per la cache L2, si riusa senza rifare la chiamata
@@ -816,7 +846,7 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
                 : embedOne(materiaPrefix + sq)
         );
 
-        const embedResults = await Promise.all(allEmbedRequests);
+        const embedResults = await budget.spend('embedding', () => Promise.all(allEmbedRequests));
         // Accoppia PRIMA di filtrare: filtrare prima fa scalare gli indici e
         // assocerebbe i vettori alle sotto-query sbagliate quando un embedding fallisce
         const vectors = embedResults
@@ -907,7 +937,7 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
                 }
             });
             
-            const responses = await Promise.all(searchPromises);
+            const responses = await budget.spend('search', () => Promise.all(searchPromises));
             const allResults = [];
             for (const r of responses) {
                 if (Array.isArray(r)) {
@@ -1056,20 +1086,39 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
             // budget di tempo, quindi il +5-8s è accettabile. Era stato disabilitato
             // solo per il limite di 60s del piano Hobby.
             let reranked = null;
-            if (matches.length > 8) {
-                reranked = await rerankCandidates(userMessageText, matches.slice(0, 24), googleKey);
+            if (matches.length > 8 && budget.canAfford('rerank', 5500)) {
+                reranked = await budget.spend('rerank', () => rerankCandidates(userMessageText, matches.slice(0, 24), googleKey));
                 if (reranked) console.log(`[RAG] 🧠 Re-rank LLM applicato su ${Math.min(matches.length, 24)} candidati`);
             }
             const topMatches = (reranked || matches).slice(0, 8);
 
+            // Pulizia contenuti (ID interni, riferimenti registro) PRIMA della compressione
+            const cleanedContents = topMatches.map(m => (m.content || '')
+                .replace(/^Documento:\s*\S+\s+\d{4}\s+\d+\s*\n?/m, '')
+                .replace(/\b(?:cds|tar[\w-]*)\s+\d{4}\s+\d{8,}\b/gi, '[riferimento registro GA]')
+                .replace(/\bNumero registro:\s*\d{8,}[^\n]*/gi, 'Numero registro: [codice interno — non citare]')
+                .replace(/\b20\d{7,}\b/g, '[cod. registro]')
+                .trim());
+
+            // COMPRESSIONE STRUTTURALE (env RAG_COMPRESS=1): dedup cross-fonte a
+            // shingle + budget di caratteri, senza mai troncare a metà frase né
+            // dentro citazioni/riferimenti normativi (protetti a soglia 0.98).
+            // Le sources per il frontend NON sono toccate: fullContent resta
+            // integro per la verifica citazioni lato client.
+            let finalContents = cleanedContents;
+            let compressStats = null;
+            if (process.env.RAG_COMPRESS === '1' && topMatches.length > 0) {
+                const compressed = compressContext(cleanedContents.map(c => ({ content: c })), {
+                    budgetChars: parseInt(process.env.RAG_CONTEXT_BUDGET_CHARS || '20000', 10)
+                });
+                finalContents = compressed.contents.map(c => c || '(contenuto omesso: interamente ridondante con le fonti precedenti)');
+                compressStats = compressed.stats;
+                console.log(`[RAG-COMPRESS] 🗜️ ${compressStats.charsIn} → ${compressStats.charsOut} chars (-${(100 * (1 - compressStats.ratio)).toFixed(1)}%, ${compressStats.sentDeduped} frasi deduplicate, ${compressStats.itemsTruncated} fonti tagliate dal budget)`);
+            }
+
             topMatches.forEach((m, i) => {
-                let cleanContent = (m.content || '')
-                    .replace(/^Documento:\s*\S+\s+\d{4}\s+\d+\s*\n?/m, '')
-                    .replace(/\b(?:cds|tar[\w-]*)\s+\d{4}\s+\d{8,}\b/gi, '[riferimento registro GA]')
-                    .replace(/\bNumero registro:\s*\d{8,}[^\n]*/gi, 'Numero registro: [codice interno — non citare]')
-                    .replace(/\b20\d{7,}\b/g, '[cod. registro]')
-                    .trim();
-                
+                const cleanContent = finalContents[i];
+
                 let cleanTitolo = (m.titolo || '')
                     .replace(/\b(?:cds|tar[\w-]*)\s+\d{4}\s+\d{8,}\b/gi, '[Sentenza GA]')
                     .replace(/N\.\s*\d{8,}/g, 'N. [registro]');
@@ -1124,8 +1173,14 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
                 top_score: topMatches[0] ? Number(topMatches[0].boostedScore.toFixed(4)) : null,
                 top_tipo: topMatches[0]?.tipo || null,
                 top_titolo: topMatches[0] ? String(topMatches[0].titolo || '').substring(0, 200) : null,
-                cache_status: cacheEnabled ? 'miss' : null
+                cache_status: cacheEnabled ? 'miss' : null,
+                retrieval_ms: Date.now() - retrievalT0,
+                degradations: budget.degradations.length ? budget.degradations.join(',') : null,
+                context_chars_in: compressStats ? compressStats.charsIn : null,
+                context_chars_out: compressStats ? compressStats.charsOut : null
             });
+
+            if (budget.enabled) console.log(`[RAG-BUDGET] ⏱️ ${budget.summary()}`);
 
             // CACHE SEMANTICA: scrivi l'entry (fire-and-forget, come il log:
             // viaggia mentre il provider genera, mai sul percorso di risposta)
@@ -1154,8 +1209,11 @@ async function fetchRAGContext(userMessageText, materiaFilter = null, skipExpans
                 top_score: null,
                 top_tipo: null,
                 top_titolo: null,
-                cache_status: cacheEnabled ? 'miss' : null
+                cache_status: cacheEnabled ? 'miss' : null,
+                retrieval_ms: Date.now() - retrievalT0,
+                degradations: budget.degradations.length ? budget.degradations.join(',') : null
             });
+            if (budget.enabled) console.log(`[RAG-BUDGET] ⏱️ ${budget.summary()}`);
         }
     } catch (e) {
         console.error("[RAG] Errore durante estrazione contesto:", e.message);
@@ -1279,6 +1337,7 @@ export function anthropicSupportsTemperature(model) {
 export const maxDuration = 300;
 
 export default async function handler(req, res) {
+    const requestStartMs = Date.now();  // per lo scheduler deadline-aware del RAG
     console.log(`\n[Proxy] 📥 RICHIESTA IN ARRIVO: ${req.method} | Provider: ${req.body?.provider || 'default'}`);
     let heartbeat = null;  // keepalive per le generazioni lunghe (impostato più sotto)
 
@@ -1444,7 +1503,7 @@ export default async function handler(req, res) {
                 // skippa la query expansion server-side per risparmiare ~2s
                 // (critico su Vercel Hobby con limite 10s)
                 const shouldSkipExpansion = req.body.skipExpansion === true || !!explicitRagQuery;
-                const ragResult = await fetchRAGContext(queryText, requestedMateria, shouldSkipExpansion, requestedFeature);
+                const ragResult = await fetchRAGContext(queryText, requestedMateria, shouldSkipExpansion, requestedFeature, requestStartMs);
                 
                 if (ragResult) {
                     // Il RAG va in un messaggio system SEPARATO, non concatenato al prompt:
